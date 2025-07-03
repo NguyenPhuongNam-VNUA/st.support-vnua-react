@@ -13,7 +13,7 @@ const ImportExcelPage = lazy(() => import('@/pages/questions/import-excel'));
 const DocumentLibraryPage = lazy(() => import('@/pages/documents/documents'));
 
 // Pages: ChatBot
-const ChatBotPage = lazy(() => import('@/pages/chatbot/chat-bot'));
+const ChatBotPage = lazy(() => import('@/pages/chatBot/chat-bot'));
 
 const routes = [
   {
