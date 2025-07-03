@@ -29,7 +29,17 @@ const questionApi = {
     removeMany(ids) {
         const url = `/questions`;
         return axiosClientLaravel.delete(url, { data: { ids } });
-      }      
+    },
+    
+    addNewQuestions(newQuestions) {
+        const url = '/questions/excel';
+        return axiosClientLaravel.post(url, newQuestions);
+    },
+
+    updateDuplicateQuestions(duplicateQuestions) {
+        const url = '/questions/update-duplicates';
+        return axiosClientLaravel.put(url, duplicateQuestions);
+    }
 };
 
 export default questionApi;
