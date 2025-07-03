@@ -1,116 +1,123 @@
-import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-import IconButton from '@mui/material/IconButton';
-import InputAdornment from '@mui/material/InputAdornment';
-import SendIcon from '@mui/icons-material/Send';
-import Container from '@mui/material/Container';
-
 import { useState } from 'react';
+import {
+  Box,
+  Container,
+  Paper,
+  Typography,
+  TextField,
+  IconButton,
+  InputAdornment,
+} from '@mui/material';
+import SendIcon from '@mui/icons-material/Send';
 import aiApi from '@/api/Ai/aiApi';
 
 function ChatBot() {
-    const [message, setMessage] = useState('');
-    const [messages, setMessages] = useState([]);
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState([]);
 
-    const handleSend = async () => {
-        if (message.trim()) {
-            const userMessage = message.trim();
-            console.log('Gửi:', message);
-            // setMessage('');
-            
-            setMessages((prevMessages) => [
-                ...prevMessages,
-                { role: 'user', text: message },
-                { role: 'assistant', text: 'Đang xử lý...' }
-            ]);
+  const handleSend = async () => {
+    const userMessage = message.trim();
+    if (!userMessage) return;
 
-            // Gọi API AI để lấy câu trả lời
-            try {
-                const response = await aiApi.askAi({ question: userMessage });
-                console.log('Nhận:', response);
-                setMessages((prevMessages) => [
-                    ...prevMessages.slice(0, -1), // Loại bỏ tin nhắn " role: 'assistant', text: 'Đang xử lý...'"
-                    { role: 'assistant', text: response.answer || '[Không có phản hồi]' }
-                ]);
-            } catch (error) {
-                console.error(error);
-                setMessages((prevMessages) => [
-                    ...prevMessages.slice(0, -1),
-                    { role: 'assistant', text: 'Đã xảy ra lỗi khi gọi API.' }
-                ]);
+    // Thêm tin nhắn người dùng và loading
+    setMessages((prev) => [
+      ...prev,
+      { role: 'user', text: userMessage },
+      { role: 'assistant', text: 'Đang xử lý...' },
+    ]);
+
+    setMessage('');
+
+    try {
+      const response = await aiApi.askAi({ question: userMessage });
+      setMessages((prev) => [
+        ...prev.slice(0, -1),
+        {
+          role: 'assistant',
+          text: response.answer || 'Không có phản hồi từ hệ thống.',
+        },
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev.slice(0, -1),
+        { role: 'assistant', text: 'Đã xảy ra lỗi khi gọi API.' },
+      ]);
+    }
+  };
+
+  return (
+    <Container maxWidth="md">
+      <Paper
+        elevation={3}
+        sx={{
+          marginTop: 6,
+          padding: 3,
+          borderRadius: 3,
+          backgroundColor: '#ffffff',
+        }}
+      >
+        <Typography variant="h6" fontWeight={600} mb={2}>
+          💬 ChatBot hỗ trợ sinh viên
+        </Typography>
+
+        {/* Hộp chat hiển thị tin nhắn */}
+        <Box
+          sx={{
+            height: 400,
+            overflowY: 'auto',
+            backgroundColor: '#f9f9f9',
+            borderRadius: 2,
+            padding: 2,
+            mb: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+          }}
+        >
+          {messages.map((msg, index) => (
+            <Box
+              key={index}
+              sx={{
+                alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                backgroundColor: msg.role === 'user' ? '#e3f2fd' : '#c8e6c9',
+                color: '#000',
+                padding: '8px 12px',
+                borderRadius: 2,
+                maxWidth: '75%',
+                wordBreak: 'break-word',
+              }}
+            >
+              {msg.text}
+            </Box>
+          ))}
+        </Box>
+
+        {/* Ô nhập + nút gửi */}
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Nhập câu hỏi..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
             }
-
-            setMessage(''); // Xóa ô nhập sau khi gửi
-        }
-    };
-
-    return (
-        <>
-            <Container maxWidth="md" sx={{ marginTop: '50px' }}>
-                <Box>
-                    <TextField
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Nhập câu hỏi của bạn..."
-                        sx={{ marginBottom: 2 }}
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleSend();
-                            }
-                        }}
-                        slotProps={{
-                            input: {
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        <IconButton
-                                            onClick={ handleSend}
-                                            disabled={message.trim() === ''}
-                                            color="primary"
-                                        >
-                                            <SendIcon />
-                                        </IconButton>
-                                    </InputAdornment>
-                                )
-                            }
-                        }}
-                    />  
-                </Box>
-                <Box
-                    sx={{
-                        height: '400px',
-                        border: '1px solid #ccc',
-                        borderRadius: '4px',
-                        padding: 2,
-                        overflowY: 'auto',
-                        backgroundColor: '#f9f9f9',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 1,
-                    }}
-                >
-                    {messages.map((msg, index) => (
-                        <Box
-                        key={ index }
-                        sx={{
-                            alignSelf: msg.role === 'user' ? 'flex-start' : 'flex-end',
-                            backgroundColor: msg.role === 'user' ? '#e0f7fa' : '#c8e6c9',
-                            color: '#000',
-                            padding: '8px 12px',
-                            borderRadius: '12px',
-                            maxWidth: '50%',
-                            wordBreak: 'break-word',
-                        }}
-                        >
-                        {msg.text}
-                        </Box>
-                    ))}
-                </Box>
-            </Container>
-        </>
-    );
+          }}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton onClick={handleSend} disabled={!message.trim()}>
+                  <SendIcon />
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Paper>
+    </Container>
+  );
 }
 
 export default ChatBot;

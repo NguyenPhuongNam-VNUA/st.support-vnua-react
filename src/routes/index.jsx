@@ -7,12 +7,10 @@ const AdminLayout = lazy(() => import('@/layouts/layout-1'));
 const QuestionListPage = lazy(() => import('@/pages/questions/question-list'));
 const AddQuestionPage = lazy(() => import('@/pages/questions/add-question'));
 const EditQuestionPage = lazy(() => import('@/pages/questions/edit-question'));
+const ImportExcelPage = lazy(() => import('@/pages/questions/import-excel'));
 
 // Pages: Documents
 const DocumentLibraryPage = lazy(() => import('@/pages/documents/documents'));
-
-// Pages: Fake test
-const FakeDuplicateDialog = lazy(() => import('@/pages/fake'));
 
 // Pages: ChatBot
 const ChatBotPage = lazy(() => import('@/pages/chatbot/chat-bot'));
@@ -26,14 +24,6 @@ const routes = [
         element: (
           <Suspense fallback={<LinearProgress />}>
             <ChatBotPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'test',
-        element: (
-          <Suspense fallback={<LinearProgress />}>
-            <FakeDuplicateDialog />
           </Suspense>
         ),
       },
@@ -64,6 +54,10 @@ const routes = [
                 path: 'edit/:id',
                 element: <EditQuestionPage />               
               },
+              {
+                path: 'import',
+                element: <ImportExcelPage />
+              }
             ],
           },
           {
