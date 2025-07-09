@@ -132,7 +132,6 @@ export default function QuestionListPage() {
       alert('Xoá thất bại. Vui lòng thử lại!');
     }
   };
-  
 
   const handleChangePage = (_, newPage) => setPage(newPage);
   const handleChangeRowsPerPage = (e) => {
