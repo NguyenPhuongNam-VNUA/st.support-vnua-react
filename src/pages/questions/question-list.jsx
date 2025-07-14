@@ -186,7 +186,7 @@ export default function QuestionListPage() {
         </Box>
 
         <TableContainer sx={{ px: 2 }}>
-          <Table size="small">
+          <Table >
             <TableHead>
               <TableRow>
                 <StyledTableCell padding="checkbox">
@@ -231,7 +231,21 @@ export default function QuestionListPage() {
                     </TableCell>
                     <TableCell align="center">{page * rowsPerPage + index + 1}</TableCell>
                     <TableCell>{q.question}</TableCell>
-                    <TableCell>{q.answer || '-'}</TableCell>
+                    <TableCell sx={{ maxWidth: 400 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'normal',
+                        }}
+                      >
+                        {q.answer || '-'}
+                      </Typography>
+                    </TableCell>
                     <TableCell align="center">
                       <Typography fontWeight={500} color={q.has_answer ? 'success.main' : 'text.secondary'}>
                         {q.has_answer ? 'Đã trả lời' : 'Chưa trả lời'}
@@ -260,7 +274,7 @@ export default function QuestionListPage() {
                             handleMenuClose(q.id);
                           }}
                         >
-                          Xóa
+                          <p style={{ color: 'red', margin: 0 }}>Xoá</p>
                         </MenuItem>
                       </Menu>
                     </TableCell>

@@ -15,6 +15,12 @@ const DocumentLibraryPage = lazy(() => import('@/pages/documents/documents'));
 // Pages: ChatBot
 const ChatBotPage = lazy(() => import('@/pages/chatBot/chat-bot'));
 
+// Pages: Login
+const LoginPage = lazy(() => import('@/pages/login/login'));
+
+// Protected Route
+const ProtectedRoute = lazy(() => import('@/components/ProtectedRoute'));
+
 const routes = [
   {
     path: '/',
@@ -28,42 +34,37 @@ const routes = [
         ),
       },
       {
-        path: 'admin',
+        path: 'login',
         element: (
           <Suspense fallback={<LinearProgress />}>
-            <AdminLayout />
+            <LoginPage />
           </Suspense>
         ),
+      },
+      {
+        path: 'admin',
+        element: <ProtectedRoute />,
         children: [
           {
-            index: true,
-            element: <div>Dashboard</div>,
-          },
-          {
-            path: 'questions',
+            element: (
+              <Suspense fallback={<LinearProgress />}>
+                <AdminLayout />
+              </Suspense>
+            ),
             children: [
+              { index: true, element: <div>Dashboard</div> },
               {
-                index: true,
-                element: <QuestionListPage />
+                path: 'questions',
+                children: [
+                  { index: true, element: <QuestionListPage /> },
+                  { path: 'add', element: <AddQuestionPage /> },
+                  { path: 'edit/:id', element: <EditQuestionPage />},
+                  { path: 'import', element: <ImportExcelPage /> }
+                ],
               },
-              {
-                path: 'add',
-                element: <AddQuestionPage />        
-              },
-              {
-                path: 'edit/:id',
-                element: <EditQuestionPage />               
-              },
-              {
-                path: 'import',
-                element: <ImportExcelPage />
-              }
-            ],
-          },
-          {
-            path: 'documents',
-            element: <DocumentLibraryPage />
-          },
+              { path: 'documents', element: <DocumentLibraryPage /> },
+            ], 
+          }, 
         ],
       },
     ],

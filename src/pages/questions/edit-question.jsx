@@ -38,15 +38,22 @@ export default function AddQuestionPage() {
 
     const { handleSubmit, control, formState: { isSubmitting } } = methods;
 
+    const cleanText = (text) =>
+        (text || '')
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line !== '')
+          .join('\n');
+
     const onSubmit = (data) => {
-        console.log('Giá trị form:', data);
+        // console.log('Giá trị form:', data);
 
         // Call API to update question
         const updatedQuestion = {
             id: id, // Sử dụng ID từ URL
-            question: data.question.trim(),
-            answer: data.answer.trim(),
-            has_answer: data.answer.trim() !== ''
+            question: cleanText(data.question),
+            answer: cleanText(data.answer),
+            has_answer: cleanText(data.answer) !== '',
         };
 
         questionApi.update(updatedQuestion)
@@ -100,7 +107,8 @@ export default function AddQuestionPage() {
                         fullWidth
                         label="Câu trả lời"
                         multiline
-                        rows={5}
+                        minRows={2}
+                        maxRows={15}
                         error={!!error}
                         helperText={error?.message}
                     />
