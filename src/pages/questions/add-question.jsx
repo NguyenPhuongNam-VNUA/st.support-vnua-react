@@ -28,15 +28,24 @@ export default function AddQuestionPage() {
 
   const { handleSubmit, control, formState: { isSubmitting } } = methods;
 
+  const cleanText = (text) =>
+    (text || '')
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line !== '')
+      .join('\n');
+  
   const onSubmit = (data) => {
     console.log('Giá trị form:', data);
 
     // Call API to add question
     const newQuestion = {
-      question: data.question.trim(),
-      answer: data.answer.trim(),
-      has_answer: data.answer.trim() !== ''
+      question: cleanText(data.question),
+      answer: cleanText(data.answer),
+      has_answer: cleanText(data.answer) !== '',
     };
+    console.log('Câu hỏi mới:', newQuestion);
+    
     questionApi.add(newQuestion)
         .then(response => {
             console.log('Câu hỏi đã được thêm:', response);
@@ -89,7 +98,8 @@ export default function AddQuestionPage() {
                     fullWidth
                     label="Câu hỏi"
                     multiline
-                    rows={2}
+                    minRows={2}
+                    maxRows={15}
                     error={!!error}
                     helperText={error?.message}
                   />

@@ -11,6 +11,10 @@ const axiosClientLaravel = axios.create({
 // Add a request interceptor
 axiosClientLaravel.interceptors.request.use(function (config) {
     // Do something before request is sent
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+    }
     return config;
   }, function (error) {
     // Do something with request error
@@ -25,6 +29,12 @@ axiosClientLaravel.interceptors.response.use(function (response) {
   }, function (error) {
     // Any status codes that falls outside the range of 2xx cause this function to trigger
     // Do something with response error
+    if (error.response && error.response.status === 401) {
+        // Handle unauthorized access
+        console.warn('Lỗi 401 (Unauthorized)');
+        // Optionally redirect to login page or show a message
+        // window.location.href = '/login';
+    }
     return Promise.reject(error);
   });
 
