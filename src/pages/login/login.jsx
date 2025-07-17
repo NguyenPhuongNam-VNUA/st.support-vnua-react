@@ -6,7 +6,6 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid2';
 import Divider from '@mui/material/Divider';
-import Checkbox from '@mui/material/Checkbox';
 import Typography from '@mui/material/Typography'; 
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
@@ -17,7 +16,6 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 import FlexRowAlign from '@/components/flexbox/FlexRowAlign';
-import FlexBetween from '@/components/flexbox/FlexBetween';
 import FlexBox from '@/components/flexbox/FlexBox';
 import { StyledDivider } from './styles';
 import loginApi from '@/api/login/loginApi';
@@ -109,16 +107,6 @@ export default function LoginPage({ login }) {
                     <Divider sx={{ borderColor: 'white', my: 3 }} />
                 </Fragment>
                 }
-
-                <Box my={4}>
-                    <Typography variant="body1" fontWeight={500} fontSize={20}>
-                        Một dự án nhỏ, vì sinh viên – bởi sinh viên
-                    </Typography>
-
-                    <Typography variant="body2" mt={1}>
-                        Đây là một bước khởi đầu, với mong muốn mở ra một hướng đi mới cho các hệ thống nội bộ thân thiện và thông minh hơn.
-                    </Typography>
-                </Box>
             </Box>
             </FlexRowAlign>
         </Grid>

@@ -8,6 +8,7 @@ import MultiLevelMenu from './MultiLevelMenu';
 import Link from '@/components/link';
 import Scrollbar from '@/components/scrollbar';
 import FlexBetween from '@/components/flexbox/FlexBetween';
+import FlexBox from '@/components/flexbox/FlexBox';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
@@ -66,5 +67,9 @@ const CollapseButton = memo(({
     <ArrowBackIcon />
   </IconButton>);
 const Logo = memo(() => <Link href="/">
-    <Box component="img" src={LOGO_PATH} alt="logo" width={30} />
+    <FlexBox gap={2} alignItems="center">
+      <Box component="img" src="/logo-vnua.png" alt="vnua" width={30} />
+      <Box component="img" src="/fita.png" alt="fita-vnua" width={30}/>
+      <Box component="img" src="/st.png" alt="st-team-vnua" width={40}/>
+    </FlexBox>
   </Link>);
