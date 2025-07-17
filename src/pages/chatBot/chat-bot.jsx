@@ -101,7 +101,7 @@ export default function ChatBot() {
           <FlexBox alignItems="center" gap={1.5}>
             <Avatar src="/st.png" alt="" />
             <Typography variant="body1" fontWeight={600}>
-              ST - ChatBot
+              ST-ChatBot
             </Typography>
           </FlexBox>
         </FlexBetween>
