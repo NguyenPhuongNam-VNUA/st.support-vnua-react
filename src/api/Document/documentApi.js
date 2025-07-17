@@ -14,11 +14,14 @@ const documentApi = {
         });
     },
 
+    delete(id) {
+        const url = `/documents/${id}`;
+        return axiosClientLaravel.delete(url);
+    },
+
     embed(filePath) {
-        const url = '/embed-doc'; // đường dẫn bên Python Flask API
-        return axiosClientPython.post(url, {
-            file_path: filePath
-        });
+        const url = '/embed-doc';
+        return axiosClientPython.post(url, filePath);
     }
 };
 

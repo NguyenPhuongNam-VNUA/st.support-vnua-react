@@ -19,7 +19,6 @@ import UserMsg from './UserMsg/UserMsg';
 import ChatMsg from './ChatMsg/ChatMsg';
 import { FlexBetween, FlexBox } from '@/components/flexbox';
 import aiApi from '@/api/Ai/aiApi';
-import { set } from 'react-hook-form';
 
 export default function ChatBot() {
   const [message, setMessage] = useState('');
@@ -29,8 +28,15 @@ export default function ChatBot() {
   const scrollRef = useRef(null);
   const bottomRef = useRef(null);
 
+  const cleanText = (text) =>
+    (text || '')
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line !== '')
+      .join('\n');
+
   const handleSend = async () => {
-    const userMessage = message.trim();
+    const userMessage = cleanText(message);
     if (!userMessage) return;
 
     setMessages((prev) => [
@@ -95,12 +101,9 @@ export default function ChatBot() {
           <FlexBox alignItems="center" gap={1.5}>
             <Avatar src="/st.png" alt="" />
             <Typography variant="body1" fontWeight={600}>
-              ST ChatBot hỗ trợ sinh viên
+              ST - ChatBot
             </Typography>
           </FlexBox>
-          <Button variant="contained" startIcon={<AddCircleIcon />} onClick={() => setMessages([])}>
-            Hội thoại mới
-          </Button>
         </FlexBetween>
 
         <Divider />
@@ -173,29 +176,37 @@ export default function ChatBot() {
 
         {/* Input */}
         <Box px={3} py={2} borderTop="1px solid #e0e0e0">
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Nhập câu hỏi..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            InputProps={{
-              sx: { borderRadius: 2 },
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton onClick={handleSend} disabled={!message.trim()}>
-                    <SendIcon />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
+          <FlexBetween>
+            <IconButton onClick={() => setMessages([])}>
+              <AddCircleIcon variant="contained" color='primary' />
+            </IconButton>
+            <TextField
+              fullWidth
+              multiline
+              minRows={1}
+              maxRows={3}
+              variant="outlined"
+              placeholder="Nhập câu hỏi..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              InputProps={{
+                sx: { borderRadius: 2 },
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={handleSend} disabled={!message.trim()}>
+                      <SendIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </FlexBetween>
         </Box>
       </Card>
     </Box>
