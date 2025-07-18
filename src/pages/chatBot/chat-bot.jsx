@@ -10,15 +10,15 @@ import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
-import Button from '@mui/material/Button';
 
 import SendIcon from '@mui/icons-material/Send';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
+import BorderColorIcon from '@mui/icons-material/BorderColor';
 
 import UserMsg from './UserMsg/UserMsg';
 import ChatMsg from './ChatMsg/ChatMsg';
 import { FlexBetween, FlexBox } from '@/components/flexbox';
 import aiApi from '@/api/Ai/aiApi';
+import { Tooltip } from '@mui/material';
 
 export default function ChatBot() {
   const [message, setMessage] = useState('');
@@ -177,9 +177,11 @@ export default function ChatBot() {
         {/* Input */}
         <Box px={3} py={2} borderTop="1px solid #e0e0e0">
           <FlexBetween>
+            <Tooltip title="Mở hội thoại mới" placement="top">
             <IconButton onClick={() => setMessages([])}>
-              <AddCircleIcon variant="contained" color='primary' />
+              <BorderColorIcon variant="contained" color='primary' />
             </IconButton>
+            </Tooltip>
             <TextField
               fullWidth
               multiline
