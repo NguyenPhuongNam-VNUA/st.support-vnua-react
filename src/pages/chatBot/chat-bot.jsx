@@ -178,7 +178,7 @@ export default function ChatBot() {
         <Box px={3} py={2} borderTop="1px solid #e0e0e0">
           <FlexBetween>
             <Tooltip title="Mở hội thoại mới" placement="top">
-            <IconButton onClick={() => setMessages([])}>
+            <IconButton onClick={() => setMessages([])} sx={{ marginRight: 2, marginLeft: -1 }}>
               <BorderColorIcon variant="contained" color='primary' />
             </IconButton>
             </Tooltip>
