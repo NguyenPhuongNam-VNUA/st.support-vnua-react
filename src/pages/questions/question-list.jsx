@@ -1,9 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import {
   Card, Box, TableContainer, Table, TableHead, TableBody,
   TableRow, TableCell, Checkbox, Typography, Button, Tabs, Tab,
-  TextField, styled, Menu, MenuItem, IconButton, TablePagination
+  TextField, styled, Menu, MenuItem, IconButton, TablePagination,
+  Tooltip
 } from '@mui/material';
 
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -11,6 +14,7 @@ import Search from '@mui/icons-material/Search';
 import Add from '@mui/icons-material/Add';
 import QuizIcon from '@mui/icons-material/Quiz';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 
 import questionApi from '@/api/Question/questionApi';
 import FlexBetween from '@/components/flexbox/FlexBetween';
@@ -49,13 +53,22 @@ export default function QuestionListPage() {
   const [questionToDelete, setQuestionToDelete] = useState(null);
   const [open, setOpen] = useState(false); //open Alert
 
+  const fetchQuestions = async () => {
+    try {
+      const response = await questionApi.getAll();
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách câu hỏi:', error);
+      return [];
+    }
+  };
   // Call API to fetch questions
   useEffect(() => {
-    const fetchAnswers = async () => {
-      const questions = await questionApi.getAll();
-      setQuestions(questions.data);
+    const loadQuestions = async () => {
+      const data = await fetchQuestions();
+      setQuestions(data);
     };
-    fetchAnswers();
+    loadQuestions();
   }, []);
 
   const handleMenuOpen = (event, id) => {
@@ -139,6 +152,27 @@ export default function QuestionListPage() {
     setPage(0);
   };
 
+  const handleExportExcel = async () => {
+      const data = await fetchQuestions();
+      const unansweredQuestions = data.filter(q => !q.has_answer);
+
+      // console.log('unansweredQuestions:', unansweredQuestions); 
+
+      const exportData = unansweredQuestions.map((q, index) => ({
+        STT: index + 1,
+        'Nội dung câu hỏi': q.question || '',
+        'Trả lời': q.answer || '',
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Danh sách câu hỏi chưa trả lời');
+
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+      saveAs(blob, 'danh_sach_cau_hoi_chua_tra_loi.xlsx');
+    };
+
   return (
     <>
     {open && (
@@ -172,17 +206,31 @@ export default function QuestionListPage() {
             onChange={(e) => setSearchText(e.target.value)}
             InputProps={{ startAdornment: <Search sx={{ mr: 1 }} /> }}
           />
-          {selectedIds.length > 0 && (
-            <Button
-              variant="outlined"
-              color="error"
-              size="small"
-              startIcon={<DeleteIcon />}
-              onClick={handleDeleteSelected}
-            >
-              Xóa ({selectedIds.length})
-            </Button>
-          )}
+          <div>
+            <Tooltip title="Xuất danh sách câu hỏi chưa trả lời ra file Excel" arrow>
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                sx={{ mr: 1 }}
+                startIcon={<FileDownloadIcon />}
+                onClick={ handleExportExcel }
+              >
+                Xuất Excel
+              </Button>
+            </Tooltip>
+            {selectedIds.length > 0 && (
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                startIcon={<DeleteIcon />}
+                onClick={handleDeleteSelected}
+              >
+                Xóa ({selectedIds.length})
+              </Button>
+            )}  
+          </div>
         </Box>
 
         <TableContainer sx={{ px: 2 }}>
