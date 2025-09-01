@@ -16,6 +16,7 @@
     "@hookform/resolvers": "^5.1.1",
     "@mui/icons-material": "^6.4.6",
     "@mui/material": "^6.4.6",
+    "@mui/x-charts": "^8.10.2",
     "@mui/x-tree-view": "^7.26.0",
     "axios": "^1.10.0",
     "dayjs": "^1.11.13",
@@ -27,6 +28,7 @@
     "react-pdf": "^9.2.1",
     "react-router-dom": "^7.6.2",
     "simplebar-react": "^3.3.0",
+    "use-debounce": "^10.0.5",
     "xlsx": "^0.18.5",
     "yup": "^1.6.1"
   },

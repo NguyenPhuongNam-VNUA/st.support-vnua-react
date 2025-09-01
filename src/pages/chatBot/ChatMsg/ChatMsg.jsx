@@ -5,11 +5,11 @@ import { Text } from './styles';
 
 export default function ChatMsg({ message }) {
   return <Box maxWidth={{
-    md: '60%',
+    md: '100%',
     sm: '70%',
     xs: '80%'
   }}>
-      <Typography
+      {/* <Typography
         variant="body2"
         sx={{
           whiteSpace: 'pre-wrap',
@@ -21,6 +21,7 @@ export default function ChatMsg({ message }) {
         }}
       >
         {message}
-      </Typography>
+      </Typography> */}
+      <Text> {message}</Text>
     </Box>;
 }
