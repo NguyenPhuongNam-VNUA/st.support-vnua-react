@@ -6,7 +6,7 @@ import {
   Card, Box, TableContainer, Table, TableHead, TableBody,
   TableRow, TableCell, Checkbox, Typography, Button, Tabs, Tab,
   TextField, styled, Menu, MenuItem, IconButton, TablePagination,
-  Tooltip
+  Tooltip, Link, CircularProgress
 } from '@mui/material';
 
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -52,6 +52,7 @@ export default function QuestionListPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState(null);
   const [open, setOpen] = useState(false); //open Alert
+  const [loading, setLoading] = useState(true);
 
   const fetchQuestions = async () => {
     try {
@@ -65,8 +66,10 @@ export default function QuestionListPage() {
   // Call API to fetch questions
   useEffect(() => {
     const loadQuestions = async () => {
+      setLoading(true);
       const data = await fetchQuestions();
       setQuestions(data);
+      setLoading(false);
     };
     loadQuestions();
   }, []);
@@ -207,7 +210,7 @@ export default function QuestionListPage() {
             InputProps={{ startAdornment: <Search sx={{ mr: 1 }} /> }}
           />
           <div>
-            <Tooltip title="Xuất danh sách câu hỏi chưa trả lời ra file Excel" arrow>
+            {/* <Tooltip title="Xuất danh sách câu hỏi chưa trả lời ra file Excel" arrow>
               <Button
                 variant="contained"
                 color="success"
@@ -218,7 +221,7 @@ export default function QuestionListPage() {
               >
                 Xuất Excel
               </Button>
-            </Tooltip>
+            </Tooltip> */}
             {selectedIds.length > 0 && (
               <Button
                 variant="outlined"
@@ -234,6 +237,11 @@ export default function QuestionListPage() {
         </Box>
 
         <TableContainer sx={{ px: 2 }}>
+          {loading ? (
+            <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
+              <CircularProgress />
+            </Box>
+          ): (
           <Table >
             <TableHead>
               <TableRow>
@@ -278,7 +286,15 @@ export default function QuestionListPage() {
                       />
                     </TableCell>
                     <TableCell align="center">{page * rowsPerPage + index + 1}</TableCell>
-                    <TableCell>{q.question}</TableCell>
+                    <TableCell> 
+                      <Link
+                        href={`/admin/questions/edit/${q.id}`}
+                        underline="none"
+                        color="info.main"
+                      >
+                        {q.question}
+                      </Link>
+                    </TableCell>
                     <TableCell sx={{ maxWidth: 400 }}>
                       <Typography
                         variant="body2"
@@ -331,6 +347,7 @@ export default function QuestionListPage() {
               )}
             </TableBody>
           </Table>
+          )}
         </TableContainer>
 
         <Box px={2} pb={2} display="flex" justifyContent="flex-end">

@@ -38,16 +38,23 @@ export default function ChatBot() {
   const handleSend = async () => {
     const userMessage = cleanText(message);
     if (!userMessage) return;
-
-    setMessages((prev) => [
-      ...prev,
-      { role: 'user', text: userMessage },
-      { role: 'assistant', text: 'Đang xử lý...' },
-    ]);
     setMessage('');
 
+    const updatedMessages = [
+      ...messages, 
+      { role: 'user', text: userMessage },
+      { role: 'assistant', text: 'Đang xử lý...' }
+    ];
+
+    setMessages(updatedMessages);
+
     try {
-      const response = await aiApi.askAi({ question: userMessage, messages });
+      // Lọc bỏ "Đang xử lý..."
+      const filteredMessages = updatedMessages.filter(
+        (msg) => !(msg.role === 'assistant' && msg.text === 'Đang xử lý...')
+      );
+      
+      const response = await aiApi.askAi({ question: userMessage, messages: filteredMessages });
       setMessages((prev) => [
         ...prev.slice(0, -1),
         {

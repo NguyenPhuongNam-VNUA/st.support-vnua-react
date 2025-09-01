@@ -32,14 +32,14 @@ export const navigations = [
       }
     ]
   },
-  {
-    name: 'Tài liệu quy chế, quy định',
-    icon: duotone.Folder,
-    children: [
-      {
-        name: 'Danh sách tài liệu',
-        path: '/admin/documents/'
-      },
-    ]
-  }
+  // {
+  //   name: 'Tài liệu quy chế, quy định',
+  //   icon: duotone.Folder,
+  //   children: [
+  //     {
+  //       name: 'Danh sách tài liệu',
+  //       path: '/admin/documents/'
+  //     },
+  //   ]
+  // }
 ];

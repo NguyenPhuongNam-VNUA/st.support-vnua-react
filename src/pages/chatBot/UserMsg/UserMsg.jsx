@@ -7,7 +7,7 @@ export default function UserMsg({ message }) {
     md: '60%',
     sm: '70%',
     xs: '80%'
-  }}>
+  }}> 
       <Text> { message } </Text>
     </Box>;
 }
