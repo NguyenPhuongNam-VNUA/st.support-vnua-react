@@ -56,7 +56,7 @@ export default function Dashboard() {
     setEmbedding(true);
     try {
       await questionApi.embedMany(answerNoEmbedData);
-      alert(`Cập nhật embedding thành công!`);
+      alert(`Cập nhật embedding ${answerNoEmbedData.length} câu hỏi thành công!`);
   
       await fetchQuestions();
     } catch (err) {
