@@ -55,11 +55,17 @@ export default function ChatBot() {
       );
       
       const response = await aiApi.askAi({ question: userMessage, messages: filteredMessages });
+
+        // Format response text để hiển thị đẹp hơn
+      const formattedText = (response.answer || 'Không có phản hồi từ hệ thống.')
+        .trim()
+        .replace(/\n{3,}/g, '\n\n'); // Giới hạn tối đa 2 dòng trống liên tiếp
+
       setMessages((prev) => [
         ...prev.slice(0, -1),
         {
           role: 'assistant',
-          text: response.answer || 'Không có phản hồi từ hệ thống.',
+          text: formattedText,
         },
       ]);
     } catch (err) {
