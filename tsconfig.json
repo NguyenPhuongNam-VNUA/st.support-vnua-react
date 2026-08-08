@@ -20,8 +20,6 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@/theme": ["./theme"],
-      "@/theme/*": ["./theme/*"],
       "@/api": ["./app/api"],
       "@/api/*": ["./app/api/*"],
       "@/components": ["./components"],

@@ -1,6 +1,8 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
+  "/page": "app/page.js",
+  "/(dashboard)/admin/questions/page": "app/(dashboard)/admin/questions/page.js",
   "/(dashboard)/chatbot/page": "app/(dashboard)/chatbot/page.js",
-  "/(dashboard)/admin/dashboard/page": "app/(dashboard)/admin/dashboard/page.js",
-  "/(dashboard)/login/page": "app/(dashboard)/login/page.js"
+  "/(dashboard)/login/page": "app/(dashboard)/login/page.js",
+  "/(dashboard)/admin/documents/page": "app/(dashboard)/admin/documents/page.js",
+  "/(dashboard)/admin/dashboard/page": "app/(dashboard)/admin/dashboard/page.js"
 }

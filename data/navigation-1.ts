@@ -1,4 +1,5 @@
-import duotone from '@/icons/duotone';
+import { LayoutDashboard, HelpCircle } from 'lucide-react';
+
 export const navigations = [
   {
     type: 'label',
@@ -6,7 +7,7 @@ export const navigations = [
   }, 
   {
     name: 'Trang điều khiển',
-    icon: duotone.PersonChalkboard,
+    icon: LayoutDashboard,
     path: '/admin',
   }, 
   {
@@ -15,7 +16,7 @@ export const navigations = [
   }, 
   {
     name: 'Câu hỏi thường gặp',
-    icon: duotone.FileCircleQuestion,
+    icon: HelpCircle,
     children: [
       {
         name: 'Danh sách câu hỏi',

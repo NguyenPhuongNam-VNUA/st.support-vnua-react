@@ -25,12 +25,7 @@ import {
   Grid,
   Badge,
 } from "@mui/material";
-import {
-  QuestionAnswer as QuestionAnswerIcon,
-  Schedule as ScheduleIcon,
-  Search as SearchIcon,
-  FilterList as FilterListIcon,
-} from "@mui/icons-material";
+import { MessageSquare, Clock, Search, Filter } from 'lucide-react';
 import { styled, alpha } from "@mui/material/styles";
 import conversationApi from "@/api/chatbot/conversationApi";
 
@@ -183,7 +178,7 @@ export default function ConversationCard() {
         title={
           <Box display="flex" alignItems="center" justifyContent="space-between">
             <Box display="flex" alignItems="center" gap={2}>
-              <QuestionAnswerIcon color="primary" sx={{ fontSize: 28 }} />
+              <MessageSquare className="w-7 h-7 text-primary-600 text-indigo-600" />
               <Box>
                 <Typography variant="h5" fontWeight={700} color="primary">
                   Nhật ký hội thoại Chatbot
@@ -266,7 +261,7 @@ export default function ConversationCard() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon color="action" />
+                  <Search className="w-5 h-5 text-gray-400" />
                 </InputAdornment>
               ),
             }}
@@ -280,7 +275,7 @@ export default function ConversationCard() {
               onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
               label="Trạng thái"
               size="small"
-              startAdornment={<FilterListIcon sx={{ mr: 1, color: 'action.active' }} />}
+              startAdornment={<Filter className="w-4 h-4 mr-2 text-gray-500" />}
             >
               <MenuItem value="">Tất cả</MenuItem>
               <MenuItem value="answered">Đã trả lời</MenuItem>
@@ -391,7 +386,7 @@ export default function ConversationCard() {
                       
                       <TableCell align="center">
                         <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
-                          <ScheduleIcon sx={{ fontSize: 14, color: "text.disabled" }} />
+                          <Clock className="w-3.5 h-3.5 text-gray-400" />
                           <Typography variant="caption" color="text.secondary">
                             {row.created_at}
                           </Typography>

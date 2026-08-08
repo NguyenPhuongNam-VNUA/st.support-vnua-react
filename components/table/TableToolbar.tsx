@@ -3,7 +3,7 @@ import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography'; // CUSTOM ICON COMPONENT
 
-import Delete from '@/icons/Delete'; // ==============================================================
+import { Trash2 } from 'lucide-react'; // ==============================================================
 
 // ==============================================================
 export default function TableToolbar({
@@ -22,7 +22,7 @@ export default function TableToolbar({
 
       <Tooltip title="Delete">
         <IconButton onClick={handleDeleteRows} color="error">
-          <Delete />
+          <Trash2 className="w-5 h-5" />
         </IconButton>
       </Tooltip>
     </Toolbar>;

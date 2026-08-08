@@ -10,8 +10,7 @@ import {
   Box,
   Button,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { ChevronDown, Trash2 } from 'lucide-react';
 
 import ConfirmDialog from '@/components/DialogConfirm';
   
@@ -49,7 +48,7 @@ function NewQuestionsAccordion({ newQuestions = [], setNewQuestions, onSave }: a
 
       {newQuestions.map((q: any, index: number) => (
         <Accordion key={index}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ color: '#333',fontWeight: 'bold', backgroundColor: '#e0e0e0',}}>
+          <AccordionSummary expandIcon={<ChevronDown className="w-5 h-5" />} sx={{ color: '#333',fontWeight: 'bold', backgroundColor: '#e0e0e0',}}>
             <Typography sx={{ flexGrow: 1 }}>
               {index + 1}. {q.question || '[Chưa nhập câu hỏi]'}
             </Typography>
@@ -83,7 +82,7 @@ function NewQuestionsAccordion({ newQuestions = [], setNewQuestions, onSave }: a
             <Box display="flex" alignItems="flex-end" justifyContent="space-between" mt={1}>
               <div style={{ flexGrow: 1 }}></div>
               <IconButton color="error" onClick={() => handleDelete(index)}>
-                <DeleteIcon />
+                <Trash2 className="w-5 h-5" />
               </IconButton>
             </Box>
           </AccordionDetails>

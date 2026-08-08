@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Slider, Typography, Box, Tooltip } from '@mui/material';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { Info } from 'lucide-react';
 
 export default function EmbedDialog({ open, onClose, onConfirm, defaultValues }: any) {
     const [chunkSize, setChunkSize] = useState(defaultValues?.chunkSize || 1000);
@@ -30,7 +30,7 @@ export default function EmbedDialog({ open, onClose, onConfirm, defaultValues }:
             <Typography gutterBottom>
                 Độ chồng lặp giữa các đoạn (chunk overlap): {chunkOverlap} ký tự
                 <Tooltip title="Giúp giữ ngữ cảnh khi chia đoạn, ví dụ đoạn sau sẽ chứa lại phần cuối đoạn trước">
-                    <InfoOutlinedIcon fontSize="small" sx={{ ml: 1 }} color="action" />
+                    <Info className="w-4 h-4 ml-1 inline text-gray-500" />
                 </Tooltip>
             </Typography>
             <Slider

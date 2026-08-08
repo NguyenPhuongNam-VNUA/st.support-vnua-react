@@ -9,11 +9,7 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 
-import UploadIcon from '@mui/icons-material/CloudUpload';
-import PreviewIcon from '@mui/icons-material/Visibility';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import DeleteForeverRoundedIcon from '@mui/icons-material/DeleteForeverRounded';
-import DocumentScannerRoundedIcon from '@mui/icons-material/DocumentScannerRounded';
+import { Upload, Eye, FileText, Trash2, Cpu } from 'lucide-react';
 
 import ConfirmDialog from '@/components/DialogConfirm';
 import documentApi from '@/api/admin/documentApi';
@@ -101,7 +97,7 @@ export default function DocumentLibraryPage() {
         <Box p={3}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
             <Typography variant="h6">Thư viện tài liệu PDF</Typography>
-            <Button variant="contained" startIcon={<UploadIcon />} onClick={() => setOpenDialog(true)}>
+            <Button variant="contained" startIcon={<Upload className="w-5 h-5" />} onClick={() => setOpenDialog(true)}>
             Tải lên tài liệu
             </Button>
         </Box>
@@ -111,7 +107,7 @@ export default function DocumentLibraryPage() {
                 <Grid key={doc.id} size={{ xs: 12, sm: 6, md: 4 }}>
                     <Card sx={{ p: 2 }}>
                     <Box display="flex" gap={2} alignItems="center">
-                        <PictureAsPdfIcon color="error" fontSize="large" />
+                        <FileText className="w-10 h-10 text-red-500 flex-shrink-0" />
                         <Box>
                             <Typography fontWeight={600}>{doc.title}</Typography>
                             <Typography variant="body2" color="text.secondary">{doc.description}</Typography>
@@ -137,13 +133,13 @@ export default function DocumentLibraryPage() {
                     </Box>
                     <Divider sx={{ my: 1 }} />
                     <Box display="flex" justifyContent="space-between" mt={1} gap={3}>
-                        <Button variant="outlined" onClick={() => handlePreview(doc.file_path) } size="small" startIcon={<PreviewIcon />}>Xem trước</Button>
+                        <Button variant="outlined" onClick={() => handlePreview(doc.file_path) } size="small" startIcon={<Eye className="w-4 h-4" />}>Xem trước</Button>
                         <div>
                             { doc.is_embed ? <></> :
                                 (
                                     <Tooltip title="Embed tài liệu vào hệ thống">
                                     <IconButton size='small' onClick={() => openEmbedDialog(doc.file_path)}>
-                                        <DocumentScannerRoundedIcon color="primary" />
+                                        <Cpu className="w-5 h-5 text-indigo-600" />
                                     </IconButton>
                                 </Tooltip>
                                 ) 
@@ -157,7 +153,7 @@ export default function DocumentLibraryPage() {
                                         setDeleteConfirmOpen(true);
                                     }}
                                 >
-                                    <DeleteForeverRoundedIcon color="error" />
+                                    <Trash2 className="w-5 h-5 text-red-500" />
                                 </IconButton>
                             </Tooltip>
                         </div>

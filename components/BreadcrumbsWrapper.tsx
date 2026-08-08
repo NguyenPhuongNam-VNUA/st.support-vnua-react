@@ -3,10 +3,10 @@
 import { Breadcrumbs, Typography, Link as MuiLink } from '@mui/material';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import HomeIcon from '@mui/icons-material/Home';
+import { Home } from 'lucide-react';
 
 const labelMap = {
-    admin: <HomeIcon fontSize="small" />,
+    admin: <Home className="w-4 h-4 inline-block" />,
     add: 'Thêm câu hỏi',
     edit: 'Chỉnh sửa câu hỏi',
     questions: 'Danh sách câu hỏi',

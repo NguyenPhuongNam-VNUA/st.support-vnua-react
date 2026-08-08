@@ -14,8 +14,7 @@ import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 import Alert from '@mui/material/Alert';
 
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import { Eye, EyeOff } from 'lucide-react';
 
 import FlexRowAlign from '@/components/flexbox/FlexRowAlign';
 import FlexBox from '@/components/flexbox/FlexBox';
@@ -159,7 +158,7 @@ export default function LoginPage() {
                                                 disableRipple disableTouchRipple 
                                                 onClick={() => setShowPassword(!showPassword)}
                                             >
-                                                {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                                                {showPassword ? <EyeOff className="w-4 h-4 text-gray-500" /> : <Eye className="w-4 h-4 text-gray-500" />}
                                             </ButtonBase>
                                         }
                                     }} 

@@ -14,8 +14,7 @@ import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import Tooltip from '@mui/material/Tooltip';
 
-import SendIcon from '@mui/icons-material/Send';
-import BorderColorIcon from '@mui/icons-material/BorderColor';
+import { Send, SquarePen } from 'lucide-react';
 
 import UserMsg from '@/components/chatbot/UserMsg/UserMsg';
 import ChatMsg from '@/components/chatbot/ChatMsg/ChatMsg';
@@ -189,7 +188,7 @@ export default function ChatBotPage() {
           <FlexBetween>
             <Tooltip title="Mở hội thoại mới" placement="top">
               <IconButton onClick={() => setMessages([])} sx={{ marginRight: 2, marginLeft: -1 }}>
-                <BorderColorIcon color='primary' />
+                <SquarePen className="w-5 h-5 text-indigo-600" />
               </IconButton>
             </Tooltip>
             <TextField
@@ -212,7 +211,7 @@ export default function ChatBotPage() {
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton onClick={handleSend} disabled={!message.trim()}>
-                      <SendIcon />
+                      <Send className="w-5 h-5 text-indigo-600" />
                     </IconButton>
                   </InputAdornment>
                 ),
