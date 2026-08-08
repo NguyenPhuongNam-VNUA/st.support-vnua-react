@@ -1,0 +1,46 @@
+import { useState } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+import Box from '@mui/material/Box';
+import { 
+    Dialog, DialogTitle, DialogContent, DialogActions,
+    Button   
+} from "@mui/material";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+const PDFPreview = ({ fileUrl }: { fileUrl: string }) => {
+    const [numPages, setNumPages] = useState<number | null>(null);
+
+    const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => setNumPages(numPages);
+
+    return (
+        <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
+            <Document file={fileUrl} onLoadSuccess={onDocumentLoadSuccess}>
+                {Array.from({ length: numPages || 0 }, (_, i) => (
+                    <Page
+                        key={i}
+                        pageNumber={i + 1}
+                        width={600}
+                    />
+                ))}
+            </Document>
+        </Box>
+    );
+};
+
+export default function DialogPreview({ open, onClose, filePath }: any) {
+    return(
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+            <DialogTitle>Xem trước tài liệu PDF</DialogTitle>
+            <DialogContent>
+                <PDFPreview fileUrl={filePath} />
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={ onClose }>Đóng</Button>
+            </DialogActions>
+        </Dialog>
+    );
+}
