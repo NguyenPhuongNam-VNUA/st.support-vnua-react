@@ -14,6 +14,16 @@
   font-family: var(--font-apple) !important;
 }
 
+h1, h2, h3, h4, h5, h6,
+.MuiTypography-h1,
+.MuiTypography-h2,
+.MuiTypography-h3,
+.MuiTypography-h4,
+.MuiTypography-h5,
+.MuiTypography-h6 {
+  font-family: "Times New Roman", Times, serif !important;
+}
+
 body {
   margin: 0;
   padding: 0;

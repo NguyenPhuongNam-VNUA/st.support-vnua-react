@@ -99,22 +99,19 @@ const AppleSelect = styled(Select)(() => ({
 }));
 
 const StatusChip = ({ status }: { status: string }) => {
-  const config: Record<string, { label: string; bg: string; text: string; border: string }> = {
-    answered: { label: "Đã trả lời", bg: "#ecfdf5", text: "#047857", border: "#a7f3d0" },
-    not_found: { label: "Không tìm thấy", bg: "#fff1f2", text: "#be123c", border: "#fecdd3" },
-    auto_generated: { label: "Tự sinh", bg: "#fffbeb", text: "#b45309", border: "#fde68a" },
-    out_of_topic: { label: "Lạc đề", bg: "#f1f5f9", text: "#475569", border: "#cbd5e1" },
+  const config: Record<string, { label: string; text: string }> = {
+    answered: { label: "Đã trả lời", text: "#059669" },
+    not_found: { label: "Không tìm thấy", text: "#e11d48" },
+    auto_generated: { label: "Tự sinh", text: "#d97706" },
+    out_of_topic: { label: "Lạc đề", text: "#64748b" },
   };
 
-  const item = config[status] || { label: status, bg: "#f1f5f9", text: "#475569", border: "#cbd5e1" };
+  const item = config[status] || { label: status, text: "#64748b" };
   return (
     <span
-      className="inline-flex items-center justify-center px-3 py-1 rounded-none text-xs font-bold transition-all shadow-2xs"
+      className="text-xs font-extrabold"
       style={{
-        backgroundColor: item.bg,
         color: item.text,
-        border: `1px solid ${item.border}`,
-        minWidth: 105,
       }}
     >
       {item.label}
@@ -157,13 +154,23 @@ const MOCK_LOGS = [
   }
 ];
 
-export default function ConversationCard() {
+export default function ConversationCard({ activeFilter, noCardContainer = false }: { activeFilter?: string | null; noCardContainer?: boolean }) {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+
+  useEffect(() => {
+    if (activeFilter) {
+      if (['answered', 'not_found', 'auto_generated', 'out_of_topic'].includes(activeFilter)) {
+        setStatusFilter(activeFilter);
+      } else if (activeFilter.startsWith('slot_')) {
+        setSearchTerm(activeFilter.replace('slot_', ''));
+      }
+    }
+  }, [activeFilter]);
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -252,15 +259,13 @@ export default function ConversationCard() {
   };
 
   return (
-    <StyledCard>
+    <Box sx={noCardContainer ? {} : { backgroundColor: '#ffffff', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)' }}>
       {/* Header */}
       <CardHeader
         title={
           <Box display="flex" alignItems="center" justifyContent="space-between" py={0.5}>
-            <Box display="flex" alignItems="center" gap={2}>
-              <div className="w-11 h-11 rounded-none bg-gradient-to-tr from-[#2563eb] to-[#2563eb] text-white flex items-center justify-center shadow-md shadow-[#2563eb]/20 flex-shrink-0">
-                <MessageSquareText className="w-5 h-5 text-white" />
-              </div>
+            <Box display="flex" alignItems="center" gap={1.5}>
+              <MessageSquareText className="w-6 h-6 text-[#2563eb]" />
               <Box>
                 <Typography variant="h6" fontWeight={800} sx={{ color: '#2563eb', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                   Nhật ký hội thoại Chatbot
@@ -271,17 +276,17 @@ export default function ConversationCard() {
               </Box>
             </Box>
 
-            {/* Square Pill Badge */}
-            <div className="hidden sm:flex items-center gap-1.5 bg-[#edf4fc] px-4 py-1.5 rounded-none border border-[#d0e2f7]">
+            {/* Total Pill Badge */}
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1">
               <span className="text-xs font-bold text-slate-500">Tổng cộng:</span>
               <span className="text-sm font-extrabold text-[#2563eb]">{logs.length}</span>
             </div>
           </Box>
         }
-        sx={{ p: 3, pb: 2 }}
+        sx={{ p: noCardContainer ? 0 : 3, pb: 2 }}
       />
       
-      <CardContent sx={{ px: 3, pb: 3, pt: 0 }}>
+      <Box sx={{ px: noCardContainer ? 0 : 3, pb: noCardContainer ? 0 : 3, pt: 0 }}>
         {/* Square Stat Cards Grid */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={6} sm={3}>
@@ -408,7 +413,7 @@ export default function ConversationCard() {
                   {paginatedLogs.map((row) => (
                     <StyledTableRow key={row.id}>
                       <TableCell align="center">
-                        <span className="w-7 h-7 rounded-none bg-[#edf4fc] text-[#2563eb] font-extrabold text-xs inline-flex items-center justify-center border border-[#d0e2f7]">
+                        <span className="font-extrabold text-[#2563eb] text-sm">
                           {row.id}
                         </span>
                       </TableCell>
@@ -510,7 +515,7 @@ export default function ConversationCard() {
             />
           </>
         )}
-      </CardContent>
-    </StyledCard>
+      </Box>
+    </Box>
   );
 }

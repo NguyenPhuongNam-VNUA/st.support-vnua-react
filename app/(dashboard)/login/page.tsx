@@ -142,22 +142,22 @@ export default function LoginPage() {
       )}
 
       {/* Top Header Bar */}
-      <header className="relative z-30 pt-[50px] pl-[100px]  pb-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <header className="relative z-30 pt-6 sm:pt-[50px] px-4 sm:px-8 md:pl-[100px] pb-2 sm:pb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Image
             src="/st.png"
             alt="ST Logo"
             width={60}
             height={60}
-            className="object-contain filter drop-shadow-sm"
+            className="object-contain filter drop-shadow-sm w-11 h-11 sm:w-15 sm:h-15"
           />
           {/* Vertical Divider Line */}
-          <div className="h-11 w-[2px] bg-white/80 rounded-full mx-1" />
+          <div className="h-8 sm:h-11 w-[2px] bg-white/80 rounded-full mx-0.5 sm:mx-1" />
           <div className="flex flex-col justify-center">
-            <h2 className="text-base sm:text-lg font-extrabold text-white tracking-tight leading-tight uppercase drop-shadow-sm">
+            <h2 className="text-xs sm:text-base md:text-lg font-extrabold text-white tracking-tight leading-tight uppercase drop-shadow-sm">
               HỌC VIỆN NÔNG NGHIỆP VIỆT NAM
             </h2>
-            <p className="text-xs sm:text-sm font-bold text-white leading-tight drop-shadow-xs">
+            <p className="text-[10px] sm:text-xs md:text-sm font-bold text-white leading-tight drop-shadow-xs">
               Khoa công nghệ thông tin
             </p>
           </div>
@@ -165,10 +165,10 @@ export default function LoginPage() {
       </header>
 
       {/* Main Content Layout */}
-      <div className="relative z-30 flex-1 grid grid-cols-1 md:grid-cols-12 items-center px-4 sm:px-8 md:px-12 py-4">
+      <div className="relative z-30 flex-1 grid grid-cols-1 md:grid-cols-12 items-center px-4 sm:px-8 md:px-12 py-2 sm:py-4 gap-4 md:gap-0">
         
-        {/* Left Section (Slogan Image khau_hieu.png) */}
-        <div className="md:col-span-5 flex items-center justify-center p-4 sm:p-6 pl-[40px] md:pl-[60px]">
+        {/* Left Section (Slogan Image khau_hieu.png) - Hidden on Mobile, Visible on PC */}
+        <div className="hidden md:flex md:col-span-5 items-center justify-center p-2 sm:p-6 md:pl-[60px]">
           <Image
             src="/khau_hieu.png"
             alt="Khẩu hiệu Khoa Công nghệ Thông tin"
@@ -180,13 +180,13 @@ export default function LoginPage() {
         </div>
 
         {/* Right Section (Login Card - Perfectly Centered in Right Half) */}
-        <div className="md:col-span-7 flex items-center justify-center py-6">
-          <div className="w-full max-w-[500px] bg-white p-9 sm:p-12 rounded-2xl shadow-2xl border border-slate-100">
+        <div className="md:col-span-7 flex items-center justify-center py-4 sm:py-6">
+          <div className="w-full max-w-[500px] bg-white/95 sm:bg-white p-6 sm:p-9 md:p-12 rounded-2xl shadow-2xl border border-slate-100">
             
             {/* Header Text */}
-            <div className="mb-6">
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2">
-                <span className="text-red-600 block sm:inline">Xin chào! </span> <br></br>
+            <div className="mb-5 sm:mb-6">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight mb-2">
+                <span className="text-red-600 inline">Xin chào! </span>
                 <span className="text-[#134e8e] block sm:inline">Đăng nhập nào.</span>
               </h1>
               
@@ -366,8 +366,8 @@ export default function LoginPage() {
       </div>
 
       {/* Footer */}
-      <footer className="relative z-30 px-6 py-3 text-center text-xs text-slate-800 font-medium">
-        © 2026 Học viện Nông nghiệp Việt Nam — Khoa Công nghệ Thông tin
+      <footer className="relative z-30 px-6 py-3 text-center text-xs text-white font-medium">
+       © 2026 Software Development and Research Team — All Rights Reserved.
       </footer>
     </main>
   );

@@ -15,6 +15,7 @@ import {
   DialogTitle,
   Button
 } from '@mui/material';
+import NotificationCenter from '@/components/NotificationCenter';
 import {
   LayoutGrid,
   FileText,
@@ -22,7 +23,10 @@ import {
   LogOut,
   ChevronRight,
   Menu,
-  X
+  X,
+  MessageSquareText,
+  Sparkles,
+  Sliders,
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -41,20 +45,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           href: '/admin/dashboard',
           icon: LayoutGrid,
         },
+        {
+          label: 'Lịch sử hội thoại',
+          href: '/admin/conversations',
+          icon: MessageSquareText,
+        },
       ],
     },
     {
-      title: 'QUẢN LÝ DỮ LIỆU',
+      title: 'QUẢN LÝ AI AGENT',
       items: [
+        {
+          label: 'Quản lý câu hỏi',
+          href: '/admin/questions',
+          icon: HelpCircle,
+        },
         {
           label: 'Thư viện tài liệu PDF',
           href: '/admin/documents',
           icon: FileText,
         },
         {
-          label: 'Quản lý câu hỏi',
-          href: '/admin/questions',
-          icon: HelpCircle,
+          label: 'Huấn luyện Agent',
+          href: '/admin/training',
+          icon: Sparkles,
+        },
+        {
+          label: 'Cấu hình Agent',
+          href: '/admin/settings',
+          icon: Sliders,
         },
       ],
     },
@@ -102,6 +121,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {/* Right: Admin ST Logo with Container + Logout Button */}
           <div className="flex items-center gap-3 sm:gap-4">
+            <NotificationCenter />
             {/* Profile (Admin ST Logo in Container Frame) & Logout */}
             <div className="flex items-center gap-2 sm:gap-3 pl-3 border-l border-slate-200">
               <div className="flex items-center gap-2.5">
@@ -132,10 +152,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* BODY: SIDEBAR + MAIN CONTENT AREA */}
         <div className="flex flex-1 relative">
+          {/* Mobile Backdrop Overlay */}
+          {mobileOpen && (
+            <div
+              className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-20 md:hidden transition-opacity"
+              onClick={() => setMobileOpen(false)}
+            />
+          )}
+
           {/* LEFT SIDEBAR - Auth Branded */}
           <aside className={`
             fixed md:sticky top-16 z-30 h-[calc(100vh-4rem)] w-64 border-r border-[#edf4fc] flex flex-col justify-between transition-all duration-300 flex-shrink-0 bg-white ${
-              mobileOpen ? 'left-0' : '-left-64 md:left-0'
+              mobileOpen ? 'left-0 shadow-2xl' : '-left-64 md:left-0'
             }
           `}>
             <div className="p-4 space-y-6 overflow-y-auto flex-1">
@@ -184,7 +212,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </aside>
 
           {/* MAIN CONTENT */}
-          <main className="flex-1 p-6 md:p-8 overflow-y-auto max-w-7xl">
+          <main className="flex-1 p-3 sm:p-6 md:p-8 overflow-y-auto w-full max-w-full overflow-x-hidden">
             <BreadcrumbsWrapper />
             <div className="mt-2">
               {children}
@@ -192,58 +220,91 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </main>
         </div>
 
-        {/* LOGOUT CONFIRMATION DIALOG */}
+        {/* APPLE macOS / iOS SOFT ORGANIC LOGOUT MODAL */}
         <Dialog
           open={logoutConfirmOpen}
           onClose={() => setLogoutConfirmOpen(false)}
+          slotProps={{
+            backdrop: {
+              sx: {
+                backgroundColor: 'rgba(15, 23, 42, 0.3)',
+                backdropFilter: 'blur(10px)',
+              }
+            }
+          }}
           PaperProps={{
             sx: {
-              borderRadius: '20px',
-              p: 1,
-              minWidth: 320,
-              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+              borderRadius: '28px',
+              p: 3.5,
+              maxWidth: 380,
+              width: '92%',
+              mx: 'auto',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(24px) saturate(180%)',
+              boxShadow: '0 30px 60px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.8) inset',
+              border: '1px solid rgba(226, 232, 240, 0.8)',
+              textAlign: 'center',
             }
           }}
         >
-          <DialogTitle sx={{ fontWeight: 800, color: '#2563eb', pt: 2, pb: 1 }}>
-            Xác nhận đăng xuất
-          </DialogTitle>
-          <DialogContent>
-            <DialogContentText sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
-              Bạn có chắc chắn muốn đăng xuất khỏi hệ thống quản lý ST - Care không?
-            </DialogContentText>
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2, pt: 1, gap: 1 }}>
-            <Button 
-              onClick={() => setLogoutConfirmOpen(false)} 
-              variant="outlined" 
-              sx={{ 
-                borderRadius: '14px', 
-                textTransform: 'none', 
-                fontWeight: 700,
-                borderColor: '#cbd5e1',
-                color: '#475569',
-                '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f8fafc' }
-              }}
-            >
-              Hủy
-            </Button>
-            <Button 
-              onClick={handleConfirmLogout} 
-              variant="contained" 
-              color="error" 
-              sx={{ 
-                borderRadius: '14px', 
-                textTransform: 'none', 
-                fontWeight: 700,
-                backgroundColor: '#dc2626',
-                boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
-                '&:hover': { backgroundColor: '#b91c1c' }
-              }}
-            >
-              Đăng xuất
-            </Button>
-          </DialogActions>
+          <div className="flex flex-col items-center">
+            {/* Logout Icon Direct */}
+            <div className="mb-3.5 transition-transform hover:scale-105">
+              <Image src="/logout.png" alt="Logout Icon" width={64} height={64} className="object-contain" />
+            </div>
+
+            <DialogTitle sx={{ p: 0, mb: 1, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', fontSize: '1.2rem' }}>
+              Xác nhận đăng xuất
+            </DialogTitle>
+
+            <DialogContent sx={{ p: 0, mb: 3.5 }}>
+              <DialogContentText sx={{ fontSize: '0.875rem', color: '#64748b', fontWeight: 500, lineHeight: 1.6 }}>
+                Bạn có chắc chắn muốn rời khỏi phiên làm việc của <span className="font-extrabold text-slate-900">ST - Care</span> không?
+              </DialogContentText>
+            </DialogContent>
+
+            <DialogActions sx={{ p: 0, width: '100%', display: 'flex', gap: 1.5 }}>
+              <Button 
+                onClick={() => setLogoutConfirmOpen(false)} 
+                fullWidth
+                variant="text"
+                disableElevation
+                sx={{ 
+                  borderRadius: '14px', 
+                  py: 1.2,
+                  textTransform: 'none', 
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  backgroundColor: '#f1f5f9',
+                  color: '#475569',
+                  '&:hover': { backgroundColor: '#e2e8f0', color: '#1e293b' },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Hủy bỏ
+              </Button>
+              <Button 
+                onClick={handleConfirmLogout} 
+                fullWidth
+                variant="contained" 
+                disableElevation
+                sx={{ 
+                  borderRadius: '14px', 
+                  py: 1.2,
+                  textTransform: 'none', 
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  backgroundColor: '#ef4444',
+                  color: '#ffffff',
+                  boxShadow: '0 8px 16px -4px rgba(239, 68, 68, 0.35)',
+                  '&:hover': { backgroundColor: '#dc2626', boxShadow: '0 10px 20px -4px rgba(220, 38, 38, 0.4)' },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Đăng xuất
+              </Button>
+            </DialogActions>
+          </div>
         </Dialog>
 
       </div>
