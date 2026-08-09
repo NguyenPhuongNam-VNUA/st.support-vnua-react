@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             // Nếu là token đăng nhập local tạm thời
             if (token.startsWith('local-')) {
                 if (!user) {
-                    const defaultEmail = process.env.NEXT_PUBLIC_EMAIL_LOCAL || 'nvt500943@gmail.com';
+                    const defaultEmail = process.env.NEXT_PUBLIC_EMAIL_LOCAL || 'admin@vnua.edu.vn';
                     setUser({
                         id: 1,
                         name: 'Admin Local',

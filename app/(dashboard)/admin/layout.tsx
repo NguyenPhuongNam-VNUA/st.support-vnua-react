@@ -134,7 +134,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
                 <div className="hidden lg:flex flex-col">
                   <span className="text-xs font-extrabold text-slate-900 leading-tight">{user?.name || 'Admin Local'}</span>
-                  <span className="text-[10px] text-[#2563eb] font-semibold leading-tight">{user?.email || 'nvt500943@gmail.com'}</span>
+                  <span className="text-[10px] text-[#2563eb] font-semibold leading-tight">{user?.email || 'admin@vnua.edu.vn'}</span>
                 </div>
               </div>
 

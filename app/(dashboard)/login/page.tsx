@@ -46,7 +46,7 @@ export default function LoginPage() {
     const inputEmail = data.email.trim();
     const inputPassword = data.password.trim();
 
-    const envEmail = process.env.NEXT_PUBLIC_EMAIL_LOCAL || process.env.EMAIL_LOCAL || 'nvt500943@gmail.com';
+    const envEmail = process.env.NEXT_PUBLIC_EMAIL_LOCAL || process.env.EMAIL_LOCAL || 'admin@vnua.edu.vn';
     const envPass = process.env.NEXT_PUBLIC_PASS_LOCAL || process.env.PASS_LOCAL || '123456';
 
     // Đăng nhập tạm bằng EMAIL_LOCAL và PASS_LOCAL trong .env
@@ -210,7 +210,7 @@ export default function LoginPage() {
                       <TextField
                         {...field}
                         fullWidth
-                        placeholder="nvt500943@gmail.com"
+                        placeholder="admin@vnua.edu.vn"
                         error={!!error}
                         helperText={
                           <span className="italic font-medium text-black">
