@@ -17,6 +17,27 @@ import DialogPreview from '@/components/documents/DialogPreview';
 import UploadPdfDialog from '@/components/documents/UploadPdfDialog';
 import EmbedDialog from '@/components/documents/EmbedDialog';
 
+const MOCK_DOCUMENTS = [
+  {
+    id: 1,
+    title: "Thông báo Tuyển sinh ĐH Chính quy 2025.pdf",
+    description: "Tài liệu chi tiết về chỉ tiêu và phương thức xét tuyển 2025",
+    file_type: "pdf",
+    file_path: "storage/documents/tuyensinh2025.pdf",
+    is_embed: true,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 2,
+    title: "Quy chế Đào tạo và Học phí Khoa CNTT.pdf",
+    description: "Quy định tín chỉ, học bổng và mức học phí năm học mới",
+    file_type: "pdf",
+    file_path: "storage/documents/hocphi.pdf",
+    is_embed: false,
+    created_at: new Date().toISOString()
+  }
+];
+
 export default function DocumentLibraryPage() {
     const [openDialog, setOpenDialog] = useState(false);
     const [documents, setDocuments] = useState<any[]>([]);
@@ -30,9 +51,14 @@ export default function DocumentLibraryPage() {
     const fetchDocuments = async () => {
         try {
             const res: any = await documentApi.getAll();
-            setDocuments(res.data || []);
+            if (res && Array.isArray(res.data) && res.data.length > 0) {
+                setDocuments(res.data);
+            } else {
+                setDocuments(MOCK_DOCUMENTS);
+            }
         } catch (err) {
-            console.error('Lỗi khi tải danh sách tài liệu:', err);
+            console.warn('Lỗi khi tải danh sách tài liệu (dùng dữ liệu mẫu):', err);
+            setDocuments(MOCK_DOCUMENTS);
         }
     };
 

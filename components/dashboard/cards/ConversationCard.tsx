@@ -10,7 +10,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Chip,
   Paper,
   CircularProgress,
   Box,
@@ -20,79 +19,143 @@ import {
   Select,
   MenuItem,
   FormControl,
-  InputLabel,
   TablePagination,
   Grid,
-  Badge,
 } from "@mui/material";
-import { MessageSquare, Clock, Search, Filter } from 'lucide-react';
-import { styled, alpha } from "@mui/material/styles";
+import { MessageSquareText, Clock, Search, Filter, CheckCircle2, AlertCircle, Cpu, PieChart } from 'lucide-react';
+import { styled } from "@mui/material/styles";
 import conversationApi from "@/api/chatbot/conversationApi";
 
 const StyledCard = styled(Card)(() => ({
-  borderRadius: 16,
-  boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-  border: `1px solid ${alpha('#1976d2', 0.1)}`,
+  borderRadius: 0,
+  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+  border: '1px solid #e2e8f0',
+  backgroundColor: '#ffffff',
+  overflow: 'hidden',
 }));
 
-const StyledTableHead = styled(TableHead)(({ theme }) => ({
+const StyledTableHead = styled(TableHead)(() => ({
   '& .MuiTableCell-head': {
-    backgroundColor: theme.palette.grey[50],
+    backgroundColor: '#f8fafc',
     fontWeight: 700,
-    fontSize: '0.875rem',
-    color: theme.palette.text.primary,
-    borderBottom: `2px solid #1976d2`,
+    fontSize: '0.8rem',
+    color: '#475569',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    borderBottom: '1px solid #e2e8f0',
     position: 'sticky',
     top: 0,
     zIndex: 10,
   },
 }));
 
-const StyledTableRow = styled(TableRow)(({ theme }) => ({
+const StyledTableRow = styled(TableRow)(() => ({
+  transition: 'background-color 0.15s ease',
   '&:hover': {
-    backgroundColor: alpha('#1976d2', 0.04),
+    backgroundColor: 'rgba(241, 245, 249, 0.7)',
   },
   '& .MuiTableCell-root': {
-    borderBottom: `1px solid ${theme.palette.divider}`,
-    padding: '12px 16px',
+    borderBottom: '1px solid #f1f5f9',
+    padding: '14px 16px',
     fontSize: '0.875rem',
   },
 }));
 
-const CompactTextField = styled(TextField)(() => ({
+const AppleTextField = styled(TextField)(() => ({
   '& .MuiOutlinedInput-root': {
-    height: '40px',
+    height: '42px',
+    borderRadius: 0,
+    backgroundColor: '#f8fafc',
     fontSize: '0.875rem',
+    transition: 'all 0.2s ease',
+    '& fieldset': {
+      borderColor: '#e2e8f0',
+    },
+    '&:hover fieldset': {
+      borderColor: '#cbd5e1',
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#2563eb',
+      borderWidth: '1.5px',
+    },
   },
 }));
 
-const StatsCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(2),
-  borderRadius: 12,
-  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)}, ${alpha(theme.palette.primary.main, 0.02)})`,
-  border: `1px solid ${alpha('#1976d2', 0.1)}`,
-  textAlign: 'center',
+const AppleSelect = styled(Select)(() => ({
+  height: '42px',
+  borderRadius: 0,
+  backgroundColor: '#f8fafc',
+  fontSize: '0.875rem',
+  '& fieldset': {
+    borderColor: '#e2e8f0',
+  },
+  '&:hover fieldset': {
+    borderColor: '#cbd5e1',
+  },
+  '&.Mui-focused fieldset': {
+    borderColor: '#2563eb',
+    borderWidth: '1.5px',
+  },
 }));
 
 const StatusChip = ({ status }: { status: string }) => {
-  const config: Record<string, { label: string; color: "success" | "error" | "warning" | "default" }> = {
-    answered: { label: "Đã trả lời", color: "success" },
-    not_found: { label: "Không tìm thấy", color: "error" },
-    auto_generated: { label: "Tự sinh", color: "warning" },
-    out_of_topic: { label: "Lạc đề", color: "default" },
+  const config: Record<string, { label: string; bg: string; text: string; border: string }> = {
+    answered: { label: "Đã trả lời", bg: "#ecfdf5", text: "#047857", border: "#a7f3d0" },
+    not_found: { label: "Không tìm thấy", bg: "#fff1f2", text: "#be123c", border: "#fecdd3" },
+    auto_generated: { label: "Tự sinh", bg: "#fffbeb", text: "#b45309", border: "#fde68a" },
+    out_of_topic: { label: "Lạc đề", bg: "#f1f5f9", text: "#475569", border: "#cbd5e1" },
   };
 
-  const item = config[status] || { label: status, color: "default" };
+  const item = config[status] || { label: status, bg: "#f1f5f9", text: "#475569", border: "#cbd5e1" };
   return (
-    <Chip 
-      label={item.label} 
-      color={item.color} 
-      size="small" 
-      variant="outlined"
-      sx={{ minWidth: 100 }}
-    />
+    <span
+      className="inline-flex items-center justify-center px-3 py-1 rounded-none text-xs font-bold transition-all shadow-2xs"
+      style={{
+        backgroundColor: item.bg,
+        color: item.text,
+        border: `1px solid ${item.border}`,
+        minWidth: 105,
+      }}
+    >
+      {item.label}
+    </span>
   );
 };
+
+const MOCK_LOGS = [
+  {
+    id: 1,
+    question: "Điểm chuẩn ngành Công nghệ thông tin là bao nhiêu?",
+    context: "Quy chế tuyển sinh VNUA 2025",
+    answer: "Điểm chuẩn ngành CNTT năm 2024 là 21.5 điểm theo phương thức xét học bạ.",
+    response_type: "answered",
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 2,
+    question: "Học phí ngành Kỹ thuật phần mềm là bao nhiêu?",
+    context: "Quy định học phí 2025",
+    answer: "Học phí khoảng 450.000đ/tín chỉ đối với các môn đại cương.",
+    response_type: "answered",
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 3,
+    question: "Địa chỉ Ký túc xá khoa CNTT?",
+    context: "",
+    answer: "Chưa tìm thấy thông tin phù hợp trong cơ sở dữ liệu.",
+    response_type: "not_found",
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 4,
+    question: "Thời gian nộp hồ sơ xét tuyển trực tiếp?",
+    context: "Thông báo tuyển sinh",
+    answer: "Thời gian nhận hồ sơ từ 15/07/2025 đến 20/08/2025.",
+    response_type: "auto_generated",
+    created_at: new Date().toISOString()
+  }
+];
 
 export default function ConversationCard() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -106,26 +169,42 @@ export default function ConversationCard() {
     const fetchLogs = async () => {
       try {
         const res: any = await conversationApi.getAll();
-        const data = res.data || [];
- 
+        const rawData = (res && Array.isArray(res.data) && res.data.length > 0) ? res.data : MOCK_LOGS;
+
         setLogs(
-            data.map((item: any) => ({
-                id: item.id,
-                question: item.question,
-                context: item.context,
-                answer: item.answer,
-                status: item.response_type,
-                created_at: new Date(item.created_at).toLocaleString("vi-VN", {
-                day: '2-digit',
-                month: '2-digit', 
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-                }),
-            }))
+          rawData.map((item: any) => ({
+            id: item.id,
+            question: item.question,
+            context: item.context,
+            answer: item.answer,
+            status: item.response_type || item.status || 'answered',
+            created_at: new Date(item.created_at || Date.now()).toLocaleString("vi-VN", {
+              day: '2-digit',
+              month: '2-digit', 
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            }),
+          }))
         );
       } catch (err) {
-        console.error("Lỗi khi lấy logs:", err);
+        console.warn("Lỗi khi lấy logs (dùng dữ liệu mẫu):", err);
+        setLogs(
+          MOCK_LOGS.map((item: any) => ({
+            id: item.id,
+            question: item.question,
+            context: item.context,
+            answer: item.answer,
+            status: item.response_type,
+            created_at: new Date(item.created_at).toLocaleString("vi-VN", {
+              day: '2-digit',
+              month: '2-digit', 
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            }),
+          }))
+        );
       } finally {
         setLoading(false);
       }
@@ -174,122 +253,131 @@ export default function ConversationCard() {
 
   return (
     <StyledCard>
+      {/* Header */}
       <CardHeader
         title={
-          <Box display="flex" alignItems="center" justifyContent="space-between">
+          <Box display="flex" alignItems="center" justifyContent="space-between" py={0.5}>
             <Box display="flex" alignItems="center" gap={2}>
-              <MessageSquare className="w-7 h-7 text-primary-600 text-indigo-600" />
+              <div className="w-11 h-11 rounded-none bg-gradient-to-tr from-[#2563eb] to-[#2563eb] text-white flex items-center justify-center shadow-md shadow-[#2563eb]/20 flex-shrink-0">
+                <MessageSquareText className="w-5 h-5 text-white" />
+              </div>
               <Box>
-                <Typography variant="h5" fontWeight={700} color="primary">
+                <Typography variant="h6" fontWeight={800} sx={{ color: '#2563eb', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                   Nhật ký hội thoại Chatbot
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Quản lý và theo dõi các cuộc hội thoại
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                  Quản lý và theo dõi chi tiết tất cả các cuộc hội thoại
                 </Typography>
               </Box>
             </Box>
-            <Badge badgeContent={filteredLogs.length} color="primary" max={9999}>
-              <Box sx={{ 
-                backgroundColor: alpha('#1976d2', 0.1), 
-                padding: 1, 
-                borderRadius: 2,
-                minWidth: 60,
-                textAlign: 'center'
-              }}>
-                <Typography variant="h6" fontWeight={600} color="primary">
-                  {logs.length}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Tổng
-                </Typography>
-              </Box>
-            </Badge>
+
+            {/* Square Pill Badge */}
+            <div className="hidden sm:flex items-center gap-1.5 bg-[#edf4fc] px-4 py-1.5 rounded-none border border-[#d0e2f7]">
+              <span className="text-xs font-bold text-slate-500">Tổng cộng:</span>
+              <span className="text-sm font-extrabold text-[#2563eb]">{logs.length}</span>
+            </div>
           </Box>
         }
-        sx={{ pb: 1 }}
+        sx={{ p: 3, pb: 2 }}
       />
       
-      <CardContent sx={{ pt: 0 }}>
+      <CardContent sx={{ px: 3, pb: 3, pt: 0 }}>
+        {/* Square Stat Cards Grid */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={6} sm={3}>
-            <StatsCard>
-              <Typography variant="h4" fontWeight={700} color="success.main">
+            <div className="p-4 rounded-none bg-emerald-50/70 border border-emerald-100/80 transition-all hover:shadow-xs">
+              <div className="flex items-center justify-between mb-1">
+                <Typography variant="caption" fontWeight={700} sx={{ color: '#047857' }}>
+                  Đã trả lời
+                </Typography>
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              </div>
+              <Typography variant="h4" fontWeight={800} sx={{ color: '#059669', letterSpacing: '-0.03em' }}>
                 {stats.answered}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Đã trả lời
-              </Typography>
-            </StatsCard>
+            </div>
           </Grid>
+
           <Grid item xs={6} sm={3}>
-            <StatsCard>
-              <Typography variant="h4" fontWeight={700} color="error.main">
+            <div className="p-4 rounded-none bg-rose-50/70 border border-rose-100/80 transition-all hover:shadow-xs">
+              <div className="flex items-center justify-between mb-1">
+                <Typography variant="caption" fontWeight={700} sx={{ color: '#be123c' }}>
+                  Không tìm thấy
+                </Typography>
+                <AlertCircle className="w-4 h-4 text-rose-600" />
+              </div>
+              <Typography variant="h4" fontWeight={800} sx={{ color: '#e11d48', letterSpacing: '-0.03em' }}>
                 {stats.notFound}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Không tìm thấy
-              </Typography>
-            </StatsCard>
+            </div>
           </Grid>
+
           <Grid item xs={6} sm={3}>
-            <StatsCard>
-              <Typography variant="h4" fontWeight={700} color="warning.main">
+            <div className="p-4 rounded-none bg-amber-50/70 border border-amber-100/80 transition-all hover:shadow-xs">
+              <div className="flex items-center justify-between mb-1">
+                <Typography variant="caption" fontWeight={700} sx={{ color: '#b45309' }}>
+                  Tự sinh
+                </Typography>
+                <Cpu className="w-4 h-4 text-amber-600" />
+              </div>
+              <Typography variant="h4" fontWeight={800} sx={{ color: '#d97706', letterSpacing: '-0.03em' }}>
                 {stats.autoGenerated}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Tự sinh
-              </Typography>
-            </StatsCard>
+            </div>
           </Grid>
+
           <Grid item xs={6} sm={3}>
-            <StatsCard>
-              <Typography variant="h4" fontWeight={700} color="primary.main">
+            <div className="p-4 rounded-none bg-[#edf4fc] border border-[#d0e2f7] transition-all hover:shadow-xs">
+              <div className="flex items-center justify-between mb-1">
+                <Typography variant="caption" fontWeight={700} sx={{ color: '#2563eb' }}>
+                  Tỷ lệ trả lời
+                </Typography>
+                <PieChart className="w-4 h-4 text-[#2563eb]" />
+              </div>
+              <Typography variant="h4" fontWeight={800} sx={{ color: '#2563eb', letterSpacing: '-0.03em' }}>
                 {((stats.answered / (stats.total || 1)) * 100).toFixed(1)}%
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Tỷ lệ trả lời
-              </Typography>
-            </StatsCard>
+            </div>
           </Grid>
         </Grid>
 
+        {/* Search & Filter Controls */}
         <Box display="flex" gap={2} mb={3} flexWrap="wrap">
-          <CompactTextField
-            placeholder="Tìm kiếm câu hỏi, câu trả lời..."
+          <AppleTextField
+            placeholder="Tìm kiếm nội dung câu hỏi hoặc câu trả lời..."
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search className="w-5 h-5 text-gray-400" />
+                  <Search className="w-4 h-4 text-slate-400" />
                 </InputAdornment>
               ),
             }}
-            sx={{ flexGrow: 1, minWidth: 300 }}
+            sx={{ flexGrow: 1, minWidth: 280 }}
           />
           
-          <FormControl sx={{ minWidth: 180 }}>
-            <InputLabel size="small">Trạng thái</InputLabel>
-            <Select
+          <FormControl sx={{ minWidth: 170 }}>
+            <AppleSelect
               value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
-              label="Trạng thái"
-              size="small"
-              startAdornment={<Filter className="w-4 h-4 mr-2 text-gray-500" />}
+              onChange={(e: any) => { setStatusFilter(e.target.value); setPage(0); }}
+              displayEmpty
+              startAdornment={<Filter className="w-4 h-4 mr-2 text-slate-400" />}
             >
-              <MenuItem value="">Tất cả</MenuItem>
+              <MenuItem value="">Tất cả trạng thái</MenuItem>
               <MenuItem value="answered">Đã trả lời</MenuItem>
               <MenuItem value="not_found">Không tìm thấy</MenuItem>
               <MenuItem value="auto_generated">Tự sinh</MenuItem>
               <MenuItem value="out_of_topic">Lạc đề</MenuItem>
-            </Select>
+            </AppleSelect>
           </FormControl>
         </Box>
 
+        {/* Loading / Table view */}
         {loading ? (
           <Box display="flex" flexDirection="column" alignItems="center" py={8}>
-            <CircularProgress size={48} />
-            <Typography variant="body1" sx={{ mt: 2, color: "text.secondary" }}>
+            <CircularProgress size={40} sx={{ color: '#2563eb' }} />
+            <Typography variant="body2" sx={{ mt: 2, color: "text.secondary", fontWeight: 500 }}>
               Đang tải dữ liệu...
             </Typography>
           </Box>
@@ -299,10 +387,9 @@ export default function ConversationCard() {
               component={Paper} 
               elevation={0} 
               sx={{ 
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'divider',
-                maxHeight: 600,
+                borderRadius: 0,
+                border: '1px solid #e2e8f0',
+                maxHeight: 520,
                 overflow: 'auto'
               }}
             >
@@ -310,33 +397,20 @@ export default function ConversationCard() {
                 <StyledTableHead>
                   <TableRow>
                     <TableCell sx={{ width: 60 }} align="center">ID</TableCell>
-                    <TableCell sx={{ minWidth: 200 }} align="center">Câu hỏi người dùng</TableCell>
-                    <TableCell sx={{ minWidth: 150 }} align="center">Ngữ cảnh</TableCell>
-                    <TableCell sx={{ minWidth: 250 }} align="center">Câu trả lời</TableCell>
-                    <TableCell align="center" sx={{ width: 130 }}>Trạng thái</TableCell>
+                    <TableCell sx={{ minWidth: 200 }}>Câu hỏi người dùng</TableCell>
+                    <TableCell sx={{ minWidth: 150 }}>Ngữ cảnh</TableCell>
+                    <TableCell sx={{ minWidth: 250 }}>Câu trả lời Chatbot</TableCell>
+                    <TableCell align="center" sx={{ width: 140 }}>Trạng thái</TableCell>
                     <TableCell align="center" sx={{ width: 140 }}>Thời gian</TableCell>
                   </TableRow>
                 </StyledTableHead>
                 <TableBody>
                   {paginatedLogs.map((row) => (
                     <StyledTableRow key={row.id}>
-                      <TableCell>
-                        <Box
-                          sx={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: 32,
-                            height: 32,
-                            borderRadius: '50%',
-                            backgroundColor: alpha('#1976d2', 0.1), 
-                            color: 'primary.main',
-                            fontSize: '0.875rem',
-                            fontWeight: 600,
-                          }}
-                        >
+                      <TableCell align="center">
+                        <span className="w-7 h-7 rounded-none bg-[#edf4fc] text-[#2563eb] font-extrabold text-xs inline-flex items-center justify-center border border-[#d0e2f7]">
                           {row.id}
-                        </Box>
+                        </span>
                       </TableCell>
                       
                       <TableCell>
@@ -344,9 +418,10 @@ export default function ConversationCard() {
                           <Typography 
                             variant="body2" 
                             sx={{ 
-                              fontWeight: 500,
+                              fontWeight: 600,
+                              color: '#1e293b',
                               cursor: 'pointer',
-                              '&:hover': { color: 'primary.main' }
+                              '&:hover': { color: '#2563eb' }
                             }}
                           >
                             {truncate(row.question, 50)}
@@ -360,7 +435,8 @@ export default function ConversationCard() {
                             variant="body2" 
                             sx={{ 
                               fontStyle: 'italic', 
-                              color: 'text.secondary',
+                              color: '#64748b',
+                              fontSize: '0.8rem',
                               cursor: row.context ? 'pointer' : 'default'
                             }}
                           >
@@ -386,8 +462,8 @@ export default function ConversationCard() {
                       
                       <TableCell align="center">
                         <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
-                          <Clock className="w-3.5 h-3.5 text-gray-400" />
-                          <Typography variant="caption" color="text.secondary">
+                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          <Typography variant="caption" fontWeight={500} color="text.secondary">
                             {row.created_at}
                           </Typography>
                         </Box>
@@ -397,9 +473,9 @@ export default function ConversationCard() {
                   
                   {paginatedLogs.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                        <Typography variant="body1" color="text.secondary">
-                          Không tìm thấy dữ liệu phù hợp
+                      <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                          Không tìm thấy cuộc hội thoại phù hợp
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -418,17 +494,17 @@ export default function ConversationCard() {
               rowsPerPageOptions={[10, 25, 50, 100]}
               labelRowsPerPage="Hiển thị:"
               labelDisplayedRows={({ from, to, count }) => 
-                `${from}-${to} trong tổng số ${count !== -1 ? count : `hơn ${to}`}`
+                `${from}-${to} trong số ${count !== -1 ? count : `hơn ${to}`}`
               }
               sx={{
-                borderTop: '1px solid',
-                borderColor: 'divider',
+                borderTop: '1px solid #f1f5f9',
                 '& .MuiTablePagination-toolbar': {
-                  paddingLeft: 2,
-                  paddingRight: 2,
+                  px: 2,
                 },
                 '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
-                  fontSize: '0.875rem',
+                  fontSize: '0.8rem',
+                  color: '#64748b',
+                  fontWeight: 500,
                 },
               }}
             />

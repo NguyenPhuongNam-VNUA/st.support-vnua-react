@@ -1,6 +1,14 @@
 import React from 'react';
 import './globals.css';
 import ClientProviders from './ClientProviders';
+import { Montserrat } from 'next/font/google';
+
+const montserrat = Montserrat({
+  subsets: ['vietnamese', 'latin'],
+  weight: ['300', '400', '500', '600', '700', '800'],
+  display: 'swap',
+  variable: '--font-montserrat',
+});
 
 export const metadata = {
   title: 'ST-Support VNUA',
@@ -9,8 +17,8 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="vi" suppressHydrationWarning>
-      <body suppressHydrationWarning>
+    <html lang="vi" className={montserrat.variable} suppressHydrationWarning>
+      <body className={montserrat.className} suppressHydrationWarning>
         <ClientProviders>
           {children}
         </ClientProviders>

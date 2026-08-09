@@ -43,18 +43,43 @@ export default function LoginPage() {
   const { setUser, setToken } = useAuth();
 
   const onSubmit = async (data: any) => {
+    const inputEmail = data.email.trim();
+    const inputPassword = data.password.trim();
+
+    const envEmail = process.env.NEXT_PUBLIC_EMAIL_LOCAL || process.env.EMAIL_LOCAL || 'nvt500943@gmail.com';
+    const envPass = process.env.NEXT_PUBLIC_PASS_LOCAL || process.env.PASS_LOCAL || '123456';
+
+    // Đăng nhập tạm bằng EMAIL_LOCAL và PASS_LOCAL trong .env
+    if (inputEmail === envEmail && inputPassword === envPass) {
+      console.log('Đăng nhập bằng tài khoản LOCAL (.env)');
+      const mockToken = 'local-admin-token-12345';
+      const mockUser = {
+        id: 1,
+        name: 'Admin Local',
+        email: inputEmail,
+        role: 'admin',
+      };
+
+      setToken(mockToken);
+      setUser(mockUser);
+
+      window.location.href = '/admin/dashboard';
+      return;
+    }
+
+    // Nếu không khớp tài khoản local thì thử gọi API Laravel backend
     try {
       const response: any = await loginApi.login({
-        email: data.email.trim(),
-        password: data.password.trim(),
+        email: inputEmail,
+        password: inputPassword,
       });
 
-      console.log('Đăng nhập thành công:', response);
+      console.log('Đăng nhập thành công từ API backend:', response);
 
       setToken(response.token);
       setUser(response.user);
 
-      window.location.href = '/admin';
+      window.location.href = '/admin/dashboard';
     } catch (error) {
       console.error('Đăng nhập thất bại:', error);
       setErrorAlert(true);

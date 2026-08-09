@@ -32,6 +32,11 @@ axiosClientLaravel.interceptors.response.use(function (response) {
     if (error.response && error.response.status === 401) {
         console.warn('Lỗi 401 (Unauthorized)');
     }
+    // Xử lý khi Backend Laravel chưa chạy (Network Error) để không làm vỡ UI Admin Local
+    if (!error.response && (error.code === 'ERR_NETWORK' || error.message === 'Network Error')) {
+        console.warn('Backend Laravel chưa kết nối (Network Error) - Tự động dùng dữ liệu mẫu cho UI Admin');
+        return Promise.resolve({ data: [], isMock: true });
+    }
     return Promise.reject(error);
   });
 

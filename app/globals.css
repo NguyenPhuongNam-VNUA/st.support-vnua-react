@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --font-apple: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-apple: var(--font-montserrat), 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --vnua-green: #006837;
   --vnua-green-light: #008d4c;
   --vnua-gold: #fdb813;
@@ -10,11 +10,15 @@
   --glass-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.15), 0 18px 36px -18px rgba(0, 0, 0, 0.1);
 }
 
+* {
+  font-family: var(--font-apple) !important;
+}
+
 body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: var(--font-apple);
+  font-family: var(--font-apple) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #0f172a;

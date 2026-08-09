@@ -32,7 +32,7 @@ export default function QuestionsPage() {
   return (
     <Box p={3}>
       <Typography variant="h4" fontWeight={700} mb={3}>
-        Quản lý & Duyệt Câu hỏi
+        Duyệt câu hỏi
       </Typography>
 
       <Card sx={{ p: 3, mb: 4 }}>

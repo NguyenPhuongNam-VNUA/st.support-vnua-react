@@ -12,9 +12,14 @@ import EmbedPieChart from '@/components/dashboard/charts/EmbedPieChart';
 
 export default function AdminDashboardPage() {
   return (
-    <Box p={3}>
-      <Typography variant="h4" fontWeight={700} mb={3}>
-        Báo cáo & Thống kê Quản trị
+    <Box>
+      <Typography 
+        variant="h4" 
+        fontWeight={800} 
+        mb={3}
+        sx={{ color: '#2563eb', letterSpacing: '-0.02em' }}
+      >
+        Dashboard <span style={{ color: '#dc2626' }}>•</span>
       </Typography>
 
       <Grid container spacing={3} mb={4}>
