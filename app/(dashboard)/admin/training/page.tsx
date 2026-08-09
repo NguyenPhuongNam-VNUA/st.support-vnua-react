@@ -208,7 +208,7 @@ export default function AgentTrainingPage() {
                     CÂU HỎI ĐANG BIÊN TẬP:
                   </Typography>
                   <Typography variant="body1" fontWeight={800} color="#0f172a" mt={0.5}>
-                    "{selectedQuestion.question}"
+                    &quot;{selectedQuestion.question}&quot;
                   </Typography>
                   <span className="text-[11px] text-slate-500 font-semibold mt-1 block">
                     Số sinh viên đã hỏi bị fallback: <strong className="text-rose-600">{selectedQuestion.asked_count} lượt</strong>

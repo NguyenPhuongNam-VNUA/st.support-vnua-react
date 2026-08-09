@@ -154,7 +154,7 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
                   />
                 </Box>
                 <Typography variant="body2" color="slate.900" p={1.5} bgcolor="#ffffff" border="1px solid #e2e8f0">
-                  "{res.chunk}"
+                  &quot;{res.chunk}&quot;
                 </Typography>
               </Box>
             ))}

@@ -127,7 +127,7 @@ export default function QuestionAuditLogDialog({
                   Thực hiện bởi: <span className="text-slate-800 font-bold">{item.user}</span>
                 </Typography>
                 <Typography variant="body2" color="slate.700" sx={{ fontSize: '0.8rem', fontStyle: 'italic' }}>
-                  "{item.changes}"
+                  &quot;{item.changes}&quot;
                 </Typography>
               </Box>
             </Box>
