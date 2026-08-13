@@ -36,32 +36,32 @@ body {
 
 /* Apple Glassmorphism Utilities */
 .apple-glass {
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(24px) saturate(190%);
-  -webkit-backdrop-filter: blur(24px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  box-shadow: var(--glass-shadow);
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.08);
 }
 
 .apple-glass-card {
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(16px) saturate(160%);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.45);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .apple-glass-card:hover {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.75);
   transform: translateY(-2px);
   box-shadow: 0 12px 24px -8px rgba(0, 104, 55, 0.15);
 }
 
 .apple-glass-header {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.35);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(229, 231, 235, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .apple-glass-input {

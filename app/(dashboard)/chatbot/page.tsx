@@ -138,7 +138,7 @@ export default function ChatBotPage() {
   }, [messages, isThinking, isAtBottom]);
 
   return (
-    <main className="relative h-screen h-[100dvh] w-full flex items-center justify-center p-0 sm:p-3 md:p-4 overflow-hidden select-none font-sans">
+    <main className="relative h-screen h-[100dvh] w-full flex items-center justify-center p-0 overflow-hidden select-none font-sans">
       {/* Dynamic SEO Hidden Header */}
       <header className="sr-only">
         <h1>ST - Care | Hệ Thống Trợ Lý AI Chatbot Học Viện Nông Nghiệp Việt Nam (VNUA)</h1>
@@ -159,8 +159,9 @@ export default function ChatBotPage() {
 
       {/* Main Chat Window Panel - Apple Glassmorphism Aesthetic */}
       <Card
-        className="apple-glass relative z-10 w-full max-w-5xl h-full sm:h-full flex flex-col rounded-none sm:rounded-[32px] overflow-hidden shadow-2xl transition-all duration-300 border border-white/60"
+        className="apple-glass relative z-10 w-full max-w-5xl h-full flex flex-col rounded-none overflow-hidden transition-all duration-300 border-x border-white/40 border-y-0"
         elevation={0}
+        sx={{ backgroundColor: 'transparent !important', boxShadow: 'none' }}
       >
         {/* Apple Glass Top Navigation Bar */}
         <div className="apple-glass-header px-4 sm:px-6 py-3.5 flex items-center justify-between z-20">
@@ -348,7 +349,7 @@ export default function ChatBotPage() {
         </section>
 
         {/* Input Bar Area - Apple Glass Style */}
-        <footer className="px-4 sm:px-6 py-3.5 border-t border-slate-200/60 bg-white/40 backdrop-blur-xl">
+        <footer className="px-4 sm:px-6 py-3.5 border-t border-white/35 bg-white/25 backdrop-blur-xl">
           {/* Quick Prompt Chips (Visible during active chat) */}
           {messages.length > 0 && (
             <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-1 custom-scrollbar text-xs">
