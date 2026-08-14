@@ -295,8 +295,8 @@ export default function AgentTrainingPage() {
                   <Button
                     variant="contained"
                     startIcon={<Send className="w-4 h-4" />}
-                    onClick={handlePushToKnowledge}
-                    disabled={!answerInput.trim()}
+                    onClick={handlePublishToKnowledgeBase}
+                    disabled={isPublishing || !answerInput.trim()}
                     sx={{
                       borderRadius: '10px',
                       backgroundColor: '#0d8a4f',
@@ -309,7 +309,7 @@ export default function AgentTrainingPage() {
                       '&.Mui-disabled': { bgcolor: '#e2e8f0', color: '#94a3b8' }
                     }}
                   >
-                    Cập nhật vào Tri thức Agent
+                    {isPublishing ? 'Đang cập nhật...' : 'Cập nhật vào Tri thức Agent'}
                   </Button>
                 </Box>
               </Box>
