@@ -16,7 +16,7 @@ import {
   Chip,
   LinearProgress,
 } from '@mui/material';
-import { Search, Sparkles, FileText, CheckCircle2, Sliders } from 'lucide-react';
+import { Search, Sparkles, FileText, CheckCircle2, Sliders, X } from 'lucide-react';
 
 interface RagTestRetrievalModalProps {
   open: boolean;
@@ -60,19 +60,29 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
       onClose={onClose}
       maxWidth="md"
       fullWidth
+      slotProps={{
+        backdrop: {
+          sx: {
+            backgroundColor: 'rgba(15, 23, 42, 0.35)',
+            backdropFilter: 'blur(8px)',
+          },
+        },
+      }}
       PaperProps={{
         sx: {
-          borderRadius: 0,
-          p: 1,
-          border: '1px solid #cbd5e1',
+          borderRadius: '24px',
+          p: 1.5,
+          backgroundColor: '#ffffff',
+          boxShadow: '0 30px 60px -15px rgba(13, 138, 79, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.95) inset',
+          border: '1px solid rgba(13, 138, 79, 0.15)',
         },
       }}
     >
-      <DialogTitle sx={{ pb: 1 }}>
+      <DialogTitle sx={{ p: 2.5, pb: 1.5 }}>
         <Box display="flex" alignItems="center" gap={1.5}>
-          <Sparkles className="w-5 h-5 text-emerald-600" />
+          <Sparkles className="w-6 h-6 text-[#0d8a4f]" />
           <Box>
-            <Typography variant="h6" fontWeight={800} sx={{ color: '#2563eb', fontSize: '1.15rem', lineHeight: 1.2 }}>
+            <Typography variant="h6" fontWeight={900} sx={{ color: '#0d8a4f', fontSize: '1.25rem', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
               Thử nghiệm Semantic Retrieval RAG (Test Query)
             </Typography>
             <Typography variant="caption" color="text.secondary" fontWeight={500}>
@@ -82,22 +92,32 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
         </Box>
       </DialogTitle>
 
-      <DialogContent dividers sx={{ py: 2 }}>
-        <Box display="flex" gap={2} mb={3}>
+      <DialogContent sx={{ p: 2.5, pt: 1 }}>
+        <Box display="flex" gap={1.5} mb={3} mt={1} flexWrap={{ xs: 'wrap', sm: 'nowrap' }}>
           <TextField
             fullWidth
             size="small"
             label="Câu hỏi mẫu cần test RAG retrieval"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0 } }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '12px',
+                bgcolor: '#f8fbf9',
+                '&.Mui-focused fieldset': { borderColor: '#0d8a4f' },
+              },
+            }}
           />
 
-          <FormControl size="small" sx={{ width: 140 }}>
+          <FormControl size="small" sx={{ width: { xs: '100%', sm: 130 } }}>
             <Select
               value={topK}
               onChange={(e) => setTopK(Number(e.target.value))}
-              sx={{ borderRadius: 0 }}
+              sx={{
+                borderRadius: '12px',
+                bgcolor: '#f8fbf9',
+                '&.Mui-focused fieldset': { borderColor: '#0d8a4f' },
+              }}
             >
               <MenuItem value={1}>Top K = 1</MenuItem>
               <MenuItem value={3}>Top K = 3</MenuItem>
@@ -110,35 +130,72 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
             startIcon={<Search className="w-4 h-4" />}
             onClick={handleTestSearch}
             sx={{
-              borderRadius: 0,
-              backgroundColor: '#2563eb',
-              fontWeight: 700,
+              borderRadius: '9999px',
+              backgroundColor: '#0d8a4f',
+              color: '#ffffff',
+              fontWeight: 800,
               px: 3,
+              py: 1,
               textTransform: 'none',
               whiteSpace: 'nowrap',
               flexShrink: 0,
               minWidth: 'auto',
+              boxShadow: '0 4px 14px -2px rgba(13, 138, 79, 0.35)',
+              '&:hover': {
+                backgroundColor: '#0a7543',
+                boxShadow: '0 6px 18px -2px rgba(13, 138, 79, 0.45)',
+              },
             }}
           >
             Chạy thử
           </Button>
         </Box>
 
-        {isSearching && <LinearProgress sx={{ my: 2 }} />}
+        {isSearching && (
+          <LinearProgress
+            sx={{
+              my: 2.5,
+              height: 6,
+              borderRadius: '9999px',
+              bgcolor: 'rgba(13, 138, 79, 0.08)',
+              '& .MuiLinearProgress-bar': { bgcolor: '#0d8a4f', borderRadius: '9999px' },
+            }}
+          />
+        )}
 
         {results && (
-          <Box display="flex" flexDirection="column" gap={2}>
-            <Typography variant="subtitle2" fontWeight={800} color="slate.900">
+          <Box display="flex" flexDirection="column" gap={2} mt={1}>
+            <Typography variant="subtitle2" fontWeight={800} sx={{ color: '#0d8a4f', fontSize: '0.875rem' }}>
               Kết quả Trích xuất Context Chunks ({results.length} đoạn tương đồng nhất):
             </Typography>
 
             {results.map((res, i) => (
-              <Box key={res.id} p={2} border="1px solid #cbd5e1" bgcolor="#f8fafc">
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <span className="text-xs font-black text-white bg-[#2563eb] px-2 py-0.5">#{i + 1}</span>
-                    <span className="text-xs font-bold text-slate-800">{res.document}</span>
-                    <Chip size="small" label={res.version} sx={{ borderRadius: 0, fontSize: '0.675rem', fontWeight: 700 }} />
+              <Box
+                key={res.id}
+                p={2.5}
+                borderRadius="18px"
+                border="1px solid rgba(13, 138, 79, 0.12)"
+                bgcolor="#fbfdfc"
+                boxShadow="0 2px 8px -2px rgba(13, 138, 79, 0.04)"
+              >
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} flexWrap="wrap" gap={1}>
+                  <Box display="flex" alignItems="center" gap={1.2}>
+                    <span className="text-xs font-black text-white bg-[#0d8a4f] px-2 py-0.5 rounded-md">
+                      #{i + 1}
+                    </span>
+                    <span className="text-xs font-black text-slate-800">{res.document}</span>
+                    <Chip
+                      size="small"
+                      label={res.version}
+                      sx={{
+                        borderRadius: '9999px',
+                        fontSize: '0.675rem',
+                        fontWeight: 800,
+                        bgcolor: '#f0f8f4',
+                        color: '#0d8a4f',
+                        border: '1px solid rgba(13, 138, 79, 0.2)',
+                      }}
+                    />
                   </Box>
                   <Chip
                     size="small"
@@ -149,11 +206,19 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
                       fontSize: '0.725rem',
                       backgroundColor: '#ecfdf5',
                       color: '#047857',
-                      border: 'none',
+                      border: '1px solid #a7f3d0',
                     }}
                   />
                 </Box>
-                <Typography variant="body2" color="slate.900" p={1.5} bgcolor="#ffffff" border="1px solid #e2e8f0">
+                <Typography
+                  variant="body2"
+                  color="slate.800"
+                  p={2}
+                  borderRadius="12px"
+                  bgcolor="#ffffff"
+                  border="1px solid rgba(13, 138, 79, 0.08)"
+                  sx={{ lineHeight: 1.6, fontWeight: 500, fontSize: '0.85rem' }}
+                >
                   &quot;{res.chunk}&quot;
                 </Typography>
               </Box>
@@ -162,11 +227,26 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
         )}
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={onClose} variant="outlined" sx={{ borderRadius: 0, textTransform: 'none', fontWeight: 700 }}>
+      <DialogActions sx={{ px: 2.5, py: 2 }}>
+        <Button
+          onClick={onClose}
+          sx={{
+            borderRadius: '9999px',
+            px: 3.5,
+            py: 1,
+            textTransform: 'none',
+            fontWeight: 800,
+            color: '#475569',
+            bgcolor: '#ffffff',
+            border: '1px solid rgba(0,0,0,0.08)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            '&:hover': { bgcolor: '#f0f8f4', color: '#0d8a4f' },
+          }}
+        >
           Đóng
         </Button>
       </DialogActions>
     </Dialog>
   );
 }
+

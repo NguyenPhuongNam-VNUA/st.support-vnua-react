@@ -1,44 +1,123 @@
 @import "tailwindcss";
 
 :root {
-  --font-apple: var(--font-montserrat), 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --vnua-green: #006837;
-  --vnua-green-light: #008d4c;
-  --vnua-gold: #fdb813;
-  --glass-bg: rgba(255, 255, 255, 0.75);
-  --glass-border: rgba(255, 255, 255, 0.6);
-  --glass-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.15), 0 18px 36px -18px rgba(0, 0, 0, 0.1);
+  --font-main: var(--font-montserrat), 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-apple: var(--font-main);
+  --vnua-green: #0d8a4f;
+  --vnua-green-hover: #0a7543;
+  --vnua-emerald: #10b981;
+  --vnua-emerald-light: #34d399;
+  --vnua-mint: #6ee7b7;
+  --vnua-tint: #f0f8f4;
+  --vnua-tint-active: #e2f4eb;
+  --vnua-gold: #f59e0b;
+  --admin-bg: #f7faf8;
+  --admin-card: #ffffff;
+  --admin-border: rgba(13, 138, 79, 0.09);
+  --admin-border-subtle: rgba(13, 138, 79, 0.05);
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(255, 255, 255, 0.8);
+  --glass-shadow: 0 12px 32px -4px rgba(13, 138, 79, 0.04);
 }
 
-* {
-  font-family: var(--font-apple) !important;
-}
-
+*, *::before, *::after,
+html, body, button, input, select, textarea,
 h1, h2, h3, h4, h5, h6,
-.MuiTypography-h1,
-.MuiTypography-h2,
-.MuiTypography-h3,
-.MuiTypography-h4,
-.MuiTypography-h5,
-.MuiTypography-h6 {
-  font-family: "Times New Roman", Times, serif !important;
+p, span, a, label, table, th, td,
+[class*="Mui"], [class*="MuiTypography"], [class*="MuiButton"], [class*="MuiTable"] {
+  font-family: var(--font-main) !important;
 }
 
 body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: var(--font-apple) !important;
+  font-family: var(--font-main) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0f172a;
+  background-color: #f7faf8;
 }
 
-/* Apple Glassmorphism Utilities */
+/* Apple-Grade Box Borders & Organic Surface Utilities with Soft Light Green */
+.emerald-glass {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(13, 138, 79, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85) inset, 0 8px 24px -4px rgba(13, 138, 79, 0.04);
+}
+
+.emerald-card {
+  background: #ffffff;
+  border: 1px solid rgba(13, 138, 79, 0.09);
+  border-radius: 18px;
+  box-shadow: 
+    0 0 0 1px rgba(255, 255, 255, 0.95) inset,
+    0 1px 2px 0 rgba(0, 0, 0, 0.02),
+    0 4px 16px -2px rgba(13, 138, 79, 0.03);
+  transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.emerald-card:hover {
+  border-color: rgba(16, 185, 129, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 0 0 1px rgba(255, 255, 255, 1) inset,
+    0 2px 4px 0 rgba(0, 0, 0, 0.02),
+    0 14px 30px -6px rgba(13, 138, 79, 0.07);
+}
+
+/* Apple Inset Surface for Inputs & Subtle Containers */
+.apple-surface {
+  background: #fbfdfc;
+  border: 1px solid rgba(13, 138, 79, 0.08);
+  border-radius: 14px;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.apple-surface:hover {
+  border-color: rgba(16, 185, 129, 0.28);
+  background: #ffffff;
+}
+
+.emerald-banner {
+  background: linear-gradient(135deg, #0d8a4f 0%, #10b981 55%, #22c55e 100%);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 30px -6px rgba(13, 138, 79, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.emerald-banner::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(110, 231, 183, 0.3) 0%, rgba(13, 138, 79, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.emerald-banner::after {
+  content: '';
+  position: absolute;
+  bottom: -40%;
+  left: 20%;
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(253, 184, 19, 0.15) 0%, rgba(0, 104, 55, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
 .apple-glass {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
+
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.08);
 }
@@ -80,8 +159,8 @@ body {
 
 /* Smooth Scrollbar (Hidden) */
 .custom-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .custom-scrollbar::-webkit-scrollbar {

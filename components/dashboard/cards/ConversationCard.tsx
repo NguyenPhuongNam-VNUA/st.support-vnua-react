@@ -1,8 +1,8 @@
+'use client';
+
 import { useEffect, useState, useMemo } from "react";
 import {
-  Card,
   CardHeader,
-  CardContent,
   Typography,
   Table,
   TableBody,
@@ -20,29 +20,21 @@ import {
   MenuItem,
   FormControl,
   TablePagination,
-  Grid,
 } from "@mui/material";
+import Grid from '@mui/material/Grid2';
 import { MessageSquareText, Clock, Search, Filter, CheckCircle2, AlertCircle, Cpu, PieChart } from 'lucide-react';
 import { styled } from "@mui/material/styles";
 import conversationApi from "@/api/chatbot/conversationApi";
 
-const StyledCard = styled(Card)(() => ({
-  borderRadius: 0,
-  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
-  border: '1px solid #e2e8f0',
-  backgroundColor: '#ffffff',
-  overflow: 'hidden',
-}));
-
 const StyledTableHead = styled(TableHead)(() => ({
   '& .MuiTableCell-head': {
-    backgroundColor: '#f8fafc',
-    fontWeight: 700,
-    fontSize: '0.8rem',
-    color: '#475569',
+    backgroundColor: '#fafdfb',
+    fontWeight: 800,
+    fontSize: '0.75rem',
+    color: '#0d8a4f',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
-    borderBottom: '1px solid #e2e8f0',
+    borderBottom: '1px solid rgba(13, 138, 79, 0.08)',
     position: 'sticky',
     top: 0,
     zIndex: 10,
@@ -50,68 +42,77 @@ const StyledTableHead = styled(TableHead)(() => ({
 }));
 
 const StyledTableRow = styled(TableRow)(() => ({
-  transition: 'background-color 0.15s ease',
+  transition: 'background-color 0.18s cubic-bezier(0.2, 0.8, 0.2, 1)',
   '&:hover': {
-    backgroundColor: 'rgba(241, 245, 249, 0.7)',
+    backgroundColor: '#f0f8f4 !important',
   },
   '& .MuiTableCell-root': {
-    borderBottom: '1px solid #f1f5f9',
-    padding: '14px 16px',
+    borderBottom: '1px solid rgba(13, 138, 79, 0.04)',
+    padding: '13px 16px',
     fontSize: '0.875rem',
   },
 }));
 
-const AppleTextField = styled(TextField)(() => ({
+const GreenTextField = styled(TextField)(() => ({
   '& .MuiOutlinedInput-root': {
     height: '42px',
-    borderRadius: 0,
-    backgroundColor: '#f8fafc',
+    borderRadius: '12px',
+    backgroundColor: '#fbfdfc',
     fontSize: '0.875rem',
-    transition: 'all 0.2s ease',
+    transition: 'all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
     '& fieldset': {
-      borderColor: '#e2e8f0',
+      borderColor: 'rgba(13, 138, 79, 0.08)',
     },
     '&:hover fieldset': {
-      borderColor: '#cbd5e1',
+      borderColor: 'rgba(16, 185, 129, 0.28)',
+    },
+    '&.Mui-focused': {
+      boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.15)',
     },
     '&.Mui-focused fieldset': {
-      borderColor: '#2563eb',
+      borderColor: '#0d8a4f',
       borderWidth: '1.5px',
     },
   },
 }));
 
-const AppleSelect = styled(Select)(() => ({
+const GreenSelect = styled(Select)(() => ({
   height: '42px',
-  borderRadius: 0,
-  backgroundColor: '#f8fafc',
+  borderRadius: '12px',
+  backgroundColor: '#fbfdfc',
   fontSize: '0.875rem',
+  transition: 'all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
   '& fieldset': {
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(13, 138, 79, 0.08)',
   },
   '&:hover fieldset': {
-    borderColor: '#cbd5e1',
+    borderColor: 'rgba(16, 185, 129, 0.28)',
+  },
+  '&.Mui-focused': {
+    boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.15)',
   },
   '&.Mui-focused fieldset': {
-    borderColor: '#2563eb',
+    borderColor: '#0d8a4f',
     borderWidth: '1.5px',
   },
 }));
 
 const StatusChip = ({ status }: { status: string }) => {
-  const config: Record<string, { label: string; text: string }> = {
-    answered: { label: "Đã trả lời", text: "#059669" },
-    not_found: { label: "Không tìm thấy", text: "#e11d48" },
-    auto_generated: { label: "Tự sinh", text: "#d97706" },
-    out_of_topic: { label: "Lạc đề", text: "#64748b" },
+  const config: Record<string, { label: string; text: string; bg: string; border: string }> = {
+    answered: { label: "Đã trả lời", text: "#047857", bg: "#ecfdf5", border: "rgba(16, 185, 129, 0.25)" },
+    not_found: { label: "Không tìm thấy", text: "#be123c", bg: "#fff1f2", border: "rgba(244, 63, 94, 0.25)" },
+    auto_generated: { label: "Tự sinh", text: "#b45309", bg: "#fffbeb", border: "rgba(245, 158, 11, 0.25)" },
+    out_of_topic: { label: "Lạc đề", text: "#475569", bg: "#f1f5f9", border: "rgba(100, 116, 139, 0.2)" },
   };
 
-  const item = config[status] || { label: status, text: "#64748b" };
+  const item = config[status] || { label: status, text: "#475569", bg: "#f1f5f9", border: "rgba(100, 116, 139, 0.2)" };
   return (
     <span
-      className="text-xs font-extrabold"
+      className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full inline-block border shadow-2xs"
       style={{
         color: item.text,
+        backgroundColor: item.bg,
+        borderColor: item.border,
       }}
     >
       {item.label}
@@ -259,87 +260,92 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
   };
 
   return (
-    <Box sx={noCardContainer ? {} : { backgroundColor: '#ffffff', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)' }}>
-      {/* Header */}
-      <CardHeader
-        title={
-          <Box display="flex" alignItems="center" justifyContent="space-between" py={0.5}>
-            <Box display="flex" alignItems="center" gap={1.5}>
-              <MessageSquareText className="w-6 h-6 text-[#2563eb]" />
-              <Box>
-                <Typography variant="h6" fontWeight={800} sx={{ color: '#2563eb', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                  Nhật ký hội thoại Chatbot
-                </Typography>
-                <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                  Quản lý và theo dõi chi tiết tất cả các cuộc hội thoại
-                </Typography>
+    <Box 
+      className={noCardContainer ? "" : "emerald-card"}
+      sx={noCardContainer ? {} : { backgroundColor: '#ffffff', p: 0 }}
+    >
+      {/* Header - Only shown when in Dashboard card mode */}
+      {!noCardContainer && (
+        <CardHeader
+          title={
+            <Box display="flex" alignItems="center" justifyContent="space-between" py={0.5}>
+              <Box display="flex" alignItems="center" gap={1.5}>
+                <MessageSquareText className="w-5 h-5 text-[#0d8a4f]" />
+                <Box>
+                  <Typography variant="h6" fontWeight={800} sx={{ color: '#0d8a4f', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                    Nhật ký hội thoại Chatbot & Tương tác thực tế
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                    Quản lý và tra cứu chi tiết toàn bộ các phiên hội thoại sinh viên hỏi đáp AI
+                  </Typography>
+                </Box>
               </Box>
-            </Box>
 
-            {/* Total Pill Badge */}
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1">
-              <span className="text-xs font-bold text-slate-500">Tổng cộng:</span>
-              <span className="text-sm font-extrabold text-[#2563eb]">{logs.length}</span>
-            </div>
-          </Box>
-        }
-        sx={{ p: noCardContainer ? 0 : 3, pb: 2 }}
-      />
+              {/* Total Pill Badge */}
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-[#f0f8f4] border border-[#a7f3d0]/80 rounded-full">
+                <span className="text-xs font-bold text-slate-600">Tổng cộng:</span>
+                <span className="text-sm font-black text-[#0d8a4f]">{logs.length}</span>
+              </div>
+            </Box>
+          }
+          sx={{ p: 2.5, pb: 2 }}
+        />
+      )}
       
-      <Box sx={{ px: noCardContainer ? 0 : 3, pb: noCardContainer ? 0 : 3, pt: 0 }}>
-        {/* Square Stat Cards Grid */}
+      <Box sx={{ px: noCardContainer ? 0 : 2.5, pb: noCardContainer ? 0 : 2.5, pt: 0 }}>
+        {/* Apple Squircle Stat Cards Grid */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={6} sm={3}>
-            <div className="p-4 rounded-none bg-emerald-50/70 border border-emerald-100/80 transition-all hover:shadow-xs">
+          <Grid size={{ xs: 6, sm: 3 }}>
+            <div className="p-3.5 rounded-2xl bg-[#f0f8f4] border border-[#a7f3d0]/60 transition-all hover:shadow-xs">
               <div className="flex items-center justify-between mb-1">
-                <Typography variant="caption" fontWeight={700} sx={{ color: '#047857' }}>
+                <Typography variant="caption" fontWeight={800} sx={{ color: '#0d8a4f', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Đã trả lời
                 </Typography>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <CheckCircle2 className="w-4 h-4 text-[#10b981]" />
               </div>
-              <Typography variant="h4" fontWeight={800} sx={{ color: '#059669', letterSpacing: '-0.03em' }}>
+              <Typography variant="h4" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em' }}>
                 {stats.answered}
               </Typography>
             </div>
           </Grid>
 
-          <Grid item xs={6} sm={3}>
-            <div className="p-4 rounded-none bg-rose-50/70 border border-rose-100/80 transition-all hover:shadow-xs">
+          <Grid size={{ xs: 6, sm: 3 }}>
+            <div className="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200/60 transition-all hover:shadow-xs">
               <div className="flex items-center justify-between mb-1">
-                <Typography variant="caption" fontWeight={700} sx={{ color: '#be123c' }}>
+                <Typography variant="caption" fontWeight={800} sx={{ color: '#be123c', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Không tìm thấy
                 </Typography>
                 <AlertCircle className="w-4 h-4 text-rose-600" />
               </div>
-              <Typography variant="h4" fontWeight={800} sx={{ color: '#e11d48', letterSpacing: '-0.03em' }}>
+              <Typography variant="h4" fontWeight={900} sx={{ color: '#e11d48', letterSpacing: '-0.025em' }}>
                 {stats.notFound}
               </Typography>
             </div>
           </Grid>
 
-          <Grid item xs={6} sm={3}>
-            <div className="p-4 rounded-none bg-amber-50/70 border border-amber-100/80 transition-all hover:shadow-xs">
+          <Grid size={{ xs: 6, sm: 3 }}>
+            <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/60 transition-all hover:shadow-xs">
               <div className="flex items-center justify-between mb-1">
-                <Typography variant="caption" fontWeight={700} sx={{ color: '#b45309' }}>
+                <Typography variant="caption" fontWeight={800} sx={{ color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Tự sinh
                 </Typography>
                 <Cpu className="w-4 h-4 text-amber-600" />
               </div>
-              <Typography variant="h4" fontWeight={800} sx={{ color: '#d97706', letterSpacing: '-0.03em' }}>
+              <Typography variant="h4" fontWeight={900} sx={{ color: '#d97706', letterSpacing: '-0.025em' }}>
                 {stats.autoGenerated}
               </Typography>
             </div>
           </Grid>
 
-          <Grid item xs={6} sm={3}>
-            <div className="p-4 rounded-none bg-[#edf4fc] border border-[#d0e2f7] transition-all hover:shadow-xs">
+          <Grid size={{ xs: 6, sm: 3 }}>
+            <div className="p-3.5 rounded-2xl bg-[#f0f8f4] border border-[#a7f3d0]/60 transition-all hover:shadow-xs">
               <div className="flex items-center justify-between mb-1">
-                <Typography variant="caption" fontWeight={700} sx={{ color: '#2563eb' }}>
+                <Typography variant="caption" fontWeight={800} sx={{ color: '#0d8a4f', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Tỷ lệ trả lời
                 </Typography>
-                <PieChart className="w-4 h-4 text-[#2563eb]" />
+                <PieChart className="w-4 h-4 text-[#0d8a4f]" />
               </div>
-              <Typography variant="h4" fontWeight={800} sx={{ color: '#2563eb', letterSpacing: '-0.03em' }}>
+              <Typography variant="h4" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em' }}>
                 {((stats.answered / (stats.total || 1)) * 100).toFixed(1)}%
               </Typography>
             </div>
@@ -348,7 +354,7 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
 
         {/* Search & Filter Controls */}
         <Box display="flex" gap={2} mb={3} flexWrap="wrap">
-          <AppleTextField
+          <GreenTextField
             placeholder="Tìm kiếm nội dung câu hỏi hoặc câu trả lời..."
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
@@ -363,7 +369,7 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
           />
           
           <FormControl sx={{ minWidth: 170 }}>
-            <AppleSelect
+            <GreenSelect
               value={statusFilter}
               onChange={(e: any) => { setStatusFilter(e.target.value); setPage(0); }}
               displayEmpty
@@ -374,16 +380,16 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
               <MenuItem value="not_found">Không tìm thấy</MenuItem>
               <MenuItem value="auto_generated">Tự sinh</MenuItem>
               <MenuItem value="out_of_topic">Lạc đề</MenuItem>
-            </AppleSelect>
+            </GreenSelect>
           </FormControl>
         </Box>
 
         {/* Loading / Table view */}
         {loading ? (
           <Box display="flex" flexDirection="column" alignItems="center" py={8}>
-            <CircularProgress size={40} sx={{ color: '#2563eb' }} />
-            <Typography variant="body2" sx={{ mt: 2, color: "text.secondary", fontWeight: 500 }}>
-              Đang tải dữ liệu...
+            <CircularProgress size={36} sx={{ color: '#006837' }} />
+            <Typography variant="body2" sx={{ mt: 2, color: "text.secondary", fontWeight: 600 }}>
+              Đang tải dữ liệu hội thoại...
             </Typography>
           </Box>
         ) : (
@@ -392,10 +398,11 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
               component={Paper} 
               elevation={0} 
               sx={{ 
-                borderRadius: 0,
-                border: '1px solid #e2e8f0',
+                borderRadius: '16px',
+                border: '1px solid rgba(0, 60, 30, 0.08)',
                 maxHeight: 520,
-                overflow: 'auto'
+                overflow: 'auto',
+                boxShadow: '0 0 0 1px rgba(255,255,255,0.8) inset'
               }}
             >
               <Table stickyHeader size="small">
@@ -413,7 +420,7 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
                   {paginatedLogs.map((row) => (
                     <StyledTableRow key={row.id}>
                       <TableCell align="center">
-                        <span className="font-extrabold text-[#2563eb] text-sm">
+                        <span className="font-extrabold text-[#006837] text-sm">
                           {row.id}
                         </span>
                       </TableCell>
@@ -423,10 +430,10 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
                           <Typography 
                             variant="body2" 
                             sx={{ 
-                              fontWeight: 600,
+                              fontWeight: 700,
                               color: '#1e293b',
                               cursor: 'pointer',
-                              '&:hover': { color: '#2563eb' }
+                              '&:hover': { color: '#006837' }
                             }}
                           >
                             {truncate(row.question, 50)}
@@ -454,7 +461,7 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
                         <Tooltip title={row.answer} arrow placement="top">
                           <Typography 
                             variant="body2"
-                            sx={{ cursor: 'pointer' }}
+                            sx={{ cursor: 'pointer', color: '#334155' }}
                           >
                             {truncate(row.answer, 60)}
                           </Typography>
@@ -468,7 +475,7 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
                       <TableCell align="center">
                         <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
                           <Clock className="w-3.5 h-3.5 text-slate-400" />
-                          <Typography variant="caption" fontWeight={500} color="text.secondary">
+                          <Typography variant="caption" fontWeight={600} color="text.secondary">
                             {row.created_at}
                           </Typography>
                         </Box>
@@ -479,7 +486,7 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
                   {paginatedLogs.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                        <Typography variant="body2" color="text.secondary" fontWeight={600}>
                           Không tìm thấy cuộc hội thoại phù hợp
                         </Typography>
                       </TableCell>
@@ -509,7 +516,7 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
                 '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
                   fontSize: '0.8rem',
                   color: '#64748b',
-                  fontWeight: 500,
+                  fontWeight: 600,
                 },
               }}
             />
@@ -519,3 +526,4 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
     </Box>
   );
 }
+

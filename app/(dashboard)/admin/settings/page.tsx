@@ -16,12 +16,9 @@ import {
   Autocomplete,
 } from '@mui/material';
 import {
-  Sliders,
+  Settings,
   Save,
   Pencil,
-  Terminal,
-  ShieldAlert,
-  Flame,
   CheckCircle2,
   Cpu,
   Key,
@@ -29,6 +26,7 @@ import {
   EyeOff,
   Zap,
 } from 'lucide-react';
+import { ConfigurationPlaybook1Icon } from '@/components/icons/SidebarIcons';
 
 export default function AgentSettingsPage() {
   const [systemPrompt, setSystemPrompt] = useState(
@@ -127,34 +125,55 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
   return (
     <Box width="100%">
       {/* Header */}
-      <Box mb={4}>
-        <Box display="flex" alignItems="center" gap={1.5} mb={1}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3.5} flexWrap="wrap" gap={2}>
+        <Box display="flex" alignItems="center" gap={2}>
+          {/* Custom SVG Icon Placed Directly without Div Wrapper */}
+          <ConfigurationPlaybook1Icon size={42} className="text-[#0d8a4f] flex-shrink-0 transition-transform hover:scale-105" />
           <Box>
-            <Typography variant="h5" fontWeight={800} sx={{ color: '#2563eb', letterSpacing: '-0.02em' }}>
-              Cấu hình Hành vi & Tinh chỉnh AI Agent
+            <Typography variant="h5" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.02em', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+              Cấu Hình & Tham Số Vận Hành AI Agent
             </Typography>
             <Typography variant="body2" color="text.secondary" fontWeight={500}>
               Tùy chỉnh System Prompt, chọn mô hình LLM, cấu hình API Key, kiến trúc Multi-Agent và ngưỡng tự tin
             </Typography>
           </Box>
         </Box>
+
+        <Button
+          variant="contained"
+          startIcon={<Save className="w-4 h-4" />}
+          onClick={handleSave}
+          sx={{
+            borderRadius: '9999px',
+            backgroundColor: '#0d8a4f',
+            color: '#ffffff',
+            fontWeight: 800,
+            textTransform: 'none',
+            px: 3.5,
+            py: 1,
+            boxShadow: '0 4px 14px -2px rgba(13, 138, 79, 0.35)',
+            '&:hover': { backgroundColor: '#0a7543', transform: 'translateY(-1px)' },
+          }}
+        >
+          Lưu toàn bộ cấu hình
+        </Button>
       </Box>
 
       {/* Success Notification Banner */}
       {savedSuccess && (
-        <Box display="flex" alignItems="center" gap={1.5} p={2} mb={3} bgcolor="#ecfdf5" sx={{ borderRadius: '8px' }}>
+        <Box display="flex" alignItems="center" gap={1.5} p={2} mb={3} bgcolor="#f0f8f4" border="1px solid rgba(16, 185, 129, 0.3)" sx={{ borderRadius: '10px' }}>
           <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-          <Typography variant="body2" fontWeight={700} sx={{ color: '#047857' }}>
+          <Typography variant="body2" fontWeight={800} sx={{ color: '#0d8a4f' }}>
             Đã lưu thành công cấu hình Agent! Hệ thống RAG & Multi-Agent đã được cập nhật tham số mới.
           </Typography>
         </Box>
       )}
 
       {/* Settings Form Container */}
-      <Box className="bg-white" p={3.5} border="1px solid #e2e8f0" sx={{ borderRadius: '12px' }}>
+      <Box className="emerald-card" p={{ xs: 2.5, sm: 3.5 }} bgcolor="#ffffff">
         {/* Section 1: System Prompt Editor */}
         <Box mb={4}>
-          <Typography variant="subtitle1" fontWeight={800} color="slate.900" mb={0.5}>
+          <Typography variant="subtitle1" fontWeight={800} color="#0d8a4f" mb={0.5}>
             1. System Prompt (Chỉ thị hệ thống cho Model LLM)
           </Typography>
           <Typography variant="caption" color="text.secondary" display="block" mb={2}>
@@ -166,15 +185,24 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
             rows={5}
             value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px', fontSize: '0.875rem' } }}
+            sx={{ 
+              '& .MuiOutlinedInput-root': { 
+                borderRadius: '10px', 
+                fontSize: '0.875rem',
+                bgcolor: '#fafdfb',
+                '& fieldset': { borderColor: 'rgba(13, 138, 79, 0.12)' },
+                '&:hover fieldset': { borderColor: 'rgba(16, 185, 129, 0.3)' },
+                '&.Mui-focused fieldset': { borderColor: '#0d8a4f' }
+              } 
+            }}
           />
         </Box>
 
-        <Divider sx={{ my: 3.5 }} />
+        <Divider sx={{ my: 3.5, borderColor: '#e2efe7' }} />
 
         {/* Section 2: Model & API Key Configuration */}
         <Box mb={4}>
-          <Typography variant="subtitle1" fontWeight={800} color="slate.900" mb={0.5}>
+          <Typography variant="subtitle1" fontWeight={800} color="#0d8a4f" mb={0.5}>
             2. Mô hình AI Engine & Cấu hình API Key
           </Typography>
           <Typography variant="caption" color="text.secondary" display="block" mb={2.5}>
@@ -207,7 +235,16 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
                     {...params}
                     size="small"
                     placeholder="Chọn hoặc gõ tên mô hình..."
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px', fontSize: '0.875rem' } }}
+                    sx={{ 
+                      '& .MuiOutlinedInput-root': { 
+                        borderRadius: '10px', 
+                        fontSize: '0.875rem',
+                        bgcolor: '#fafdfb',
+                        '& fieldset': { borderColor: 'rgba(13, 138, 79, 0.12)' },
+                        '&:hover fieldset': { borderColor: 'rgba(16, 185, 129, 0.3)' },
+                        '&.Mui-focused fieldset': { borderColor: '#0d8a4f' }
+                      } 
+                    }}
                   />
                 )}
                 sx={{ minWidth: 320, flex: 1, maxWidth: 400 }}
@@ -245,22 +282,32 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px', fontSize: '0.85rem' } }}
+                  sx={{ 
+                    '& .MuiOutlinedInput-root': { 
+                      borderRadius: '10px', 
+                      fontSize: '0.85rem',
+                      bgcolor: '#fafdfb',
+                      '& fieldset': { borderColor: 'rgba(13, 138, 79, 0.12)' },
+                      '&:hover fieldset': { borderColor: 'rgba(16, 185, 129, 0.3)' },
+                      '&.Mui-focused fieldset': { borderColor: '#0d8a4f' }
+                    } 
+                  }}
                 />
                 <Button
                   size="small"
                   variant="outlined"
                   onClick={handleTestApi}
                   sx={{
-                    borderRadius: '8px',
+                    borderRadius: '10px',
                     textTransform: 'none',
                     fontWeight: 700,
                     fontSize: '0.75rem',
                     whiteSpace: 'nowrap',
-                    borderColor: '#2563eb',
-                    color: '#2563eb',
+                    borderColor: '#0d8a4f',
+                    color: '#0d8a4f',
                     py: 0.8,
                     px: 2,
+                    '&:hover': { bgcolor: '#f0f8f4', borderColor: '#0d8a4f' }
                   }}
                 >
                   Thử kết nối
@@ -269,9 +316,9 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
             </Box>
 
             {testApiSuccess && (
-              <Box display="flex" alignItems="center" gap={1} py={0.8} px={1.5} bgcolor="#ecfdf5" width="fit-content" sx={{ borderRadius: '8px' }}>
+              <Box display="flex" alignItems="center" gap={1} py={0.8} px={1.5} bgcolor="#f0f8f4" border="1px solid rgba(16, 185, 129, 0.3)" width="fit-content" sx={{ borderRadius: '8px' }}>
                 <Zap className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <Typography variant="caption" fontWeight={700} sx={{ color: '#047857' }}>
+                <Typography variant="caption" fontWeight={700} sx={{ color: '#0d8a4f' }}>
                   Kết nối API Key thành công! Độ trễ phản hồi với [{selectedModel}]: 142ms.
                 </Typography>
               </Box>
@@ -284,7 +331,7 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
                   Mô hình Vector Embedding (Chọn hoặc Tự nhập):
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Dùng để chuyển đổi tài liệu quy chế thành Vector DB trong ChromaDB / FAISS.
+                  Dùng để chuyển đổi tài liệu quy chế thành Vector DB trong ChromaDB / FAISS / Qdrant.
                 </Typography>
               </Box>
               <Autocomplete
@@ -302,7 +349,16 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
                     {...params}
                     size="small"
                     placeholder="Chọn hoặc gõ mô hình embedding..."
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px', fontSize: '0.875rem' } }}
+                    sx={{ 
+                      '& .MuiOutlinedInput-root': { 
+                        borderRadius: '10px', 
+                        fontSize: '0.875rem',
+                        bgcolor: '#fafdfb',
+                        '& fieldset': { borderColor: 'rgba(13, 138, 79, 0.12)' },
+                        '&:hover fieldset': { borderColor: 'rgba(16, 185, 129, 0.3)' },
+                        '&.Mui-focused fieldset': { borderColor: '#0d8a4f' }
+                      } 
+                    }}
                   />
                 )}
                 sx={{ minWidth: 320, flex: 1, maxWidth: 400 }}
@@ -311,12 +367,12 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
           </Box>
         </Box>
 
-        <Divider sx={{ my: 3.5 }} />
+        <Divider sx={{ my: 3.5, borderColor: 'rgba(13, 138, 79, 0.08)' }} />
 
         {/* Section 3: Multi-Agent Orchestration & Per-SubAgent Settings */}
         <Box mb={4}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-            <Typography variant="subtitle1" fontWeight={800} color="slate.900">
+            <Typography variant="subtitle1" fontWeight={800} color="#0d8a4f">
               3. Kiến trúc Multi-Agent (Routing & Tùy chỉnh từng Sub-Agent)
             </Typography>
             <FormControlLabel
@@ -324,11 +380,18 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
                 <Switch
                   checked={enableMultiAgent}
                   onChange={(e) => setEnableMultiAgent(e.target.checked)}
-                  color="primary"
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': {
+                      color: '#0d8a4f',
+                    },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                      backgroundColor: '#10b981',
+                    },
+                  }}
                 />
               }
               label={
-                <Typography variant="body2" fontWeight={800} color="primary.main">
+                <Typography variant="body2" fontWeight={800} sx={{ color: enableMultiAgent ? '#0d8a4f' : '#64748b' }}>
                   {enableMultiAgent ? 'Đang bật Multi-Agent' : 'Chỉ dùng Single Agent'}
                 </Typography>
               }
@@ -341,16 +404,16 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
           {enableMultiAgent && (
             <Box display="flex" flexDirection="column" gap={2.5}>
               {/* Router Agent Info Card */}
-              <Box p={2.5} bgcolor="#f8fafc" border="1px solid #e2e8f0" sx={{ borderRadius: '8px' }} display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
+              <Box p={2.5} bgcolor="#fafdfb" border="1px solid rgba(16, 185, 129, 0.3)" sx={{ borderRadius: '10px' }} display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
                 <Box>
-                  <Typography variant="body2" fontWeight={800} color="slate.900">
+                  <Typography variant="body2" fontWeight={800} color="#0d8a4f">
                     Supervisor / Router Agent (Agent Điều phối Trung tâm)
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     Tự động phân tích ý định câu hỏi của sinh viên và phân luồng chính xác tới Sub-Agent tương ứng.
                   </Typography>
                 </Box>
-                <Chip label="Router Active" size="small" sx={{ borderRadius: '9999px', bgcolor: '#eff6ff', color: '#2563eb', fontWeight: 800 }} />
+                <Chip label="Router Active" size="small" sx={{ borderRadius: '9999px', bgcolor: '#f0f8f4', color: '#0d8a4f', border: '1px solid rgba(16, 185, 129, 0.3)', fontWeight: 800 }} />
               </Box>
 
               {/* Sub-Agents Grid with Full Configuration for Each Sub-Agent */}
@@ -361,33 +424,34 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
                     <Box
                       key={agent.id}
                       p={2.5}
-                      border="1px solid #e2e8f0"
-                      bgcolor={isEditing ? '#ffffff' : '#f8fafc'}
-                      sx={{ borderRadius: '8px', transition: 'all 0.2s ease-in-out' }}
+                      border="1px solid"
+                      borderColor={isEditing ? '#0d8a4f' : 'rgba(13, 138, 79, 0.12)'}
+                      bgcolor={isEditing ? '#ffffff' : '#fafdfb'}
+                      sx={{ borderRadius: '12px', transition: 'all 0.2s ease-in-out', boxShadow: isEditing ? '0 4px 16px rgba(13, 138, 79, 0.12)' : 'none' }}
                       display="flex"
                       flexDirection="column"
                       gap={2}
                     >
                       <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
                         <Box display="flex" alignItems="center" gap={1}>
-                          <Typography variant="body2" fontWeight={800} color="slate.900">
+                          <Typography variant="body2" fontWeight={800} color="#0f291e">
                             {agent.name}
                           </Typography>
-                          <Chip label={agent.status} size="small" sx={{ borderRadius: '9999px', bgcolor: '#ecfdf5', color: '#047857', fontWeight: 800, fontSize: '0.675rem' }} />
+                          <Chip label={agent.status} size="small" sx={{ borderRadius: '9999px', bgcolor: '#f0f8f4', color: '#0d8a4f', border: '1px solid rgba(16, 185, 129, 0.3)', fontWeight: 800, fontSize: '0.675rem' }} />
                         </Box>
                         <IconButton
                           size="small"
                           onClick={() => toggleEditSubAgent(agent.id)}
                           title={isEditing ? 'Lưu cấu hình Sub-Agent' : 'Chỉnh sửa Sub-Agent'}
                           sx={{
-                            borderRadius: '6px',
+                            borderRadius: '8px',
                             p: 0.8,
-                            color: isEditing ? '#ffffff' : '#2563eb',
-                            bgcolor: isEditing ? '#2563eb' : '#eff6ff',
+                            color: isEditing ? '#ffffff' : '#0d8a4f',
+                            bgcolor: isEditing ? '#0d8a4f' : '#f0f8f4',
                             border: '1px solid',
-                            borderColor: isEditing ? '#2563eb' : '#bfdbfe',
+                            borderColor: isEditing ? '#0d8a4f' : '#a7f3d0',
                             '&:hover': {
-                              bgcolor: isEditing ? '#1d4ed8' : '#dbeafe',
+                              bgcolor: isEditing ? '#0a7543' : '#dcfce7',
                             },
                           }}
                         >
@@ -416,7 +480,15 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
                               {...params}
                               size="small"
                               placeholder="Chọn hoặc gõ tên mô hình..."
-                              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px', fontSize: '0.825rem' } }}
+                              sx={{ 
+                                '& .MuiOutlinedInput-root': { 
+                                  borderRadius: '10px', 
+                                  fontSize: '0.825rem',
+                                  bgcolor: isEditing ? '#fafdfb' : 'transparent',
+                                  '& fieldset': { borderColor: 'rgba(13, 138, 79, 0.12)' },
+                                  '&.Mui-focused fieldset': { borderColor: '#0d8a4f' }
+                                } 
+                              }}
                             />
                           )}
                         />
@@ -442,7 +514,15 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
                               </InputAdornment>
                             ),
                           }}
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px', fontSize: '0.825rem' } }}
+                          sx={{ 
+                            '& .MuiOutlinedInput-root': { 
+                              borderRadius: '10px', 
+                              fontSize: '0.825rem',
+                              bgcolor: isEditing ? '#fafdfb' : 'transparent',
+                              '& fieldset': { borderColor: 'rgba(13, 138, 79, 0.12)' },
+                              '&.Mui-focused fieldset': { borderColor: '#0d8a4f' }
+                            } 
+                          }}
                         />
                       </Box>
 
@@ -458,7 +538,15 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
                           value={agent.kb}
                           onChange={(e) => updateSubAgent(agent.id, 'kb', e.target.value)}
                           placeholder="Tên file tri thức..."
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px', fontSize: '0.825rem' } }}
+                          sx={{ 
+                            '& .MuiOutlinedInput-root': { 
+                              borderRadius: '10px', 
+                              fontSize: '0.825rem',
+                              bgcolor: isEditing ? '#fafdfb' : 'transparent',
+                              '& fieldset': { borderColor: 'rgba(13, 138, 79, 0.12)' },
+                              '&.Mui-focused fieldset': { borderColor: '#0d8a4f' }
+                            } 
+                          }}
                         />
                       </Box>
 
@@ -475,7 +563,15 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
                           size="small"
                           value={agent.prompt}
                           onChange={(e) => updateSubAgent(agent.id, 'prompt', e.target.value)}
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px', fontSize: '0.825rem' } }}
+                          sx={{ 
+                            '& .MuiOutlinedInput-root': { 
+                              borderRadius: '10px', 
+                              fontSize: '0.825rem',
+                              bgcolor: isEditing ? '#fafdfb' : 'transparent',
+                              '& fieldset': { borderColor: 'rgba(13, 138, 79, 0.12)' },
+                              '&.Mui-focused fieldset': { borderColor: '#0d8a4f' }
+                            } 
+                          }}
                         />
                       </Box>
                     </Box>
@@ -486,15 +582,15 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
           )}
         </Box>
 
-        <Divider sx={{ my: 3.5 }} />
+        <Divider sx={{ my: 3.5, borderColor: 'rgba(13, 138, 79, 0.08)' }} />
 
         {/* Section 4: Confidence Fallback Threshold */}
         <Box mb={4}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-            <Typography variant="subtitle1" fontWeight={800} color="slate.900">
+            <Typography variant="subtitle1" fontWeight={800} color="#0d8a4f">
               4. Ngưỡng tự tin Fallback (Confidence Threshold)
             </Typography>
-            <span className="px-3 py-1 text-xs font-black text-[#2563eb] bg-[#eff6ff] rounded-full">
+            <span className="px-3 py-1 text-xs font-black text-[#0d8a4f] bg-[#f0f8f4] border border-[#a7f3d0] rounded-full">
               {(confidenceThreshold * 100).toFixed(0)}% Similarity Match
             </span>
           </Box>
@@ -510,16 +606,22 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
               onChange={(_, val) => setConfidenceThreshold(val as number)}
               valueLabelDisplay="auto"
               valueLabelFormat={(v) => `${(v * 100).toFixed(0)}%`}
-              sx={{ color: '#2563eb' }}
+              sx={{ 
+                color: '#0d8a4f',
+                '& .MuiSlider-thumb': {
+                  bgcolor: '#0d8a4f',
+                  boxShadow: '0 2px 6px rgba(13, 138, 79, 0.3)',
+                },
+              }}
             />
           </Box>
         </Box>
 
-        <Divider sx={{ my: 3.5 }} />
+        <Divider sx={{ my: 3.5, borderColor: 'rgba(13, 138, 79, 0.08)' }} />
 
         {/* Section 5: Temperature & Guardrails */}
         <Box mb={4}>
-          <Typography variant="subtitle1" fontWeight={800} color="slate.900" mb={1}>
+          <Typography variant="subtitle1" fontWeight={800} color="#0d8a4f" mb={1}>
             5. Tham số Sinh từ & Giới hạn Phạm vi
           </Typography>
 
@@ -527,7 +629,7 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
             <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
               <Box maxWidth={500}>
                 <Typography variant="body2" fontWeight={700} color="slate.900">
-                  Nhiệt độ Temperature: <strong className="text-[#2563eb]">{temperature}</strong>
+                  Nhiệt độ Temperature: <strong className="text-[#0d8a4f]">{temperature}</strong>
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   Mức độ sáng tạo từ vựng (0.0 = Chuẩn xác tuyệt đối theo văn bản, 1.0 = Mở rộng ngôn từ tự nhiên).
@@ -540,7 +642,13 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
                   max={0.7}
                   step={0.1}
                   onChange={(_, val) => setTemperature(val as number)}
-                  sx={{ color: '#2563eb' }}
+                  sx={{ 
+                    color: '#0d8a4f',
+                    '& .MuiSlider-thumb': {
+                      bgcolor: '#0d8a4f',
+                      boxShadow: '0 2px 6px rgba(13, 138, 79, 0.3)',
+                    },
+                  }}
                 />
               </Box>
             </Box>
@@ -550,7 +658,14 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
                 <Switch
                   checked={strictScope}
                   onChange={(e) => setStrictScope(e.target.checked)}
-                  color="primary"
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': {
+                      color: '#0d8a4f',
+                    },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                      backgroundColor: '#10b981',
+                    },
+                  }}
                 />
               }
               label={
@@ -568,19 +683,21 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
         </Box>
 
         {/* Actions Footer */}
-        <Box display="flex" justifyContent="flex-end" pt={2.5} borderTop="1px solid #e2e8f0">
+        <Box display="flex" justifyContent="flex-end" pt={2.5} borderTop="1px solid rgba(13, 138, 79, 0.08)">
           <Button
             variant="contained"
             startIcon={<Save className="w-4 h-4" />}
             onClick={handleSave}
             sx={{
-              borderRadius: '8px',
-              backgroundColor: '#2563eb',
+              borderRadius: '10px',
+              backgroundColor: '#0d8a4f',
               fontWeight: 700,
               px: 4,
               py: 1.2,
               textTransform: 'none',
               whiteSpace: 'nowrap',
+              boxShadow: '0 4px 14px rgba(13, 138, 79, 0.2)',
+              '&:hover': { backgroundColor: '#0a7543' },
             }}
           >
             Lưu tất cả cấu hình
@@ -590,7 +707,3 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
     </Box>
   );
 }
-
-
-
-

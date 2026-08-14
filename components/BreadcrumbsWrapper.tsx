@@ -5,12 +5,16 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Home } from 'lucide-react';
 
-const labelMap = {
-    admin: <Home className="w-4 h-4 inline-block" />,
+const labelMap: Record<string, any> = {
+    admin: <Home className="w-4 h-4 inline-block text-[#006837]" />,
+    dashboard: 'Dashboard Điều Hành',
     add: 'Thêm câu hỏi',
     edit: 'Chỉnh sửa câu hỏi',
-    questions: 'Danh sách câu hỏi',
-    documents: 'Danh sách tài liệu',
+    questions: 'Quản lý câu hỏi',
+    documents: 'Thư viện tài liệu RAG',
+    training: 'Huấn luyện Agent',
+    settings: 'Cấu hình Agent',
+    conversations: 'Lịch sử hội thoại',
     import: 'Import từ Excel'
 };
 
@@ -31,11 +35,22 @@ export default function BreadcrumbsWrapper() {
         const isNonClickable = value === 'edit';
 
         return isLast || isNonClickable ? (
-          <Typography color="text.primary" key={to}>
+          <Typography color="#006837" key={to} sx={{ fontWeight: 700, fontSize: '0.8rem' }}>
             {label}
           </Typography>
         ) : (
-          <MuiLink key={to} underline="hover" color="inherit" component={Link} href={to}>
+          <MuiLink 
+            key={to} 
+            underline="hover" 
+            color="#64748b" 
+            component={Link} 
+            href={to}
+            sx={{ 
+              fontSize: '0.8rem', 
+              fontWeight: 600,
+              '&:hover': { color: '#006837' } 
+            }}
+          >
             {label}
           </MuiLink>
         );
@@ -43,3 +58,4 @@ export default function BreadcrumbsWrapper() {
     </Breadcrumbs>
   );
 }
+

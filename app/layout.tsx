@@ -11,7 +11,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata = {
-  title: 'ST-Support VNUA',
+  title: 'ST - Care | Khoa CNTT VNUA',
   description: 'Hệ thống hỗ trợ sinh viên VNUA - AI RAG Chatbot & Quản lý tri thức',
 };
 
