@@ -31,3 +31,5 @@ build/
 # env
 .env
 .env*.local
+
+mocks/

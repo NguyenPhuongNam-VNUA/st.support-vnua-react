@@ -6,14 +6,6 @@ import { Card, CardHeader, CardContent, Typography, Box, CircularProgress } from
 import { BarChart3 } from "lucide-react";
 import questionApi from "@/api/admin/questionApi";
 
-const MOCK_TOP_QUESTIONS = [
-  { question: "Điểm chuẩn ngành CNTT năm 2025?", ask_count: 142 },
-  { question: "Học phí tín chỉ của khoa?", ask_count: 98 },
-  { question: "Thời gian xét tuyển đợt 1?", ask_count: 75 },
-  { question: "Các ngành đào tạo của Khoa?", ask_count: 62 },
-  { question: "Điều kiện nhận học bổng?", ask_count: 45 },
-];
-
 export default function BarCard() {
   const [topQuestions, setTopQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,11 +19,11 @@ export default function BarCard() {
         if (res && Array.isArray(res.data) && res.data.length > 0) {
           setTopQuestions(res.data);
         } else {
-          setTopQuestions(MOCK_TOP_QUESTIONS);
+          setTopQuestions([]);
         }
       } catch (err) {
-        console.warn("Lỗi khi lấy top 5 câu hỏi (dùng dữ liệu mẫu):", err);
-        setTopQuestions(MOCK_TOP_QUESTIONS);
+        console.warn("Lỗi khi lấy top 5 câu hỏi:", err);
+        setTopQuestions([]);
       } finally {
         setLoading(false);
       }
@@ -96,4 +88,3 @@ export default function BarCard() {
     </Card>
   );
 }
-

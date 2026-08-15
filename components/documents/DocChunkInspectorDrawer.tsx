@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Drawer,
   Box,
@@ -14,45 +14,30 @@ import {
   Button,
 } from '@mui/material';
 import { X, Cpu, ChevronDown, Layers, FileText, Code2, Sparkles } from 'lucide-react';
+import documentApi from '@/api/admin/documentApi';
 
 interface DocChunkInspectorDrawerProps {
   open: boolean;
   onClose: () => void;
+  documentId: number | null;
   documentTitle: string;
 }
 
 export default function DocChunkInspectorDrawer({
   open,
   onClose,
+  documentId,
   documentTitle,
 }: DocChunkInspectorDrawerProps) {
-  // Mock extracted chunks with 768-dim vector preview
-  const MOCK_CHUNKS = [
-    {
-      id: 'chunk_001',
-      page: 1,
-      tokens: 245,
-      content:
-        'Học phí ngành Công nghệ thông tin áp dụng cho khóa tuyển sinh 2025 là 450.000đ/tín chỉ đối với các học phần đại cương và 520.000đ/tín chỉ đối với học phần chuyên ngành.',
-      vector_preview: '[0.0241, -0.1582, 0.8912, 0.0041, -0.3129, 0.4412, ... 768 dimensions]',
-    },
-    {
-      id: 'chunk_002',
-      page: 2,
-      tokens: 310,
-      content:
-        'Sinh viên có hoàn cảnh khó khăn hoặc thuộc diện chính sách được giảm 50% đến 100% học phí theo quy định chung của Học viện Nông nghiệp Việt Nam.',
-      vector_preview: '[-0.1042, 0.3341, 0.1198, -0.7781, 0.5120, 0.0912, ... 768 dimensions]',
-    },
-    {
-      id: 'chunk_003',
-      page: 3,
-      tokens: 180,
-      content:
-        'Thời gian hoàn thành nghĩa vụ đóng học phí đợt 1 năm học 2025-2026 muộn nhất là ngày 30/09/2025.',
-      vector_preview: '[0.4410, -0.0912, 0.6512, 0.1239, -0.0091, 0.2319, ... 768 dimensions]',
-    },
-  ];
+  const [chunks, setChunks] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!open || !documentId) return;
+    documentApi
+      .getChunks(documentId)
+      .then((response: any) => setChunks(response?.data?.chunks || []))
+      .catch(() => setChunks([]));
+  }, [open, documentId]);
 
   return (
     <Drawer
@@ -98,9 +83,9 @@ export default function DocChunkInspectorDrawer({
           </Typography>
 
           <Box display="flex" gap={1} flexWrap="wrap">
-            <Chip size="small" label="Tổng Chunks: 3" sx={{ borderRadius: 0, fontWeight: 700, backgroundColor: '#edf4fc', color: '#2563eb' }} />
-            <Chip size="small" label="Embedding Model: text-embedding-004" sx={{ borderRadius: 0, fontWeight: 700, backgroundColor: '#f1f5f9' }} />
-            <Chip size="small" label="Vector Size: 768 Float32" sx={{ borderRadius: 0, fontWeight: 700, backgroundColor: '#f1f5f9' }} />
+            <Chip size="small" label={`Tổng Chunks: ${chunks.length}`} sx={{ borderRadius: 0, fontWeight: 700, backgroundColor: '#edf4fc', color: '#2563eb' }} />
+            <Chip size="small" label="Embedding Model: cấu hình bởi AI Agent" sx={{ borderRadius: 0, fontWeight: 700, backgroundColor: '#f1f5f9' }} />
+            <Chip size="small" label="Vector Size: 1024" sx={{ borderRadius: 0, fontWeight: 700, backgroundColor: '#f1f5f9' }} />
           </Box>
         </Box>
 
@@ -109,7 +94,7 @@ export default function DocChunkInspectorDrawer({
         </Typography>
 
         <Box display="flex" flexDirection="column" gap={2}>
-          {MOCK_CHUNKS.map((chunk, index) => (
+          {chunks.map((chunk, index) => (
             <Accordion key={chunk.id} defaultExpanded={index === 0} sx={{ borderRadius: 0, border: '1px solid #cbd5e1', '&:before': { display: 'none' } }}>
               <AccordionSummary expandIcon={<ChevronDown className="w-4 h-4" />} sx={{ backgroundColor: '#f8fafc' }}>
                 <Box display="flex" alignItems="center" justifyContent="space-between" width="100%" pr={1}>
@@ -129,11 +114,16 @@ export default function DocChunkInspectorDrawer({
                   Mẫu Vector Float32 Array Preview:
                 </Typography>
                 <Box p={1} bgcolor="#0f172a" color="#38bdf8" fontFamily="monospace" fontSize="0.725rem" border="1px solid #1e293b">
-                  {chunk.vector_preview}
+                  Embedding được lưu an toàn trong PostgreSQL và không trả toàn bộ vector về trình duyệt.
                 </Box>
               </AccordionDetails>
             </Accordion>
           ))}
+          {chunks.length === 0 && (
+            <Typography variant="body2" color="text.secondary">
+              Tài liệu chưa có chunk hoặc pipeline embedding chưa hoàn tất.
+            </Typography>
+          )}
         </Box>
       </Box>
 

@@ -23,8 +23,7 @@ import {
   Check,
 } from "lucide-react";
 
-import loginApi from "@/api/auth/loginApi";
-import { useAuth } from "@/contexts/AuthContext";
+import { useLogin } from "@/hooks/auth/useLogin";
 
 const translations = {
   VN: {
@@ -58,7 +57,7 @@ const translations = {
     or: "hoặc",
     ssoBtn: "Đăng nhập SSO",
     ssoRedirecting: "Đang chuyển hướng SSO...",
-    copyright: "© 2024 Học viện Nông nghiệp Việt Nam",
+    copyright: "© 2026 Software Development and Research Team ",
     subCopyright: "Khoa Công nghệ thông tin",
     emailRequired: "Vui lòng nhập Email hoặc Mã tài khoản",
     passRequired: "Vui lòng nhập mật khẩu",
@@ -141,80 +140,57 @@ export default function LoginPage() {
     formState: { isSubmitting },
   } = methods;
 
-  const { setUser, setToken } = useAuth();
+  const { login, isLoading: isLoginLoading } = useLogin();
 
   const onSubmit = async (data: any) => {
+    setErrorAlert(null);
     const inputEmail = data.email.trim();
-    const inputPassword = data.password.trim();
+    // Mật khẩu là dữ liệu nguyên trạng; trim có thể biến mật khẩu đúng thành sai.
+    const inputPassword = data.password;
 
-    const envEmail =
-      process.env.NEXT_PUBLIC_EMAIL_LOCAL ||
-      process.env.EMAIL_LOCAL ||
-      "admin@vnua.edu.vn";
-    const envPass =
-      process.env.NEXT_PUBLIC_PASS_LOCAL || process.env.PASS_LOCAL || "123456";
-
-    // Đăng nhập tạm bằng EMAIL_LOCAL và PASS_LOCAL trong .env
-    if (inputEmail === envEmail && inputPassword === envPass) {
-      console.log("Đăng nhập bằng tài khoản LOCAL (.env)");
-      const mockToken = "local-admin-token-12345";
-      const mockUser = {
-        id: 1,
-        name: "Admin Local",
+    // Đăng nhập kết nối trực tiếp Supabase qua API & useLogin hook
+    const result = await login(
+      {
         email: inputEmail,
-        role: "admin",
-      };
+        password: inputPassword,
+      },
+      "/admin/dashboard"
+    );
 
-      setToken(mockToken);
-      setUser(mockUser);
-
-      window.location.href = "/admin/dashboard";
+    if (result.isStudent) {
+      setInfoAlert(
+        lang === "VN"
+          ? "Đăng nhập thành công! Chức năng dành cho Sinh viên đang phát triển. Vui lòng quay lại sau!"
+          : "Sign in successful! Student features are currently under development."
+      );
       return;
     }
 
-    // Nếu không khớp tài khoản local thì thử gọi API Laravel backend
-    try {
-      const response: any = await loginApi.login({
-        email: inputEmail,
-        password: inputPassword,
-      });
-
-      console.log("Đăng nhập thành công từ API backend:", response);
-
-      setToken(response.token);
-      setUser(response.user);
-
-      window.location.href = "/admin/dashboard";
-    } catch (error: any) {
-      console.error("Đăng nhập thất bại:", error);
+    if (!result.success) {
       setErrorAlert(
-        error?.response?.data?.message ||
+        result.message ||
           (lang === "VN"
             ? "Đăng nhập thất bại! Vui lòng kiểm tra lại email/mã tài khoản và mật khẩu."
-            : "Sign in failed! Please check your credentials."),
+            : "Sign in failed! Please check your credentials.")
       );
     }
+
   };
+
 
   const handleSsoLogin = () => {
     setIsSsoLoading(true);
     setInfoAlert(t.ssoNotice);
     setTimeout(() => {
       setIsSsoLoading(false);
-      const envEmail =
-        process.env.NEXT_PUBLIC_EMAIL_LOCAL ||
-        process.env.EMAIL_LOCAL ||
-        "admin@vnua.edu.vn";
-      setToken("sso-token-vnua-2024");
-      setUser({
-        id: 99,
-        name: "Cán bộ VNUA (SSO)",
-        email: envEmail,
-        role: "admin",
-      });
-      window.location.href = "/admin/dashboard";
-    }, 1500);
+      setInfoAlert(
+        lang === "VN"
+          ? "Cổng đăng nhập SSO đang được bảo trì hoặc liên kết với tài khoản Supabase."
+          : "SSO Portal is under maintenance."
+      );
+    }, 1200);
   };
+
 
   const handleForgotPassword = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -425,9 +401,11 @@ export default function LoginPage() {
           <div className="relative w-full max-w-[370px] min-h-[520px] bg-white/95 backdrop-blur-xl px-6 py-7 sm:px-7 sm:py-8 rounded-[30px] shadow-2xl border border-white/90 overflow-hidden flex flex-col justify-between">
             {/* Top Right Card Leaf Branch Overlay */}
             <div className="absolute top-0 right-0 w-20 sm:w-28 pointer-events-none opacity-90 z-0">
-              <img
-                src="/leaf_branch_corner.png?v=2"
+              <Image
+                src="/leaf_branch_corner.png"
                 alt="Trang trí cành lá"
+                width={112}
+                height={112}
                 className="w-full h-auto"
               />
             </div>

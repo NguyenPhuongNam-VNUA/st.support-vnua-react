@@ -1,12 +1,9 @@
-import axiosClientLaravel from '../axiosClientLaravel';
+import apiClient from '@/lib/http/api-client';
 
 const questionsExcelApi = {
-    upload(data: any) {
-        const url = '/questions/import-excel';
-        return axiosClientLaravel.post(url, data, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
-    }
+  upload(data: FormData) {
+    return apiClient.post('/api/admin/questions/import', data);
+  },
 };
 
 export default questionsExcelApi;

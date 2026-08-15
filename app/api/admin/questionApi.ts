@@ -1,36 +1,33 @@
-import axiosClientLaravel from '../axiosClientLaravel';
-import axiosClientPython from '../axiosClientPython';
+import apiClient from '@/lib/http/api-client';
 
 const questionApi = {
-    getAll(params?: any) {
-        const url = '/questions';
-        return axiosClientLaravel.get(url, { params });
-    },
-
-    add(data: any) {
-        const url = '/questions';
-        return axiosClientLaravel.post(url, data);
-    },
-
-    getDetail(id: any) {
-        const url = `/questions/${id}`;
-        return axiosClientLaravel.get(url);
-    },
-
-    update(id: any, data: any) {
-        const url = `/questions/${id}`;
-        return axiosClientLaravel.put(url, data);
-    },
-
-    countInputTokens(data: any) {
-        const url = '/count-tokens';
-        return axiosClientPython.post(url, data);
-    },
-
-    getTop5() {
-        const url = '/top-5-questions';
-        return axiosClientLaravel.get(url);
-    }
+  getAll(params?: Record<string, unknown>) {
+    return apiClient.get('/api/admin/questions', { params });
+  },
+  add(data: unknown) {
+    return apiClient.post('/api/admin/questions', data);
+  },
+  getDetail(id: number) {
+    return apiClient.get(`/api/admin/questions/${id}`);
+  },
+  update(id: number, data: unknown) {
+    return apiClient.patch(`/api/admin/questions/${id}`, data);
+  },
+  delete(id: number) {
+    return apiClient.delete(`/api/admin/questions/${id}`);
+  },
+  bulkUpdate(ids: number[], status: string) {
+    return apiClient.patch('/api/admin/questions/bulk', { ids, status });
+  },
+  bulkDelete(ids: number[]) {
+    return apiClient.delete('/api/admin/questions/bulk', { data: { ids } });
+  },
+  getAudit(id: number) {
+    return apiClient.get(`/api/admin/questions/${id}/audit`);
+  },
+  getTop5() {
+    return apiClient.get('/api/admin/questions/top');
+  },
 };
 
 export default questionApi;

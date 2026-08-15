@@ -81,12 +81,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         },
       ],
     },
+    {
+      title: 'QUẢN TRỊ HỆ THỐNG',
+      items: [
+        {
+          label: 'Quản lý tài khoản',
+          href: '/admin/accounts',
+          icon: ShieldCheck,
+        },
+      ],
+    },
   ];
 
-  const handleConfirmLogout = () => {
+
+  const handleConfirmLogout = async () => {
     setLogoutConfirmOpen(false);
-    logout();
-    router.push('/login');
+    await logout();
+    router.replace('/login');
   };
 
   return (
@@ -149,9 +160,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white"></span>
                 </div>
                 <div className="hidden lg:flex flex-col pr-1">
-                  <span className="text-xs font-extrabold text-slate-900 leading-tight">{user?.name || 'Admin VNUA'}</span>
+                  <span className="text-xs font-extrabold text-slate-900 leading-tight">{user?.full_name || 'Admin VNUA'}</span>
                   <span className="text-[10px] text-[#0d8a4f] font-semibold leading-tight">{user?.email || 'admin@vnua.edu.vn'}</span>
                 </div>
+
               </div>
 
               <div className="h-4 w-[1px] bg-[rgba(13,138,79,0.12)] mx-0.5" />
@@ -418,4 +430,3 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </ProtectedRoute>
   );
 }
-

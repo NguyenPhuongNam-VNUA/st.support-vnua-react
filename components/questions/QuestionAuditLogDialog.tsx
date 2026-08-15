@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -13,6 +13,7 @@ import {
   Divider,
 } from '@mui/material';
 import { History, UserCheck, Clock, CheckCircle2, Edit3, ShieldAlert } from 'lucide-react';
+import questionApi from '@/api/admin/questionApi';
 
 interface AuditItem {
   id: number;
@@ -26,40 +27,34 @@ interface AuditItem {
 interface QuestionAuditLogDialogProps {
   open: boolean;
   onClose: () => void;
+  questionId?: number;
   questionText: string;
 }
 
 export default function QuestionAuditLogDialog({
   open,
   onClose,
+  questionId,
   questionText,
 }: QuestionAuditLogDialogProps) {
-  const MOCK_AUDIT_LOGS: AuditItem[] = [
-    {
-      id: 1,
-      user: 'Nguyễn Phương Nam (Admin)',
-      action: 'Chuyển trạng thái sang Đã duyệt (Approved)',
-      timestamp: '09/08/2026 14:10:22',
-      changes: 'Duyệt nội dung câu trả lời chuẩn cho AI Agent.',
-      status: 'approved',
-    },
-    {
-      id: 2,
-      user: 'Trần Văn Tùng (Biên tập viên)',
-      action: 'Chỉnh sửa câu trả lời & Gắn Tag [Học phí]',
-      timestamp: '09/08/2026 11:45:10',
-      changes: 'Cập nhật lại mức tín chỉ từ 420.000đ thành 450.000đ/tín chỉ.',
-      status: 'needs_edit',
-    },
-    {
-      id: 3,
-      user: 'Hệ thống tự động (Log Chatbot)',
-      action: 'Tạo tự động từ câu hỏi chưa trả lời',
-      timestamp: '08/08/2026 20:30:15',
-      changes: 'Phát hiện 28 lượt hỏi chưa có đáp án trong 24h.',
-      status: 'pending',
-    },
-  ];
+  const [auditLogs, setAuditLogs] = useState<AuditItem[]>([]);
+
+  useEffect(() => {
+    if (!open || !questionId) return;
+    questionApi.getAudit(questionId).then((response: any) => {
+      const rows = response?.data?.logs || [];
+      setAuditLogs(
+        rows.map((row: any) => ({
+          id: row.id,
+          user: row.changed_by ? `Tài khoản #${row.changed_by}` : 'Hệ thống',
+          action: row.action === 'create' ? 'Tạo câu hỏi' : row.action === 'delete' ? 'Xóa câu hỏi' : 'Cập nhật câu hỏi',
+          timestamp: new Date(row.created_at).toLocaleString('vi-VN'),
+          changes: JSON.stringify(row.new_value || row.old_value || {}),
+          status: row.new_value?.status || row.old_value?.status || 'pending',
+        }))
+      );
+    }).catch(() => setAuditLogs([]));
+  }, [open, questionId]);
 
   return (
     <Dialog
@@ -103,13 +98,13 @@ export default function QuestionAuditLogDialog({
 
         {/* Timeline representation */}
         <Box display="flex" flexDirection="column" gap={2}>
-          {MOCK_AUDIT_LOGS.map((item, index) => (
+          {auditLogs.map((item, index) => (
             <Box key={item.id} display="flex" gap={2} position="relative">
               <div className="flex flex-col items-center">
                 <div className="w-8 h-8 rounded-none bg-blue-50 border border-blue-200 text-[#2563eb] flex items-center justify-center flex-shrink-0">
                   <UserCheck className="w-4 h-4" />
                 </div>
-                {index < MOCK_AUDIT_LOGS.length - 1 && (
+                {index < auditLogs.length - 1 && (
                   <div className="w-0.5 bg-slate-200 flex-1 my-1" />
                 )}
               </div>
@@ -132,6 +127,11 @@ export default function QuestionAuditLogDialog({
               </Box>
             </Box>
           ))}
+          {auditLogs.length === 0 && (
+            <Typography variant="body2" color="text.secondary">
+              Chưa có lịch sử thay đổi cho câu hỏi này.
+            </Typography>
+          )}
         </Box>
       </DialogContent>
 

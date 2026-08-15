@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -28,81 +28,77 @@ import DocChunkInspectorDrawer from './DocChunkInspectorDrawer';
 import RagTestRetrievalModal from './RagTestRetrievalModal';
 import UploadPdfDialog from './UploadPdfDialog';
 import DialogPreview from './DialogPreview';
+import documentApi from '@/api/admin/documentApi';
 
 export const VALIDITY_OPTIONS = ['Còn hiệu lực', 'Hết hiệu lực', 'Theo học kỳ (HK1 2025-2026)'];
 
 export default function DocumentLifecycleView() {
-  const [documents, setDocuments] = useState<any[]>([
-    {
-      id: 1,
-      title: 'Quy chế Đào tạo và Học phí Khoa CNTT.pdf',
-      description: 'Tải lên quy định tín chỉ, học bổng và học phí cập nhật năm học 2025-2026',
-      version: 'v2.1',
-      is_active: true,
-      validity: 'Còn hiệu lực',
-      pipeline_stage: 'ready', // 'uploading' | 'chunking' | 'embedding' | 'ready' | 'error'
-      progress: 100,
-      file_path: 'storage/documents/hocphi.pdf',
-      created_at: '09/08/2026 09:00',
-    },
-    {
-      id: 2,
-      title: 'Thông báo Tuyển sinh ĐH Chính quy 2025.pdf',
-      description: 'Chỉ tiêu tuyển sinh và danh sách các phương thức xét tuyển mới',
-      version: 'v1.0',
-      is_active: true,
-      validity: 'Còn hiệu lực',
-      pipeline_stage: 'ready',
-      progress: 100,
-      file_path: 'storage/documents/tuyensinh.pdf',
-      created_at: '08/08/2026 14:15',
-    },
-    {
-      id: 3,
-      title: 'Quy định Ký túc xá và Tạm trú năm 2024 (Cũ).pdf',
-      description: 'Văn bản quy định cũ của năm 2024 đã được thay thế',
-      version: 'v1.0',
-      is_active: false, // Archived version!
-      validity: 'Hết hiệu lực',
-      pipeline_stage: 'ready',
-      progress: 100,
-      file_path: 'storage/documents/ktx2024.pdf',
-      created_at: '01/01/2024 08:00',
-    },
-    {
-      id: 4,
-      title: 'Hướng dẫn Đăng ký Đồ án Tốt nghiệp HK1 2025-2026.pdf',
-      description: 'Tài liệu hướng dẫn điều kiện và quy trình nộp đề tài đồ án',
-      version: 'v1.0',
-      is_active: true,
-      validity: 'Theo học kỳ (HK1 2025-2026)',
-      pipeline_stage: 'embedding', // Currently embedding!
-      progress: 65,
-      file_path: 'storage/documents/doan.pdf',
-      created_at: '09/08/2026 14:00',
-    },
-  ]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // Dialog & Drawer states
   const [uploadOpen, setUploadOpen] = useState(false);
   const [testRetrievalOpen, setTestRetrievalOpen] = useState(false);
   const [chunkInspectorOpen, setChunkInspectorOpen] = useState(false);
   const [selectedDocTitle, setSelectedDocTitle] = useState('');
+  const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const handleToggleActive = (id: number) => {
-    setDocuments((prev) =>
-      prev.map((doc) => (doc.id === id ? { ...doc, is_active: !doc.is_active } : doc))
-    );
+  const loadDocuments = async () => {
+    try {
+      const response: any = await documentApi.getAll({ limit: 100 });
+      setDocuments(response?.data?.documents || []);
+      setApiError(null);
+    } catch (error: any) {
+      setApiError(error?.response?.data?.message || 'Không thể tải danh sách tài liệu');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const openInspector = (title: string) => {
+  useEffect(() => {
+    loadDocuments();
+  }, []);
+
+  const handleToggleActive = async (id: number, isActive: boolean) => {
+    try {
+      const response: any = await documentApi.update(id, { is_active: !isActive });
+      setDocuments((prev) => prev.map((doc) => (doc.id === id ? response.data : doc)));
+    } catch (error: any) {
+      setApiError(error?.response?.data?.message || 'Không thể cập nhật tài liệu');
+    }
+  };
+
+  const handlePreview = async (id: number) => {
+    try {
+      const response: any = await documentApi.getFileUrl(id);
+      setPreviewUrl(response?.data?.url || null);
+    } catch (error: any) {
+      setApiError(error?.response?.data?.message || 'Không thể mở PDF');
+    }
+  };
+
+  const handleEmbed = async (id: number) => {
+    try {
+      const response: any = await documentApi.embed(id);
+      setDocuments((prev) => prev.map((doc) => (doc.id === id ? response.data : doc)));
+      setApiError(null);
+    } catch (error: any) {
+      setApiError(error?.response?.data?.message || 'Không thể khởi chạy pipeline AI');
+    }
+  };
+
+  const openInspector = (id: number, title: string) => {
+    setSelectedDocId(id);
     setSelectedDocTitle(title);
     setChunkInspectorOpen(true);
   };
 
   return (
     <Box>
+      {loading && <Typography mb={2} color="text.secondary">Đang tải tài liệu từ Supabase...</Typography>}
+      {apiError && <Typography mb={2} color="error.main" fontWeight={700}>{apiError}</Typography>}
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3.5} flexWrap="wrap" gap={2}>
         <Box display="flex" alignItems="center" gap={2}>
@@ -191,7 +187,7 @@ export default function DocumentLifecycleView() {
                         <Chip label={doc.version} size="small" sx={{ borderRadius: '9999px', fontWeight: 800, fontSize: '0.7rem', bgcolor: '#f0f8f4', color: '#0d8a4f', border: '1px solid rgba(16, 185, 129, 0.25)' }} />
                       </Box>
                       <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                        Ngày tải: {doc.created_at}
+                        Ngày tải: {new Date(doc.created_at).toLocaleString('vi-VN')}
                       </Typography>
                     </Box>
                   </Box>
@@ -202,7 +198,7 @@ export default function DocumentLifecycleView() {
                       control={
                         <Switch
                           checked={doc.is_active}
-                          onChange={() => handleToggleActive(doc.id)}
+                          onChange={() => handleToggleActive(doc.id, doc.is_active)}
                           size="small"
                           sx={{
                             '& .MuiSwitch-switchBase.Mui-checked': {
@@ -227,15 +223,15 @@ export default function DocumentLifecycleView() {
                 {/* Validity Label & Pipeline Stage */}
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
                   <Chip
-                    label={`Hiệu lực: ${doc.validity}`}
+                    label={`Hiệu lực: ${doc.validity || 'Chưa xác định'}`}
                     size="small"
                     sx={{
                       borderRadius: '9999px',
                       fontWeight: 700,
                       fontSize: '0.725rem',
-                      backgroundColor: doc.validity.includes('Còn') ? '#f0f8f4' : doc.validity.includes('Hết') ? '#fff1f2' : '#f0f8f4',
-                      color: doc.validity.includes('Còn') ? '#0d8a4f' : doc.validity.includes('Hết') ? '#be123c' : '#0d8a4f',
-                      border: `1px solid ${doc.validity.includes('Còn') ? 'rgba(16, 185, 129, 0.25)' : doc.validity.includes('Hết') ? 'rgba(244, 63, 94, 0.25)' : 'rgba(13, 138, 79, 0.2)'}`,
+                      backgroundColor: doc.validity?.includes('Hết') ? '#fff1f2' : '#f0f8f4',
+                      color: doc.validity?.includes('Hết') ? '#be123c' : '#0d8a4f',
+                      border: `1px solid ${doc.validity?.includes('Hết') ? 'rgba(244, 63, 94, 0.25)' : 'rgba(16, 185, 129, 0.25)'}`,
                     }}
                   />
 
@@ -270,18 +266,30 @@ export default function DocumentLifecycleView() {
                     size="small"
                     variant="text"
                     startIcon={<Eye className="w-4 h-4" />}
-                    onClick={() => setPreviewUrl(doc.file_path)}
+                    onClick={() => handlePreview(doc.id)}
                     sx={{ borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'none', color: '#0d8a4f', px: 1.2, '&:hover': { bgcolor: '#f0f8f4' } }}
                   >
                     Xem PDF
                   </Button>
 
                   <Box display="flex" gap={1}>
+                    {doc.pipeline_stage !== 'ready' && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<Cpu className="w-4 h-4" />}
+                        onClick={() => handleEmbed(doc.id)}
+                        disabled={doc.pipeline_stage === 'embedding' || doc.pipeline_stage === 'chunking'}
+                        sx={{ borderRadius: '10px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'none' }}
+                      >
+                        Xử lý AI
+                      </Button>
+                    )}
                     <Button
                       size="small"
                       variant="contained"
                       startIcon={<Layers className="w-4 h-4" />}
-                      onClick={() => openInspector(doc.title)}
+                      onClick={() => openInspector(doc.id, doc.title)}
                       sx={{ 
                         borderRadius: '10px', 
                         fontSize: '0.75rem', 
@@ -307,6 +315,7 @@ export default function DocumentLifecycleView() {
       <DocChunkInspectorDrawer
         open={chunkInspectorOpen}
         onClose={() => setChunkInspectorOpen(false)}
+        documentId={selectedDocId}
         documentTitle={selectedDocTitle}
       />
 
@@ -318,9 +327,14 @@ export default function DocumentLifecycleView() {
       <UploadPdfDialog
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
-        onSubmit={(form) => {
-          console.log('Upload form submitted:', form);
-          setUploadOpen(false);
+        onSubmit={async (form) => {
+          try {
+            await documentApi.add(form);
+            setUploadOpen(false);
+            await loadDocuments();
+          } catch (error: any) {
+            setApiError(error?.response?.data?.message || 'Không thể tải tài liệu lên');
+          }
         }}
       />
 
@@ -332,4 +346,3 @@ export default function DocumentLifecycleView() {
     </Box>
   );
 }
-

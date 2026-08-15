@@ -1,10 +1,9 @@
-import axiosClientLaravel from '../axiosClientLaravel';
+import apiClient from '@/lib/http/api-client';
 
 const conversationApi = {
-    getAll() {
-        const url = '/user-question-logs';
-        return axiosClientLaravel.get(url);
-    }
+  getAll() {
+    return apiClient.get('/api/admin/conversations');
+  },
 };
 
 export default conversationApi;

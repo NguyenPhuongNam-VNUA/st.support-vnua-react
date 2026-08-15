@@ -1,128 +1,100 @@
-# ST Support VNUA - Frontend React (Next.js 15)
+# ST Support VNUA
 
-Hệ thống hỗ trợ sinh viên Học viện Nông nghiệp Việt Nam (VNUA) ứng dụng Trí tuệ Nhân tạo (AI Chatbot & RAG Vector Search).
+Ứng dụng hỗ trợ sinh viên và quản trị kho tri thức RAG của Khoa Công nghệ thông tin VNUA.
 
----
-
-## Giới thiệu dự án
-
-**ST Support VNUA** là ứng dụng web frontend được thiết kế để hỗ trợ sinh viên tra cứu thông tin, giải đáp thắc mắc tự động thông qua AI Chatbot thông minh, đồng thời cung cấp giao diện quản trị cho nhà trường để quản lý tài liệu PDF, bộ câu hỏi và thống kê lượt tương tác.
-
----
-
-## Tính năng chính
-
-### 1. Giao diện Chatbot AI độc lập (`/chatbot`)
-- Giao diện trò chuyện trực quan, hỗ trợ cuộc gọi API xử lý ngôn ngữ tự nhiên từ server AI.
-- Tự động cuộn thông minh, hiển thị trạng thái đang xử lý và hỗ trợ tạo cuộc hội thoại mới.
-
-### 2. Báo cáo & Thống kê Quản trị (`/admin/dashboard`)
-- Thống kê tỷ lệ câu hỏi được trả lời, tỷ lệ tài liệu đã xử lý dữ liệu (Vector Embeddings).
-- Biểu đồ Top 5 câu hỏi được hỏi nhiều nhất và xu hướng hội thoại theo ngày.
-- Nhật ký lịch sử hội thoại hỗ trợ bộ lọc và tìm kiếm nhanh.
-
-### 3. Thư viện & Xử lý Tài liệu PDF (`/admin/documents`)
-- Tải lên tài liệu PDF thông tin nhà trường.
-- Xem trực tiếp tài liệu PDF.
-- Tích hợp công cụ chia nhỏ văn bản (Chunking) và xử lý Embedding cho hệ thống RAG (Retrieval-Augmented Generation).
-
-### 4. Quản lý & Duyệt Câu hỏi (`/admin/questions`)
-- Duyệt và chỉnh sửa câu hỏi mới do hệ thống/sinh viên cập nhật.
-- Tự động so sánh và phát hiện câu hỏi trùng lặp.
-- Hỗ trợ nhập (Import) danh sách câu hỏi hàng loạt từ tệp Excel.
-
-### 5. Huấn luyện & Đóng vòng lặp Tri thức Agent (`/admin/training`)
-- Gom nhóm các câu hỏi chưa trả lời được hoặc bị fallback để biên tập câu trả lời chuẩn.
-- Cập nhật trực tiếp đáp án chuẩn hóa vào Knowledge Base.
-
-### 6. Cấu hình Multi-Agent (`/admin/settings`)
-- Cấu hình vai trò, độ ưu tiên, temperature và model cho từng Agent riêng biệt (Academic Router, Policy Agent, Document Agent...).
-
-### 7. Xác thực người dùng (`/login`)
-- Trang đăng nhập quản trị viên an toàn với mã hóa token và phân quyền dữ liệu.
-
----
-
-## Công nghệ sử dụng (Tech Stack)
-
-| Thành phần | Công nghệ |
-| :--- | :--- |
-| **Framework** | Next.js 15 (App Router) |
-| **Ngôn ngữ** | TypeScript |
-| **Styling** | Tailwind CSS v4 & Material UI (MUI v6) |
-| **Icons** | Lucide React |
-| **Biểu đồ** | MUI X-Charts |
-| **HTTP Client** | Axios |
-| **Quản lý Form** | React Hook Form & Yup |
-
----
-
-## Cấu trúc thư mục
+## Kiến trúc
 
 ```text
-st.support-vnua-react/
-├── app/                        # Next.js App Router
-│   ├── (dashboard)/            # Cấu trúc App Router Group
-│   │   ├── admin/              # Module Quản trị (/admin/dashboard, /admin/documents, /admin/questions, /admin/training, /admin/settings)
-│   │   ├── chatbot/            # Module Chatbot độc lập (/chatbot)
-│   │   └── login/              # Module Đăng nhập (/login)
-│   ├── api/                    # API Service Clients phân theo module (admin, auth, chatbot)
-│   ├── globals.css             # Cấu hình Tailwind CSS v4
-│   ├── layout.tsx              # Root Layout chính
-│   └── page.tsx                # Trang chủ gốc (tự động chuyển hướng về /chatbot)
-├── components/                 # Các component tái sử dụng (chatbot, dashboard, questions, documents...)
-├── contexts/                   # React Context Providers (AuthContext...)
-├── utils/                      # Các hàm tiện ích (currency, formatters...)
-└── public/                     # Tài nguyên tĩnh (logo VNUA, hình ảnh icon)
+Next.js UI
+  -> Next.js Route Handlers (Node.js)
+     -> JWT jose + RBAC
+     -> Supabase PostgreSQL / Storage
+
+Next.js /api/chat
+  -> Python AI Agent nội bộ (tùy chọn)
+     -> Supabase PostgreSQL + pgvector
 ```
 
----
+Laravel đã được loại bỏ. Trình duyệt không gọi trực tiếp Supabase bằng server key và cũng không gọi trực tiếp Python AI Agent.
 
-## Hướng dẫn cài đặt và khởi chạy
+## Xác thực và phân quyền
 
-### Yêu cầu hệ thống
-- **Node.js**: >= 18.x
-- **npm**: >= 9.x
+- JWT được ký/xác minh bằng `jose`.
+- JWT nằm trong cookie `st_session` với `HttpOnly`, `SameSite=Lax`, `Secure` ở production.
+- Vai trò hiện tại: `admin` và `student`.
+- `/admin/**` và `/api/admin/**` chỉ dành cho admin.
+- Route Handler luôn kiểm tra lại tài khoản `is_active` và `role` trong PostgreSQL.
+- Token không được lưu trong `localStorage`.
 
-### Các bước cài đặt
+## Cấu hình môi trường
 
-1. **Clone repository và di chuyển vào thư mục dự án**:
-   ```bash
-   git clone <repository_url>
-   cd st.support-vnua-react
-   ```
+Sao chép `.env.example` thành `.env` và điền giá trị thật:
 
-2. **Cài đặt các gói phụ thuộc (Dependencies)**:
-   ```bash
-   npm install
-   ```
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SECRET_KEY=server-only-secret
+JWT_SECRET=at-least-32-random-bytes
+JWT_ISSUER=st-care
+JWT_AUDIENCE=st-care-web
 
-3. **Cấu hình biến môi trường (`.env`)**:
-   Sao chép tệp `.env.example` thành `.env` tại thư mục gốc của dự án:
-   ```bash
-   cp .env.example .env
-   ```
+# Chỉ cần khi có Python AI Agent
+PYTHON_AGENT_BASE_URL=http://127.0.0.1:5001
+AI_AGENT_SERVICE_TOKEN=internal-service-token
+```
 
-4. **Khởi chạy ứng dụng ở chế độ Phát triển (Development)**:
-   ```bash
-   npm run dev
-   ```
-   Ứng dụng sẽ chạy tại địa chỉ: `http://localhost:3000`
+Không đặt `SUPABASE_SECRET_KEY`, `JWT_SECRET` hoặc `AI_AGENT_SERVICE_TOKEN` trong biến có tiền tố `NEXT_PUBLIC_`.
 
-5. **Đóng gói cho Môi trường Thực tế (Production)**:
-   ```bash
-   npm run build
-   npm start
-   ```
+## Cơ sở dữ liệu
 
----
+- Cài mới: chạy `mocks/DB.sql`, sau đó chạy migration trong `supabase/migrations`.
+- Database đã tồn tại: chỉ chạy migration theo thứ tự trong `supabase/migrations`.
+- Bucket `documents` được đặt private; API tạo signed URL ngắn hạn khi admin xem PDF.
+- RLS được bật và quyền `anon`/`authenticated` bị thu hồi cho các bảng nội bộ.
+- Node.js dùng server key sau khi đã kiểm tra JWT/RBAC.
+- Hai group role `st_ai_agent` và `st_ai_ingestion_worker` chuẩn bị sẵn quyền tối thiểu cho Python.
 
-## Liên kết các Route chính
+Migration hiện tại:
 
-- **Chatbot**: [http://localhost:3000/chatbot](http://localhost:3000/chatbot)
-- **Admin Dashboard**: [http://localhost:3000/admin/dashboard](http://localhost:3000/admin/dashboard)
-- **Quản lý Tài liệu**: [http://localhost:3000/admin/documents](http://localhost:3000/admin/documents)
-- **Quản lý Câu hỏi**: [http://localhost:3000/admin/questions](http://localhost:3000/admin/questions)
-- **Huấn luyện Agent**: [http://localhost:3000/admin/training](http://localhost:3000/admin/training)
-- **Cấu hình Agent**: [http://localhost:3000/admin/settings](http://localhost:3000/admin/settings)
-- **Đăng nhập**: [http://localhost:3000/login](http://localhost:3000/login)
+```text
+supabase/migrations/202608150001_node_supabase_security.sql
+```
+
+## API chính
+
+### Authentication
+
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `POST /api/auth/logout`
+
+### Admin
+
+- `/api/admin/accounts`
+- `/api/admin/documents`
+- `/api/admin/documents/[id]/chunks`
+- `/api/admin/documents/[id]/embed`
+- `/api/admin/questions`
+- `/api/admin/questions/bulk`
+- `/api/admin/questions/import`
+- `/api/admin/questions/top`
+- `/api/admin/conversations`
+
+### AI gateway
+
+- `POST /api/chat`
+
+Chi tiết hợp đồng tích hợp Python nằm tại `docs/python-ai-agent-contract.md`.
+
+## Chạy dự án
+
+```bash
+npm install
+npm run dev
+```
+
+Kiểm tra trước khi phát hành:
+
+```bash
+npx tsc --noEmit
+npm run build
+```

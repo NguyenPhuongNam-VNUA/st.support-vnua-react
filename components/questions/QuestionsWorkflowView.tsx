@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   Box,
   Typography,
   Card,
@@ -18,14 +19,19 @@ import {
   IconButton,
   TextField,
   InputAdornment,
+  LinearProgress,
   MenuItem,
   Select,
   FormControl,
   Tabs,
   Tab,
+  TablePagination,
   Tooltip,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import {
+  CircleAlert,
   CheckCircle,
   XCircle,
   Edit3,
@@ -33,12 +39,16 @@ import {
   History,
   Plus,
   Save,
-  HelpCircle,
   GitCompare,
+  FileSpreadsheet,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { ConfigurationPlaybookIcon } from '@/components/icons/SidebarIcons';
 import SideBySideDuplicateModal from './SideBySideDuplicateModal';
 import QuestionAuditLogDialog from './QuestionAuditLogDialog';
+import QuestionEditDialog from './QuestionEditDialog';
+import questionApi from '@/api/admin/questionApi';
+import questionsExcelApi from '@/api/admin/questionsExcelApi';
 
 export const TOPIC_TAGS = ['Học vụ', 'Học phí', 'Ký túc xá', 'Tuyển sinh', 'Bảo lưu', 'Đồ án', 'Khác'];
 
@@ -49,53 +59,39 @@ export const STATUS_CONFIG: Record<string, { label: string; bg: string; text: st
   needs_edit: { label: 'Cần chỉnh sửa', bg: '#f0fdf4', text: '#006837', border: '#a7f3d0' },
 };
 
-const INITIAL_QUESTIONS = [
-  {
-    id: 1,
-    question: 'Điểm chuẩn ngành Công nghệ thông tin năm 2025 là bao nhiêu?',
-    answer: 'Điểm chuẩn ngành CNTT năm 2024 là 21.5 điểm theo phương thức xét học bạ THPT.',
-    topic: 'Tuyển sinh',
-    status: 'pending',
-    duplicate_score: 92.5,
-    existing_doc: 'Điểm chuẩn ngành CNTT năm 2024?',
-    created_at: '09/08/2026 10:15',
-  },
-  {
-    id: 2,
-    question: 'Quy định mức đóng học phí tín chỉ lý thuyết và thực hành năm 2025?',
-    answer: 'Học phí môn đại cương là 450.000đ/tín chỉ, môn chuyên ngành là 520.000đ/tín chỉ.',
-    topic: 'Học phí',
-    status: 'approved',
-    duplicate_score: 0,
-    created_at: '08/08/2026 14:30',
-  },
-  {
-    id: 3,
-    question: 'Thủ tục đăng ký tạm trú tạm vắng và ký túc xá khoa CNTT?',
-    answer: 'Sinh viên nộp đơn đăng ký tại Ban Quản lý Ký túc xá nhà N1 kèm bản sao CCCD.',
-    topic: 'Ký túc xá',
-    status: 'needs_edit',
-    duplicate_score: 76.0,
-    existing_doc: 'Đăng ký phòng ký túc xá ở đâu?',
-    created_at: '08/08/2026 11:20',
-  },
-  {
-    id: 4,
-    question: 'Hồ sơ xin hoãn thi kết thúc học kỳ 1 cần những giấy tờ gì?',
-    answer: 'Cần đơn xin hoãn thi, giấy chứng nhận y tế hoặc lý do chính đáng nộp về Ban Quản lý Đào tạo.',
-    topic: 'Học vụ',
-    status: 'pending',
-    duplicate_score: 0,
-    created_at: '07/08/2026 16:45',
-  },
-];
+interface QuestionRow {
+  id: number;
+  question: string;
+  answer: string | null;
+  topic: string | null;
+  status: string;
+  duplicate_score: number;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+const EMPTY_STATUS_COUNTS = { all: 0, pending: 0, approved: 0, needs_edit: 0, rejected: 0 };
+const EMPTY_ANSWER_COUNTS = { answered: 0, unanswered: 0 };
 
 export default function QuestionsWorkflowView() {
-  const [questions, setQuestions] = useState<any[]>(INITIAL_QUESTIONS);
+  const [questions, setQuestions] = useState<QuestionRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [currentTab, setCurrentTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('');
+  const [answerFilter, setAnswerFilter] = useState('all');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [statusCounts, setStatusCounts] = useState(EMPTY_STATUS_COUNTS);
+  const [answerCounts, setAnswerCounts] = useState(EMPTY_ANSWER_COUNTS);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [actionQuestionId, setActionQuestionId] = useState<number | null>(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   // Modals state
   const [compareModalOpen, setCompareModalOpen] = useState(false);
@@ -104,26 +100,67 @@ export default function QuestionsWorkflowView() {
   const [auditModalOpen, setAuditModalOpen] = useState(false);
   const [selectedAuditQuestion, setSelectedAuditQuestion] = useState<any>(null);
 
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedEditQuestion, setSelectedEditQuestion] = useState<QuestionRow | null>(null);
+
   // New Question Inline Add State
   const [newQuestionText, setNewQuestionText] = useState('');
   const [newAnswerText, setNewAnswerText] = useState('');
   const [newTopic, setNewTopic] = useState('Học vụ');
 
-  const filteredQuestions = useMemo(() => {
-    return questions.filter((q) => {
-      const matchesTab = currentTab === 'all' || q.status === currentTab;
-      const matchesSearch =
-        searchTerm === '' ||
-        q.question?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.answer?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesTopic = selectedTopic === '' || q.topic === selectedTopic;
-      return matchesTab && matchesSearch && matchesTopic;
-    });
-  }, [questions, currentTab, searchTerm, selectedTopic]);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setPage(0);
+      setSelectedIds([]);
+      setDebouncedSearch(searchTerm.trim());
+    }, 350);
+    return () => window.clearTimeout(timeoutId);
+  }, [searchTerm]);
+
+  const loadQuestions = useCallback(async (active: () => boolean = () => true) => {
+    setLoading(true);
+    try {
+      const response: any = await questionApi.getAll({
+        page: page + 1,
+        limit: rowsPerPage,
+        ...(currentTab !== 'all' && { status: currentTab }),
+        ...(debouncedSearch && { search: debouncedSearch }),
+        ...(selectedTopic && { topic: selectedTopic }),
+        ...(answerFilter !== 'all' && { answer: answerFilter }),
+      });
+      if (!active()) return;
+      const result = response?.data || {};
+      const rows = result.questions || [];
+      setQuestions(rows);
+      setTotal(result.total || 0);
+      setStatusCounts(result.statusCounts || EMPTY_STATUS_COUNTS);
+      setAnswerCounts(result.answerCounts || EMPTY_ANSWER_COUNTS);
+      setApiError(null);
+      if (page > 0 && rows.length === 0 && (result.total || 0) > 0) setPage((value) => value - 1);
+    } catch (error: any) {
+      if (active()) setApiError(error?.response?.data?.message || 'Không thể tải danh sách câu hỏi');
+    } finally {
+      if (active()) setLoading(false);
+    }
+  }, [answerFilter, currentTab, debouncedSearch, page, rowsPerPage, selectedTopic]);
+
+  useEffect(() => {
+    let active = true;
+    loadQuestions(() => active);
+    return () => { active = false; };
+  }, [loadQuestions, refreshKey]);
+
+  const refreshQuestions = () => setRefreshKey((value) => value + 1);
+
+  const selectedQuestions = useMemo(
+    () => questions.filter((question) => selectedIds.includes(question.id)),
+    [questions, selectedIds]
+  );
+  const hasSelectedUnanswered = selectedQuestions.some((question) => !question.answer?.trim());
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedIds(filteredQuestions.map((q) => q.id));
+      setSelectedIds(questions.map((q) => q.id));
     } else {
       setSelectedIds([]);
     }
@@ -136,39 +173,75 @@ export default function QuestionsWorkflowView() {
   };
 
   // Status transitions
-  const handleChangeStatus = (id: number, newStatus: string) => {
-    setQuestions((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, status: newStatus } : q))
-    );
+  const handleChangeStatus = async (id: number, newStatus: string) => {
+    setActionQuestionId(id);
+    try {
+      await questionApi.update(id, { status: newStatus });
+      setSuccessMessage('Cập nhật trạng thái thành công');
+      setApiError(null);
+      refreshQuestions();
+    } catch (error: any) {
+      setApiError(error?.response?.data?.message || 'Không thể cập nhật trạng thái');
+    } finally {
+      setActionQuestionId(null);
+    }
   };
 
   // Bulk actions
-  const handleBulkStatusChange = (newStatus: string) => {
-    setQuestions((prev) =>
-      prev.map((q) => (selectedIds.includes(q.id) ? { ...q, status: newStatus } : q))
-    );
-    setSelectedIds([]);
+  const handleBulkStatusChange = async (newStatus: string) => {
+    if (selectedIds.length === 0) return;
+    setBulkLoading(true);
+    try {
+      await questionApi.bulkUpdate(selectedIds, newStatus);
+      setSelectedIds([]);
+      setSuccessMessage('Cập nhật hàng loạt thành công');
+      setApiError(null);
+      refreshQuestions();
+    } catch (error: any) {
+      setApiError(error?.response?.data?.message || 'Không thể cập nhật hàng loạt');
+    } finally {
+      setBulkLoading(false);
+    }
   };
 
-  const handleBulkDelete = () => {
-    setQuestions((prev) => prev.filter((q) => !selectedIds.includes(q.id)));
-    setSelectedIds([]);
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0 || !window.confirm(`Xóa ${selectedIds.length} câu hỏi đã chọn?`)) return;
+    setBulkLoading(true);
+    try {
+      await questionApi.bulkDelete(selectedIds);
+      setSelectedIds([]);
+      setSuccessMessage('Xóa câu hỏi thành công');
+      setApiError(null);
+      refreshQuestions();
+    } catch (error: any) {
+      setApiError(error?.response?.data?.message || 'Không thể xóa câu hỏi');
+    } finally {
+      setBulkLoading(false);
+    }
   };
 
-  const handleAddQuestion = () => {
+  const handleAddQuestion = async () => {
     if (!newQuestionText.trim()) return;
-    const newItem = {
-      id: Date.now(),
-      question: newQuestionText,
-      answer: newAnswerText,
-      topic: newTopic,
-      status: 'pending',
-      duplicate_score: 0,
-      created_at: new Date().toLocaleString('vi-VN'),
-    };
-    setQuestions([newItem, ...questions]);
-    setNewQuestionText('');
-    setNewAnswerText('');
+    try {
+      await questionApi.add({
+        question: newQuestionText,
+        answer: newAnswerText,
+        topic: newTopic,
+        status: 'pending',
+      });
+      setNewQuestionText('');
+      setNewAnswerText('');
+      setCurrentTab('pending');
+      setAnswerFilter(newAnswerText.trim() ? 'answered' : 'unanswered');
+      setSelectedTopic('');
+      setSearchTerm('');
+      setPage(0);
+      setSuccessMessage('Thêm câu hỏi thành công');
+      setApiError(null);
+      refreshQuestions();
+    } catch (error: any) {
+      setApiError(error?.response?.data?.message || 'Không thể tạo câu hỏi');
+    }
   };
 
   const openCompare = (q: any) => {
@@ -181,8 +254,30 @@ export default function QuestionsWorkflowView() {
     setAuditModalOpen(true);
   };
 
+  const openEdit = (question: QuestionRow) => {
+    setSelectedEditQuestion(question);
+    setEditModalOpen(true);
+  };
+
+  const handleExcelImport = async (file?: File) => {
+    if (!file) return;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      await questionsExcelApi.upload(formData);
+      setPage(0);
+      setSuccessMessage('Nhập câu hỏi từ Excel thành công');
+      refreshQuestions();
+      setApiError(null);
+    } catch (error: any) {
+      setApiError(error?.response?.data?.message || 'Không thể nhập file Excel');
+    }
+  };
+
   return (
     <Box>
+      {apiError && <Alert severity="error" onClose={() => setApiError(null)} sx={{ mb: 2 }}>{apiError}</Alert>}
+      {successMessage && <Alert severity="success" onClose={() => setSuccessMessage(null)} sx={{ mb: 2 }}>{successMessage}</Alert>}
       {/* Top Header & Action Tabs */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
         <Box display="flex" alignItems="center" gap={2}>
@@ -198,7 +293,25 @@ export default function QuestionsWorkflowView() {
           </Box>
         </Box>
 
-        {/* Quick Add Form Trigger */}
+        {/* Quick Add / Excel Import */}
+        <Box display="flex" gap={1.2} flexWrap="wrap">
+        <Button
+          component="label"
+          variant="outlined"
+          startIcon={<FileSpreadsheet className="w-4 h-4" />}
+          sx={{ borderRadius: '10px', fontWeight: 700, textTransform: 'none', px: 2.2 }}
+        >
+          Nhập Excel
+          <input
+            hidden
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            onChange={(event) => {
+              handleExcelImport(event.target.files?.[0]);
+              event.target.value = '';
+            }}
+          />
+        </Button>
         <Button
           variant="contained"
           startIcon={<Plus className="w-4 h-4" />}
@@ -219,13 +332,19 @@ export default function QuestionsWorkflowView() {
         >
           Thêm câu hỏi mới
         </Button>
+        </Box>
       </Box>
 
       {/* Tabs Filter Card */}
       <Card className="emerald-card" sx={{ p: 0, bgcolor: '#ffffff', mb: 3 }}>
+        {loading && <LinearProgress aria-label="Đang tải danh sách câu hỏi" sx={{ bgcolor: '#d1fae5', '& .MuiLinearProgress-bar': { bgcolor: '#0d8a4f' } }} />}
         <Tabs
           value={currentTab}
-          onChange={(_, val) => setCurrentTab(val)}
+          onChange={(_, value) => {
+            setCurrentTab(value);
+            setPage(0);
+            setSelectedIds([]);
+          }}
           variant="scrollable"
           scrollButtons="auto"
           allowScrollButtonsMobile
@@ -251,11 +370,11 @@ export default function QuestionsWorkflowView() {
             },
           }}
         >
-          <Tab value="all" label={`Tất cả (${questions.length})`} />
-          <Tab value="pending" label={`Chờ duyệt (${questions.filter((q) => q.status === 'pending').length})`} />
-          <Tab value="approved" label={`Đã duyệt (${questions.filter((q) => q.status === 'approved').length})`} />
-          <Tab value="needs_edit" label={`Cần chỉnh sửa (${questions.filter((q) => q.status === 'needs_edit').length})`} />
-          <Tab value="rejected" label={`Từ chối (${questions.filter((q) => q.status === 'rejected').length})`} />
+          <Tab value="all" label={`Tất cả (${statusCounts.all})`} />
+          <Tab value="pending" label={`Chờ duyệt (${statusCounts.pending})`} />
+          <Tab value="approved" label={`Đã duyệt (${statusCounts.approved})`} />
+          <Tab value="needs_edit" label={`Cần chỉnh sửa (${statusCounts.needs_edit})`} />
+          <Tab value="rejected" label={`Từ chối (${statusCounts.rejected})`} />
         </Tabs>
 
         {/* Search, Tag Filter & Bulk Action Toolbar */}
@@ -289,7 +408,11 @@ export default function QuestionsWorkflowView() {
             <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 160 } }}>
               <Select
                 value={selectedTopic}
-                onChange={(e) => setSelectedTopic(e.target.value)}
+                onChange={(event) => {
+                  setSelectedTopic(event.target.value);
+                  setPage(0);
+                  setSelectedIds([]);
+                }}
                 displayEmpty
                 sx={{ 
                   borderRadius: '12px', 
@@ -309,23 +432,58 @@ export default function QuestionsWorkflowView() {
                 ))}
               </Select>
             </FormControl>
+
+            <ToggleButtonGroup
+              exclusive
+              size="small"
+              value={answerFilter}
+              onChange={(_, value) => {
+                if (!value) return;
+                setAnswerFilter(value);
+                setPage(0);
+                setSelectedIds([]);
+              }}
+              aria-label="Lọc theo tình trạng câu trả lời"
+              sx={{
+                alignSelf: { xs: 'stretch', sm: 'center' },
+                '& .MuiToggleButton-root': {
+                  px: 1.5,
+                  textTransform: 'none',
+                  fontSize: '0.75rem',
+                  fontWeight: 750,
+                  whiteSpace: 'nowrap',
+                  borderColor: 'rgba(0, 60, 30, 0.1)',
+                  '&.Mui-selected': { color: '#006837', bgcolor: '#ecfdf5' },
+                },
+              }}
+            >
+              <ToggleButton value="all">Tất cả đáp án ({answerCounts.answered + answerCounts.unanswered})</ToggleButton>
+              <ToggleButton value="unanswered">Chưa có ({answerCounts.unanswered})</ToggleButton>
+              <ToggleButton value="answered">Đã có ({answerCounts.answered})</ToggleButton>
+            </ToggleButtonGroup>
           </Box>
 
           {/* Bulk Action Controls */}
           {selectedIds.length > 0 && (
             <Box display="flex" alignItems="center" gap={1} bgcolor="#ecfdf5" p={1} border="1px solid rgba(16, 185, 129, 0.3)" sx={{ borderRadius: '12px', boxShadow: '0 0 0 1px rgba(255,255,255,0.8) inset' }}>
               <span className="text-xs font-black text-[#006837]">Đã chọn {selectedIds.length} mục:</span>
+              <Tooltip title={hasSelectedUnanswered ? 'Hãy thêm câu trả lời cho các câu hỏi đã chọn trước khi duyệt' : 'Duyệt các câu hỏi đã chọn'}>
+                <span>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    disabled={bulkLoading || hasSelectedUnanswered}
+                    onClick={() => handleBulkStatusChange('approved')}
+                    sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 800, fontSize: '0.75rem', py: 0.4, bgcolor: '#006837', '&:hover': { bgcolor: '#00562e' } }}
+                  >
+                    Duyệt hàng loạt
+                  </Button>
+                </span>
+              </Tooltip>
               <Button
                 size="small"
                 variant="contained"
-                onClick={() => handleBulkStatusChange('approved')}
-                sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 800, fontSize: '0.75rem', py: 0.4, bgcolor: '#006837', '&:hover': { bgcolor: '#00562e' } }}
-              >
-                Duyệt hàng loạt
-              </Button>
-              <Button
-                size="small"
-                variant="contained"
+                disabled={bulkLoading}
                 onClick={() => handleBulkStatusChange('rejected')}
                 sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 800, fontSize: '0.75rem', py: 0.4, bgcolor: '#e11d48', '&:hover': { bgcolor: '#be123c' } }}
               >
@@ -334,6 +492,7 @@ export default function QuestionsWorkflowView() {
               <Button
                 size="small"
                 variant="outlined"
+                disabled={bulkLoading}
                 onClick={handleBulkDelete}
                 sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 800, fontSize: '0.75rem', py: 0.4, borderColor: '#e11d48', color: '#e11d48', '&:hover': { bgcolor: '#fff1f2' } }}
               >
@@ -344,15 +503,17 @@ export default function QuestionsWorkflowView() {
         </Box>
 
         {/* Main Questions Table */}
-        <TableContainer component={Paper} elevation={0} sx={{ borderRadius: '0 0 18px 18px', overflow: 'hidden' }}>
+        <TableContainer component={Paper} elevation={0} sx={{ overflowX: 'auto' }}>
           <Table size="small" sx={{ minWidth: 700 }}>
             <TableHead sx={{ backgroundColor: '#fafdfb' }}>
               <TableRow>
                 <TableCell padding="checkbox" sx={{ borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>
                   <Checkbox
                     size="small"
-                    checked={selectedIds.length > 0 && selectedIds.length === filteredQuestions.length}
+                    checked={questions.length > 0 && selectedIds.length === questions.length}
+                    indeterminate={selectedIds.length > 0 && selectedIds.length < questions.length}
                     onChange={handleSelectAll}
+                    inputProps={{ 'aria-label': 'Chọn tất cả câu hỏi trên trang này' }}
                     sx={{ color: '#0d8a4f', '&.Mui-checked': { color: '#0d8a4f' } }}
                   />
                 </TableCell>
@@ -360,13 +521,15 @@ export default function QuestionsWorkflowView() {
                 <TableCell align="center" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#0d8a4f', width: 110, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>CHỦ ĐỀ</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#0d8a4f', width: 120, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>TRẠNG THÁI</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#0d8a4f', width: 130, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>TRÙNG LẶP %</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#0d8a4f', width: 220, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>HÀNH ĐỘNG DUYỆT</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#0d8a4f', width: 260, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>HÀNH ĐỘNG</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredQuestions.map((row) => {
+              {questions.map((row) => {
                 const isSelected = selectedIds.includes(row.id);
                 const statusInfo = STATUS_CONFIG[row.status] || STATUS_CONFIG.pending;
+                const hasAnswer = Boolean(row.answer?.trim());
+                const actionLoading = actionQuestionId === row.id;
                 return (
                   <TableRow 
                     key={row.id} 
@@ -383,6 +546,7 @@ export default function QuestionsWorkflowView() {
                         size="small"
                         checked={isSelected}
                         onChange={() => handleSelectOne(row.id)}
+                        inputProps={{ 'aria-label': `Chọn câu hỏi #${row.id}` }}
                         sx={{ color: '#0d8a4f', '&.Mui-checked': { color: '#0d8a4f' } }}
                       />
                     </TableCell>
@@ -390,10 +554,22 @@ export default function QuestionsWorkflowView() {
                       <Typography variant="body2" fontWeight={800} color="#0f291e" sx={{ fontSize: '0.875rem' }}>
                         {row.question}
                       </Typography>
-                      <Typography variant="body2" color="slate.600" sx={{ fontSize: '0.8rem', mt: 0.5 }}>
-                        {row.answer}
+                      {hasAnswer ? (
+                        <Typography variant="body2" color="slate.600" sx={{ fontSize: '0.8rem', mt: 0.5 }}>
+                          {row.answer}
+                        </Typography>
+                      ) : (
+                        <Chip
+                          icon={<MessageSquarePlus size={14} aria-hidden="true" />}
+                          label="Chưa có câu trả lời"
+                          size="small"
+                          onClick={() => openEdit(row)}
+                          sx={{ mt: 0.75, color: '#c2410c', bgcolor: '#fff7ed', border: '1px solid #fed7aa', fontWeight: 800, cursor: 'pointer' }}
+                        />
+                      )}
+                      <Typography component="span" display="block" sx={{ mt: 0.5, fontSize: '0.6875rem', color: '#94a3b8', fontWeight: 500 }}>
+                        Tạo lúc: {new Date(row.created_at).toLocaleString('vi-VN')}
                       </Typography>
-                      <span className="text-[11px] text-slate-400 font-medium">Tạo lúc: {row.created_at}</span>
                     </TableCell>
 
                     <TableCell align="center" sx={{ borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
@@ -428,7 +604,7 @@ export default function QuestionsWorkflowView() {
                       {row.duplicate_score > 0 ? (
                         <Tooltip title="Click để xem so sánh side-by-side">
                           <Chip
-                            icon={<GitCompare className="w-3 h-3" />}
+                            icon={<GitCompare className="w-3 h-3" aria-hidden="true" />}
                             label={`${row.duplicate_score}%`}
                             onClick={() => openCompare(row)}
                             size="small"
@@ -450,39 +626,67 @@ export default function QuestionsWorkflowView() {
 
                     <TableCell align="right" sx={{ borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
                       <Box display="flex" justifyContent="flex-end" gap={0.5}>
-                        <Tooltip title="Duyệt câu hỏi">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleChangeStatus(row.id, 'approved')}
-                            sx={{ color: '#0d8a4f', borderRadius: '8px', '&:hover': { backgroundColor: '#f0f8f4' } }}
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </IconButton>
+                        <Tooltip title={hasAnswer ? 'Duyệt câu hỏi' : 'Chưa thể duyệt khi chưa có câu trả lời'}>
+                          <span>
+                            <IconButton
+                              size="small"
+                              aria-label={`Duyệt câu hỏi #${row.id}`}
+                              disabled={!hasAnswer || row.status === 'approved' || actionLoading}
+                              onClick={() => handleChangeStatus(row.id, 'approved')}
+                              sx={{ color: '#0d8a4f', borderRadius: '8px', '&:hover': { backgroundColor: '#f0f8f4' } }}
+                            >
+                              <CheckCircle className="w-4 h-4" aria-hidden="true" />
+                            </IconButton>
+                          </span>
                         </Tooltip>
 
                         <Tooltip title="Từ chối">
+                          <span>
+                            <IconButton
+                              size="small"
+                              aria-label={`Từ chối câu hỏi #${row.id}`}
+                              disabled={row.status === 'rejected' || actionLoading}
+                              onClick={() => handleChangeStatus(row.id, 'rejected')}
+                              sx={{ color: '#be123c', borderRadius: '8px', '&:hover': { backgroundColor: '#fff1f2' } }}
+                            >
+                              <XCircle className="w-4 h-4" aria-hidden="true" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+
+                        <Tooltip title="Đánh dấu cần chỉnh sửa">
+                          <span>
+                            <IconButton
+                              size="small"
+                              aria-label={`Đánh dấu câu hỏi #${row.id} cần chỉnh sửa`}
+                              disabled={row.status === 'needs_edit' || actionLoading}
+                              onClick={() => handleChangeStatus(row.id, 'needs_edit')}
+                              sx={{ color: '#b45309', borderRadius: '8px', '&:hover': { backgroundColor: '#fffbeb' } }}
+                            >
+                              <CircleAlert className="w-4 h-4" aria-hidden="true" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+
+                        <Tooltip title={hasAnswer ? 'Sửa câu hỏi và câu trả lời' : 'Thêm câu trả lời'}>
                           <IconButton
                             size="small"
-                            onClick={() => handleChangeStatus(row.id, 'rejected')}
-                            sx={{ color: '#be123c', borderRadius: '8px', '&:hover': { backgroundColor: '#fff1f2' } }}
+                            aria-label={hasAnswer ? `Sửa câu hỏi #${row.id}` : `Thêm câu trả lời cho câu hỏi #${row.id}`}
+                            onClick={() => openEdit(row)}
+                            sx={{ color: hasAnswer ? '#2563eb' : '#c2410c', borderRadius: '8px', '&:hover': { backgroundColor: hasAnswer ? '#eff6ff' : '#fff7ed' } }}
                           >
-                            <XCircle className="w-4 h-4" />
+                            {hasAnswer ? <Edit3 className="w-4 h-4" aria-hidden="true" /> : <MessageSquarePlus className="w-4 h-4" aria-hidden="true" />}
                           </IconButton>
                         </Tooltip>
 
-                        <Tooltip title="Yêu cầu sửa">
+                        <Tooltip title="Xem lịch sử thay đổi">
                           <IconButton
                             size="small"
-                            onClick={() => handleChangeStatus(row.id, 'needs_edit')}
-                            sx={{ color: '#0d8a4f', borderRadius: '8px', '&:hover': { backgroundColor: '#f0f8f4' } }}
+                            aria-label={`Xem lịch sử thay đổi câu hỏi #${row.id}`}
+                            onClick={() => openAudit(row)}
+                            sx={{ color: '#64748b', borderRadius: '8px', '&:hover': { backgroundColor: '#f8fafc' } }}
                           >
-                            <Edit3 className="w-4 h-4" />
-                          </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title="Xem Audit Log">
-                          <IconButton size="small" onClick={() => openAudit(row)} sx={{ color: '#10b981', borderRadius: '8px', '&:hover': { backgroundColor: '#f0f8f4' } }}>
-                            <History className="w-4 h-4" />
+                            <History className="w-4 h-4" aria-hidden="true" />
                           </IconButton>
                         </Tooltip>
                       </Box>
@@ -490,9 +694,36 @@ export default function QuestionsWorkflowView() {
                   </TableRow>
                 );
               })}
+              {!loading && questions.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 7, color: 'text.secondary' }}>
+                    <MessageSquarePlus size={30} aria-hidden="true" />
+                    <Typography mt={1} fontWeight={700}>Không có câu hỏi phù hợp bộ lọc.</Typography>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </TableContainer>
+        <TablePagination
+          component="div"
+          count={total}
+          page={page}
+          onPageChange={(_, nextPage) => {
+            setPage(nextPage);
+            setSelectedIds([]);
+          }}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(Number(event.target.value));
+            setPage(0);
+            setSelectedIds([]);
+          }}
+          rowsPerPageOptions={[10, 20, 50, 100]}
+          labelRowsPerPage="Số dòng/trang:"
+          labelDisplayedRows={({ from, to, count }) => `${from}–${to} / ${count}`}
+          sx={{ borderTop: '1px solid rgba(13, 138, 79, 0.08)' }}
+        />
       </Card>
 
       {/* Quick Add Inline Card */}
@@ -600,9 +831,21 @@ export default function QuestionsWorkflowView() {
       <QuestionAuditLogDialog
         open={auditModalOpen}
         onClose={() => setAuditModalOpen(false)}
+        questionId={selectedAuditQuestion?.id}
         questionText={selectedAuditQuestion?.question}
+      />
+
+      <QuestionEditDialog
+        open={editModalOpen}
+        question={selectedEditQuestion}
+        topics={TOPIC_TAGS}
+        onClose={() => setEditModalOpen(false)}
+        onSaved={() => {
+          setEditModalOpen(false);
+          setSuccessMessage('Lưu thay đổi câu hỏi thành công');
+          refreshQuestions();
+        }}
       />
     </Box>
   );
 }
-

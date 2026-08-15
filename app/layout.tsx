@@ -11,6 +11,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: 'ST - Care | Khoa CNTT VNUA',
   description: 'Hệ thống hỗ trợ sinh viên VNUA - AI RAG Chatbot & Quản lý tri thức',
 };

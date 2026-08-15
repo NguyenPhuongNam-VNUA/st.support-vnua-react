@@ -120,41 +120,6 @@ const StatusChip = ({ status }: { status: string }) => {
   );
 };
 
-const MOCK_LOGS = [
-  {
-    id: 1,
-    question: "Điểm chuẩn ngành Công nghệ thông tin là bao nhiêu?",
-    context: "Quy chế tuyển sinh VNUA 2025",
-    answer: "Điểm chuẩn ngành CNTT năm 2024 là 21.5 điểm theo phương thức xét học bạ.",
-    response_type: "answered",
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 2,
-    question: "Học phí ngành Kỹ thuật phần mềm là bao nhiêu?",
-    context: "Quy định học phí 2025",
-    answer: "Học phí khoảng 450.000đ/tín chỉ đối với các môn đại cương.",
-    response_type: "answered",
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 3,
-    question: "Địa chỉ Ký túc xá khoa CNTT?",
-    context: "",
-    answer: "Chưa tìm thấy thông tin phù hợp trong cơ sở dữ liệu.",
-    response_type: "not_found",
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 4,
-    question: "Thời gian nộp hồ sơ xét tuyển trực tiếp?",
-    context: "Thông báo tuyển sinh",
-    answer: "Thời gian nhận hồ sơ từ 15/07/2025 đến 20/08/2025.",
-    response_type: "auto_generated",
-    created_at: new Date().toISOString()
-  }
-];
-
 export default function ConversationCard({ activeFilter, noCardContainer = false }: { activeFilter?: string | null; noCardContainer?: boolean }) {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,7 +142,7 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
     const fetchLogs = async () => {
       try {
         const res: any = await conversationApi.getAll();
-        const rawData = (res && Array.isArray(res.data) && res.data.length > 0) ? res.data : MOCK_LOGS;
+        const rawData = res && Array.isArray(res.data) ? res.data : [];
 
         setLogs(
           rawData.map((item: any) => ({
@@ -196,23 +161,8 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
           }))
         );
       } catch (err) {
-        console.warn("Lỗi khi lấy logs (dùng dữ liệu mẫu):", err);
-        setLogs(
-          MOCK_LOGS.map((item: any) => ({
-            id: item.id,
-            question: item.question,
-            context: item.context,
-            answer: item.answer,
-            status: item.response_type,
-            created_at: new Date(item.created_at).toLocaleString("vi-VN", {
-              day: '2-digit',
-              month: '2-digit', 
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            }),
-          }))
-        );
+        console.warn("Lỗi khi lấy logs:", err);
+        setLogs([]);
       } finally {
         setLoading(false);
       }
@@ -526,4 +476,3 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
     </Box>
   );
 }
-
