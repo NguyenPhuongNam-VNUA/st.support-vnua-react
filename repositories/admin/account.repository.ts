@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/utils/supabase/admin';
+import bcrypt from 'bcryptjs';
 import { AccountModel } from '../auth/auth.repository';
 import { CreateAccountDTO, UpdateAccountDTO } from '@/lib/validations/account.validation';
 
@@ -111,20 +112,13 @@ export const accountRepository = {
   },
 
   /**
-   * Tạo tài khoản mới: Băm mật khẩu bằng RPC hash_password rồi lưu vào DB
+   * Tạo tài khoản mới: Băm mật khẩu bằng bcrypt trực tiếp trên Node.js rồi lưu vào DB
    */
   async createAccount(data: CreateAccountDTO): Promise<Omit<AccountModel, 'password_hash'>> {
     const supabase = getSupabaseAdmin();
 
-    // 1. Băm mật khẩu qua RPC hash_password
-    const { data: hashedPassword, error: hashError } = await supabase.rpc('hash_password', {
-      p_password: data.password,
-    });
-
-    if (hashError || !hashedPassword) {
-      console.error('Lỗi băm mật khẩu qua RPC:', hashError);
-      throw new Error(`Không thể mã hóa mật khẩu: ${hashError?.message || 'Lỗi không xác định'}`);
-    }
+    // 1. Băm mật khẩu qua bcrypt (12 rounds)
+    const hashedPassword = await bcrypt.hash(data.password, 12);
 
     // 2. Chèn vào bảng accounts
     const insertPayload = {
@@ -145,7 +139,6 @@ export const accountRepository = {
       console.error('Lỗi khi chèn tài khoản mới:', insertError);
       throw new Error(`Lỗi tạo tài khoản: ${insertError.message}`);
     }
-
 
     return newAccount as Omit<AccountModel, 'password_hash'>;
   },
@@ -176,13 +169,7 @@ export const accountRepository = {
 
     // Nếu có cập nhật mật khẩu mới
     if (data.password && data.password.trim() !== '') {
-      const { data: hashedPassword, error: hashError } = await supabase.rpc('hash_password', {
-        p_password: data.password,
-      });
-      if (hashError || !hashedPassword) {
-        throw new Error(`Không thể mã hóa mật khẩu mới: ${hashError?.message || 'Lỗi'}`);
-      }
-      updatePayload.password_hash = hashedPassword;
+      updatePayload.password_hash = await bcrypt.hash(data.password, 12);
     }
 
     const { data: updatedAccount, error } = await supabase

@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/utils/supabase/admin';
+import bcrypt from 'bcryptjs';
 
 export interface AccountModel {
   id: number;
@@ -12,15 +13,16 @@ export interface AccountModel {
 
 export const authRepository = {
   /**
-   * Tìm kiếm tài khoản theo email (không phân biệt hoa thường)
+   * Tìm kiếm tài khoản theo email (tối ưu chọn đúng các trường cần thiết)
    */
   async findAccountByEmail(email: string): Promise<AccountModel | null> {
     const supabase = getSupabaseAdmin();
+    const normalizedEmail = email.trim().toLowerCase();
 
     const { data, error } = await supabase
       .from('accounts')
-      .select('*')
-      .ilike('email', email.trim())
+      .select('id, email, password_hash, full_name, role, is_active, created_at')
+      .ilike('email', normalizedEmail)
       .maybeSingle();
 
     if (error) {
@@ -32,22 +34,17 @@ export const authRepository = {
   },
 
   /**
-   * Xác thực mật khẩu thông qua hàm verify_password (pgcrypto) trong Supabase
+   * Xác thực mật khẩu thông qua thư viện bcrypt trên Node.js server
+   * Giúp loại bỏ lượt gọi mạng RPC thứ 2 tới DB, tăng tốc độ phản hồi gấp đôi
    */
   async verifyPassword(password: string, passwordHash: string): Promise<boolean> {
-    const supabase = getSupabaseAdmin();
-
-    const { data, error } = await supabase.rpc('verify_password', {
-      p_input_password: password,
-      p_password_hash: passwordHash,
-    });
-
-    if (error) {
-      console.error('Lỗi khi gọi RPC verify_password:', error);
-      throw new Error(`Lỗi xác thực mật khẩu từ cơ sở dữ liệu: ${error.message}`);
+    if (!password || !passwordHash) return false;
+    try {
+      return await bcrypt.compare(password, passwordHash);
+    } catch (error) {
+      console.error('Lỗi so khớp mật khẩu bằng bcrypt:', error);
+      return false;
     }
-
-    return !!data;
   },
 
   /**

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +14,15 @@ export function useLogin() {
   const [errorAlert, setErrorAlert] = useState<string | null>(null);
   const [infoAlert, setInfoAlert] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  // Preload trước trang /admin/dashboard để điều hướng tức thì sau khi đăng nhập thành công
+  useEffect(() => {
+    try {
+      router.prefetch('/admin/dashboard');
+    } catch {
+      // Bỏ qua nếu môi trường test/SSR
+    }
+  }, [router]);
 
   /**
    * Hook trực tiếp điều phối và gọi RESTful API /api/auth/login
