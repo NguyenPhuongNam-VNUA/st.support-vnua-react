@@ -5,6 +5,7 @@ and registers chat, documents, and health routers.
 """
 
 from contextlib import asynccontextmanager
+import asyncio
 import logging
 from typing import AsyncGenerator, Optional
 
@@ -77,6 +78,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         "hybrid_retriever",
         "semantic_cache",
         "input_guardrail",
+        "prompt_guard_model",
+        "local_reranker",
         "output_guardrail",
         "ingestion_worker",
         "graph_runner",
@@ -89,6 +92,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 logger.info("Eagerly wired singleton '%s' into container.", comp_name)
         except Exception as exc:
             logger.warning("Safe fallback: could not eagerly wire '%s': %s", comp_name, exc)
+
+    # Load optional local weights before readiness. Missing weights keep deterministic fallbacks active.
+    for model_name in ("prompt_guard_model", "local_reranker"):
+        model_component = get_component(model_name)
+        if model_component is not None and hasattr(model_component, "load"):
+            try:
+                await asyncio.to_thread(model_component.load)
+            except Exception as exc:
+                logger.warning("Local model '%s' warm-up failed safely: %s", model_name, type(exc).__name__)
 
     try:
         yield

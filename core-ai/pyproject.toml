@@ -39,6 +39,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+local-models = [
+    "torch>=2.4.0,<3.0.0",
+    "transformers>=4.48.0,<6.0.0",
+    "huggingface-hub>=0.27.0,<2.0.0",
+]
 dev = [
     "pytest>=8.2.0",
     "pytest-asyncio>=0.23.0",

@@ -18,10 +18,19 @@ export async function POST(request: NextRequest) {
     const requestId = crypto.randomUUID();
     const tenantId = process.env.CORE_AI_TENANT_ID || 'vnua';
     const upstream = await callAiAgent(
-      '/ask-ai',
+      '/v1/chat',
       {
         method: 'POST',
-        body: JSON.stringify({ ...body, question }),
+        headers: { Accept: 'text/event-stream' },
+        body: JSON.stringify({
+          message: question,
+          conversation_id: body?.conversation_id,
+          locale: 'vi-VN',
+          channel: 'web',
+          requested_tool: body?.requested_tool,
+          tool_arguments: body?.tool_arguments || {},
+          tool_approved: body?.tool_approved === true,
+        }),
       },
       { requestId, tenantId }
     );
@@ -29,8 +38,10 @@ export async function POST(request: NextRequest) {
     return new Response(upstream.body, {
       status: upstream.status,
       headers: {
-        'Content-Type': upstream.headers.get('content-type') || 'application/json; charset=utf-8',
-        'Cache-Control': 'no-store',
+        'Content-Type': upstream.headers.get('content-type') || 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
+        'X-Accel-Buffering': 'no',
         'X-Request-ID': upstream.headers.get('x-request-id') || requestId,
       },
     });

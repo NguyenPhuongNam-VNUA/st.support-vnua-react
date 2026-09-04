@@ -9,6 +9,7 @@ Implements:
 
 from __future__ import annotations
 
+import asyncio
 import re
 import time
 import unicodedata
@@ -16,6 +17,7 @@ from typing import Any, Dict, List, Set
 
 from core_ai.contracts.chat import Citation, FallbackInfo, RouteStatus
 from core_ai.dependencies import get_component
+from core_ai.config import get_settings
 from core_ai.graph.state import GraphState, add_execution_trace
 from core_ai.guardrails.pii_filter import PIIFilter
 from core_ai.observability.metrics import record_fallback
@@ -117,7 +119,40 @@ async def input_guardrail_node(state: GraphState) -> GraphState:
         except Exception:
             pass  # Fall back to internal heuristics
 
-    # 4. Prompt injection detection
+    # 4. Optional semantic Prompt Guard; timeout/failure falls through to regex.
+    prompt_guard = get_component("prompt_guard_model")
+    guard_mode = "regex_fallback"
+    if prompt_guard is not None and getattr(prompt_guard, "available", False):
+        try:
+            decision = await asyncio.wait_for(
+                asyncio.to_thread(prompt_guard.classify, normalized),
+                timeout=get_settings().prompt_guard_timeout_seconds,
+            )
+            guard_mode = decision.detector
+            if not decision.is_safe:
+                latency = int((time.perf_counter() - t0) * 1000)
+                state["is_blocked"] = True
+                state["block_reason"] = "Yêu cầu bị chặn bởi lớp bảo vệ Prompt Guard."
+                state["block_category"] = decision.category
+                state["status"] = RouteStatus.BLOCKED
+                state["fallback"] = FallbackInfo(
+                    reason="prompt_guard_model_blocked",
+                    original_route="input_guardrail",
+                    fallback_strategy="safe_template",
+                )
+                record_fallback("prompt_guard_model_blocked", "safe_template")
+                add_execution_trace(
+                    state,
+                    "input_guardrail",
+                    "failed",
+                    latency,
+                    {"detector": guard_mode, "category": decision.category, "score": decision.score},
+                )
+                return state
+        except Exception:
+            guard_mode = "regex_fallback"
+
+    # 5. Prompt injection detection
     for pattern in INJECTION_PATTERNS:
         if pattern.search(normalized):
             latency = int((time.perf_counter() - t0) * 1000)
@@ -135,7 +170,7 @@ async def input_guardrail_node(state: GraphState) -> GraphState:
             add_execution_trace(state, "input_guardrail", "failed", latency, {"reason": "prompt_injection"})
             return state
 
-    # 5. Raw PII check
+    # 6. Raw PII check
     for pii_pat in PII_PATTERNS:
         if pii_pat.search(normalized):
             latency = int((time.perf_counter() - t0) * 1000)
@@ -155,7 +190,7 @@ async def input_guardrail_node(state: GraphState) -> GraphState:
     # Input guardrail passed successfully
     latency = int((time.perf_counter() - t0) * 1000)
     state["is_blocked"] = False
-    add_execution_trace(state, "input_guardrail", "passed", latency)
+    add_execution_trace(state, "input_guardrail", "passed", latency, {"detector": guard_mode})
     return state
 
 

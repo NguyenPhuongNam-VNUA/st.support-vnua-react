@@ -21,13 +21,15 @@ import {
 } from 'lucide-react';
 
 import UserMsg from '@/components/chatbot/UserMsg/UserMsg';
-import ChatMsg from '@/components/chatbot/ChatMsg/ChatMsg';
+import ChatMsg, { ChatCitation, ChatTraceStep } from '@/components/chatbot/ChatMsg/ChatMsg';
 import aiApi from '@/api/chatbot/aiApi';
 
 interface Message {
   role: 'user' | 'assistant';
   text: string;
   timestamp?: string;
+  citations?: ChatCitation[];
+  trace?: ChatTraceStep[];
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -53,10 +55,13 @@ export default function ChatBotPage() {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isThinking, setIsThinking] = useState(false);
+  const [liveAnswer, setLiveAnswer] = useState('');
+  const [liveTrace, setLiveTrace] = useState<ChatTraceStep[]>([]);
   const [isAtBottom, setIsAtBottom] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const conversationIdRef = useRef('');
 
   const getCurrentTime = () => {
     return new Date().toLocaleTimeString('vi-VN', {
@@ -87,28 +92,49 @@ export default function ChatBotPage() {
 
     setMessages(newMessages);
     setIsThinking(true);
+    setLiveAnswer('');
+    setLiveTrace([]);
 
     try {
-      const filteredMessages = newMessages.map((msg) => ({
-        role: msg.role,
-        text: msg.text,
-      }));
-
-      const response: any = await aiApi.askAi({
-        question: userMessage,
-        messages: filteredMessages,
-      });
-
-      const formattedText = (response.answer || 'Không có phản hồi từ hệ thống.')
-        .trim()
-        .replace(/\n{3,}/g, '\n\n');
+      let finalAnswer = '';
+      let finalCitations: ChatCitation[] = [];
+      let finalTrace: ChatTraceStep[] = [];
+      if (!conversationIdRef.current) conversationIdRef.current = crypto.randomUUID();
+      await aiApi.streamAi(
+        { question: userMessage, conversation_id: conversationIdRef.current },
+        ({ event, data }) => {
+          if (event === 'pipeline.status') {
+            setLiveTrace((previous) => [
+              ...previous.filter((item) => item.step !== data.stage),
+              {
+                step: String(data.stage),
+                status: String(data.status),
+                latency_ms: data.latency_ms,
+                message: String(data.message || data.stage),
+              },
+            ]);
+          } else if (event === 'answer.delta') {
+            setLiveAnswer((previous) => previous + String(data.delta || ''));
+          } else if (event === 'answer.completed') {
+            finalAnswer = String(data.answer || 'Không có phản hồi từ hệ thống.').trim();
+            finalCitations = Array.isArray(data.citations) ? data.citations.slice(0, 3) : [];
+            finalTrace = Array.isArray(data.execution_trace) ? data.execution_trace : [];
+            setLiveAnswer(finalAnswer);
+            setLiveTrace(finalTrace);
+          } else if (event === 'answer.error') {
+            throw new Error(String(data.message || 'AI Agent tạm thời không khả dụng'));
+          }
+        }
+      );
 
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          text: formattedText,
+          text: finalAnswer || 'Không có phản hồi từ hệ thống.',
           timestamp: getCurrentTime(),
+          citations: finalCitations,
+          trace: finalTrace,
         },
       ]);
     } catch (err) {
@@ -123,12 +149,15 @@ export default function ChatBotPage() {
       console.error('Error fetching AI response:', err);
     } finally {
       setIsThinking(false);
+      setLiveAnswer('');
+      setLiveTrace([]);
     }
   };
 
   const handleResetChat = () => {
     setMessages([]);
     setMessage('');
+    conversationIdRef.current = '';
   };
 
   useEffect(() => {
@@ -301,32 +330,16 @@ export default function ChatBotPage() {
                         key={index}
                         message={msg.text}
                         timestamp={msg.timestamp}
+                        citations={msg.citations}
+                        trace={msg.trace}
                       />
                     );
                   return null;
                 })}
 
-                {/* Thinking / Typing Animation Indicator */}
+                {/* Immediate safe progress plus guarded answer stream */}
                 {isThinking && (
-                  <div className="flex items-center gap-3 my-2 animate-fadeIn">
-                    <div className="w-9 h-9 flex items-center justify-center">
-                      <Image
-                        src="/st.png"
-                        alt="ST - Care Avatar"
-                        width={32}
-                        height={32}
-                        className="object-contain drop-shadow-sm"
-                      />
-                    </div>
-                    <div className="px-4 py-3 rounded-2xl bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-sm flex items-center gap-1.5">
-                      <span className="typing-dot" />
-                      <span className="typing-dot" />
-                      <span className="typing-dot" />
-                      <span className="text-xs text-slate-500 font-medium ml-2">
-                        ST - Care đang suy nghĩ...
-                      </span>
-                    </div>
-                  </div>
+                  <ChatMsg message={liveAnswer} trace={liveTrace} isStreaming />
                 )}
                 <div ref={bottomRef} />
               </div>

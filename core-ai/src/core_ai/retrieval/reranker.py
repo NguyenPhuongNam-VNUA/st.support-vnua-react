@@ -33,6 +33,7 @@ class EvidenceEvaluationResult(BaseModel):
     top_score: float = Field(default=0.0, ge=0.0, le=1.0)
     has_high_relevance_source: bool = Field(default=False)
     latency_ms: int = Field(default=0, ge=0)
+    strategy: str = Field(default="heuristic", description="Safe reranking strategy identifier")
 
 
 class LocalReranker:

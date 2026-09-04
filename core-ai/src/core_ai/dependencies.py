@@ -203,6 +203,8 @@ def get_component(name: str) -> Optional[Any]:
         return get_embedding_service()
     if name == "local_reranker":
         return get_local_reranker()
+    if name == "prompt_guard_model":
+        return get_prompt_guard_model()
     if name == "context_builder":
         return get_context_builder()
 
@@ -271,13 +273,22 @@ def get_hybrid_retriever() -> Any:
 
 
 def get_local_reranker() -> Any:
-    """Dependency for injecting LocalReranker singleton."""
+    """Dependency for model-backed reranking with a no-model fallback."""
     reranker = _component_registry.get("local_reranker")
     if reranker is None:
-        from core_ai.retrieval.reranker import LocalReranker
-        reranker = LocalReranker()
+        from core_ai.retrieval.model_reranker import ModelReranker
+        reranker = ModelReranker(settings=_runtime_settings())
         register_component("local_reranker", reranker)
     return reranker
+
+
+def get_prompt_guard_model() -> Any:
+    guard = _component_registry.get("prompt_guard_model")
+    if guard is None:
+        from core_ai.guardrails.prompt_guard_model import PromptGuardModel
+        guard = PromptGuardModel(settings=_runtime_settings())
+        register_component("prompt_guard_model", guard)
+    return guard
 
 
 def get_context_builder() -> Any:

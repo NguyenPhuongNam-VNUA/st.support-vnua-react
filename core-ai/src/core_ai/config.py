@@ -73,7 +73,24 @@ class Settings(BaseSettings):
     embedding_timeout_seconds: float = Field(default=20.0, ge=1.0, le=60.0, alias="EMBEDDING_TIMEOUT_SECONDS")
     embedding_max_concurrency: int = Field(default=5, ge=1, le=20, alias="EMBEDDING_MAX_CONCURRENCY")
     reranker_timeout_seconds: float = Field(
-        default=0.25, ge=0.05, le=2.0, alias="RERANKER_TIMEOUT_SECONDS"
+        default=1.5, ge=0.05, le=10.0, alias="RERANKER_TIMEOUT_SECONDS"
+    )
+    retrieval_top_k: int = Field(default=3, ge=1, le=5, alias="RETRIEVAL_TOP_K")
+
+    # Optional local safety/reranking models. Runtime never downloads weights.
+    local_models_enabled: bool = Field(default=True, alias="LOCAL_MODELS_ENABLED")
+    local_models_device: str = Field(default="cpu", alias="LOCAL_MODELS_DEVICE")
+    prompt_guard_model_path: str = Field(
+        default="./models/Llama-Prompt-Guard-2-86M", alias="PROMPT_GUARD_MODEL_PATH"
+    )
+    prompt_guard_threshold: float = Field(
+        default=0.80, ge=0.0, le=1.0, alias="PROMPT_GUARD_THRESHOLD"
+    )
+    prompt_guard_timeout_seconds: float = Field(
+        default=0.8, ge=0.05, le=5.0, alias="PROMPT_GUARD_TIMEOUT_SECONDS"
+    )
+    bge_reranker_model_path: str = Field(
+        default="./models/bge-reranker-v2-m3", alias="BGE_RERANKER_MODEL_PATH"
     )
 
     # PostgreSQL & Supavisor Pooler Configuration

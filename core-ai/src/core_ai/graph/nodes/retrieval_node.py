@@ -96,6 +96,7 @@ async def retrieval_node(state: GraphState) -> GraphState:
             )
             candidates = reciprocal_rank_fusion(dense, sparse, top_k=10)
             reranker = get_component("local_reranker")
+            final_top_k = get_settings().retrieval_top_k
             if reranker is not None:
                 try:
                     reranked = await asyncio.wait_for(
@@ -103,20 +104,27 @@ async def retrieval_node(state: GraphState) -> GraphState:
                             reranker.rerank,
                             query,
                             candidates,
-                            target_top_n=5,
+                            target_top_n=final_top_k,
                         ),
                         timeout=get_settings().reranker_timeout_seconds,
                     )
                     candidates = reranked.snippets
+                    state["rerank_strategy"] = getattr(reranked, "strategy", "unknown")
+                except asyncio.TimeoutError:
+                    logger.warning("BGE reranker timed out; using RRF order")
+                    state["rerank_strategy"] = "rrf_timeout_fallback"
+                    candidates = candidates[:final_top_k]
                 except Exception as exc:
                     logger.warning(
                         "Local reranker unavailable for request_id=%s: %s; using RRF order",
                         state.get("request_id"),
                         type(exc).__name__,
                     )
-                    candidates = candidates[:5]
+                    state["rerank_strategy"] = "rrf_error_fallback"
+                    candidates = candidates[:final_top_k]
             else:
-                candidates = candidates[:5]
+                state["rerank_strategy"] = "rrf_unavailable_fallback"
+                candidates = candidates[:final_top_k]
         except Exception as exc:
             retrieval_status = "degraded"
             state["error_code"] = "retrieval_failed"
@@ -134,6 +142,11 @@ async def retrieval_node(state: GraphState) -> GraphState:
         "retrieval",
         retrieval_status,  # type: ignore[arg-type]
         int((time.perf_counter() - started) * 1000),
-        {"snippets_count": len(candidates), "attempt": attempts, "dense_enabled": include_dense},
+        {
+            "snippets_count": len(candidates),
+            "attempt": attempts,
+            "dense_enabled": include_dense,
+            "rerank_strategy": state.get("rerank_strategy", "none"),
+        },
     )
     return state
