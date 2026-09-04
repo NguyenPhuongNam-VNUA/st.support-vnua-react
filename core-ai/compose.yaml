@@ -1,0 +1,142 @@
+# ==============================================================================
+# ST-Care Core AI Microservice - Docker Compose Stack
+# ==============================================================================
+# Architecture:
+# - core-ai: FastAPI backend hosting LangGraph, RAG pipeline, LLM/MCP gateways.
+# - redis: Internal semantic cache, idempotency lock, and rate limiter.
+#          No public ports exposed; strictly internal Docker network.
+# - Optional monitoring profile: Prometheus scraping core-ai:5001/metrics.
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Internal Semantic Cache & Distributed Lock (Redis)
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7.2.4-alpine
+    container_name: stcare-core-ai-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy volatile-lru
+      --save 900 1
+      --save 300 10
+    expose:
+      - "6379"  # Strictly internal to Docker network; no host port mapping in production
+    volumes:
+      - redis_data:/data
+    networks:
+      - core_ai_internal_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # ----------------------------------------------------------------------------
+  # 2. ST-Care Core AI Microservice
+  # ----------------------------------------------------------------------------
+  core-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: st-care-core-ai:latest
+    container_name: stcare-core-ai-service
+    restart: unless-stopped
+    ports:
+      - "5001:5001"  # Accessible to Node.js backend / BFF
+    environment:
+      # Application Environment
+      APP_ENV: ${APP_ENV:-production}
+      CORE_AI_HOST: 0.0.0.0
+      CORE_AI_PORT: 5001
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN must be set}
+      DEFAULT_TENANT: ${DEFAULT_TENANT:-vnua}
+      ALLOWED_TENANTS: ${ALLOWED_TENANTS:-vnua}
+
+      # LLM Gateway
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      LLM_MODEL: ${LLM_MODEL:-gemini-3.5-flash}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-20.0}
+      LLM_MAX_EXTERNAL_CALLS: ${LLM_MAX_EXTERNAL_CALLS:-2}
+      LLM_FALLBACK_PROVIDER: ${LLM_FALLBACK_PROVIDER:-}
+      LLM_FALLBACK_MODEL: ${LLM_FALLBACK_MODEL:-}
+
+      # Embedding
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-gemini}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-gemini-embedding-2}
+      EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-1024}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
+      EMBEDDING_TIMEOUT_SECONDS: ${EMBEDDING_TIMEOUT_SECONDS:-20.0}
+      EMBEDDING_MAX_CONCURRENCY: ${EMBEDDING_MAX_CONCURRENCY:-5}
+
+      # Database & Supavisor Connection Pooler
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@host.docker.internal:6543/postgres}
+      DB_POOL_MIN_SIZE: ${DB_POOL_MIN_SIZE:-2}
+      DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE:-10}
+      DB_COMMAND_TIMEOUT_SECONDS: ${DB_COMMAND_TIMEOUT_SECONDS:-3.0}
+      DB_STATEMENT_CACHE_SIZE: 0
+
+      # Internal Redis Cache (points to internal compose service)
+      REDIS_URL: redis://redis:6379/0
+      REDIS_MAX_CONNECTIONS: 30
+
+      # MCP Gateway
+      MCP_TRANSPORT: ${MCP_TRANSPORT:-streamable-http}
+      MCP_TOOL_TIMEOUT_SECONDS: ${MCP_TOOL_TIMEOUT_SECONDS:-3.0}
+      MCP_ALLOWED_TOOLS: "search_knowledge,lookup_schedule,check_tuition,get_regulations,create_support_case"
+
+      # Observability
+      OTEL_SERVICE_NAME: "st-care-core-ai"
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      LOG_RAW_PROMPTS: "false"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - core_ai_internal_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health/live', timeout=3)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # ----------------------------------------------------------------------------
+  # 3. Optional Monitoring Profile: Prometheus
+  # ----------------------------------------------------------------------------
+  # Launch with: docker compose --profile monitoring up -d
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: stcare-prometheus
+    profiles:
+      - monitoring
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - core_ai_internal_net
+    depends_on:
+      - core-ai
+
+# ------------------------------------------------------------------------------
+# Networks & Storage Volumes
+# ------------------------------------------------------------------------------
+networks:
+  core_ai_internal_net:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local

@@ -40,7 +40,7 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
   const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
   const [apiKey, setApiKey] = useState('AIzaSyD-VNUA_GeminiKey_2026_Secured');
   const [showApiKey, setShowApiKey] = useState(false);
-  const [embeddingModel, setEmbeddingModel] = useState('text-embedding-004');
+  const [embeddingModel, setEmbeddingModel] = useState('gemini-embedding-2');
   const [testApiSuccess, setTestApiSuccess] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -106,7 +106,8 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
   ];
 
   const EMBEDDING_OPTIONS = [
-    'text-embedding-004',
+    'gemini-embedding-2',
+    'gemini-embedding-001',
     'text-embedding-3-small',
     'text-embedding-3-large',
     'bge-m3',

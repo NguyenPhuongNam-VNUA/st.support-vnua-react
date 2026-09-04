@@ -84,7 +84,7 @@ export default function DocChunkInspectorDrawer({
 
           <Box display="flex" gap={1} flexWrap="wrap">
             <Chip size="small" label={`Tổng Chunks: ${chunks.length}`} sx={{ borderRadius: 0, fontWeight: 700, backgroundColor: '#edf4fc', color: '#2563eb' }} />
-            <Chip size="small" label="Embedding Model: cấu hình bởi AI Agent" sx={{ borderRadius: 0, fontWeight: 700, backgroundColor: '#f1f5f9' }} />
+            <Chip size="small" label="Embedding Model: Gemini Embedding 2" sx={{ borderRadius: 0, fontWeight: 700, backgroundColor: '#f1f5f9' }} />
             <Chip size="small" label="Vector Size: 1024" sx={{ borderRadius: 0, fontWeight: 700, backgroundColor: '#f1f5f9' }} />
           </Box>
         </Box>

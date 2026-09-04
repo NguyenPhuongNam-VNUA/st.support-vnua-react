@@ -1,0 +1,123 @@
+"""ST-Care Core AI Frozen Contracts.
+
+All domain schemas, protocols, event envelopes, and error hierarchies are frozen here.
+"""
+
+from core_ai.contracts.chat import (
+    ChatRequest,
+    ChatResponse,
+    Citation,
+    DocumentEmbedRequest,
+    DocumentEmbedResponse,
+    ExecutionTraceStep,
+    FallbackInfo,
+    LegacyAskAiRequest,
+    LegacyChatMessage,
+    RouteStatus,
+)
+from core_ai.contracts.errors import (
+    AuthenticationError,
+    CallBudgetExceededError,
+    CircuitBreakerOpenError,
+    CoreAIError,
+    DatabaseUnavailableError,
+    ErrorCode,
+    ForbiddenError,
+    GuardrailBlockedError,
+    InvalidPayloadError,
+    MalformedOutputError,
+    PayloadTooLargeError,
+    ProviderTimeoutError,
+    ProviderUnavailableError,
+    RateLimitExceededError,
+    RetrievalError,
+    TenantForbiddenError,
+    ToolExecutionError,
+    ToolNotAllowedError,
+)
+from core_ai.contracts.events import (
+    AnswerCompletedPayload,
+    AnswerDeltaPayload,
+    AnswerErrorPayload,
+    PipelineStatusPayload,
+    RequestAcceptedPayload,
+    SSEEvent,
+    TokenUsageSummary,
+)
+from core_ai.contracts.llm import (
+    ChatMessage,
+    GenerationRequest,
+    GenerationResult,
+    LLMPort,
+    ModelConfig,
+    ProviderCapability,
+    TokenUsage,
+)
+from core_ai.contracts.mcp import (
+    CircuitBreakerConfig,
+    CircuitBreakerState,
+    MCPGateway,
+    ToolCircuitStatus,
+    ToolDefinition,
+    ToolRequest,
+    ToolResult,
+    ToolScope,
+)
+
+__all__ = [
+    # Chat contracts
+    "RouteStatus",
+    "Citation",
+    "ExecutionTraceStep",
+    "FallbackInfo",
+    "ChatRequest",
+    "LegacyChatMessage",
+    "LegacyAskAiRequest",
+    "ChatResponse",
+    "DocumentEmbedRequest",
+    "DocumentEmbedResponse",
+    # Events contracts
+    "RequestAcceptedPayload",
+    "PipelineStatusPayload",
+    "AnswerDeltaPayload",
+    "TokenUsageSummary",
+    "AnswerCompletedPayload",
+    "AnswerErrorPayload",
+    "SSEEvent",
+    # LLM contracts
+    "ChatMessage",
+    "TokenUsage",
+    "GenerationRequest",
+    "GenerationResult",
+    "ProviderCapability",
+    "ModelConfig",
+    "LLMPort",
+    # MCP contracts
+    "ToolScope",
+    "CircuitBreakerState",
+    "CircuitBreakerConfig",
+    "ToolCircuitStatus",
+    "ToolDefinition",
+    "ToolRequest",
+    "ToolResult",
+    "MCPGateway",
+    # Errors contracts
+    "ErrorCode",
+    "CoreAIError",
+    "AuthenticationError",
+    "ForbiddenError",
+    "TenantForbiddenError",
+    "RateLimitExceededError",
+    "CallBudgetExceededError",
+    "InvalidPayloadError",
+    "PayloadTooLargeError",
+    "GuardrailBlockedError",
+    "RetrievalError",
+    "DatabaseUnavailableError",
+    "ProviderTimeoutError",
+    "ProviderUnavailableError",
+    "MalformedOutputError",
+    "ToolExecutionError",
+    "CircuitBreakerOpenError",
+    "ToolNotAllowedError",
+]

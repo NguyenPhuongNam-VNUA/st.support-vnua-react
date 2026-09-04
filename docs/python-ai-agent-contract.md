@@ -56,7 +56,7 @@ Python thực hiện:
 
 1. Tải PDF từ signed URL.
 2. Tách nội dung và tạo chunk.
-3. Sinh embedding đúng 1024 chiều như schema hiện tại.
+3. Sinh embedding bằng `gemini-embedding-2`, đúng 1024 chiều như schema hiện tại.
 4. Ghi `document_chunks` với `document_id`, `chunk_index`, `page`, `tokens`, `content`, `embedding`.
 5. Cập nhật `documents.pipeline_stage` và `progress`.
 
