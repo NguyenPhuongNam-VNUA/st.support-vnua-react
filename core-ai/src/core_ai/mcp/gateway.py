@@ -15,6 +15,7 @@ from core_ai.config import Settings, get_settings
 from core_ai.contracts.errors import (
     CircuitBreakerOpenError,
     CoreAIError,
+    TenantForbiddenError,
     ToolExecutionError,
     ToolNotAllowedError,
 )
@@ -30,6 +31,7 @@ from core_ai.dependencies import register_component
 from core_ai.mcp.circuit_breaker import ToolCircuitBreaker
 from core_ai.mcp.client_manager import MCPClientManager
 from core_ai.mcp.registry import RegisteredTool, ToolRegistry
+from core_ai.observability.metrics import record_mcp_tool
 
 logger = logging.getLogger("core_ai.mcp.gateway")
 
@@ -91,6 +93,14 @@ class MCPGatewayImpl:
             request.user_id,
         )
 
+        allowed_tenants = self.settings.allowed_tenants
+        if isinstance(allowed_tenants, str):
+            allowed_tenants = [
+                item.strip() for item in allowed_tenants.split(",") if item.strip()
+            ]
+        if request.tenant_id not in allowed_tenants:
+            raise TenantForbiddenError("Tenant không được phép thực thi công cụ")
+
         # 1. Allowlist & ACL Scope Validation
         registered_tool: RegisteredTool = self.registry.validate_tool_call(
             request, allowed_tools=self.allowed_tools
@@ -115,17 +125,24 @@ class MCPGatewayImpl:
         # 4. Dispatch Tool Execution with Timeout
         try:
             raw_data = await asyncio.wait_for(
-                self._dispatch_tool_execution(registered_tool, request.arguments, effective_timeout),
+                self._dispatch_tool_execution(registered_tool, request, effective_timeout),
                 timeout=effective_timeout,
             )
+            self.registry.validate_tool_output(registered_tool, raw_data)
+            encoded_size = len(json.dumps(raw_data, ensure_ascii=False, default=str).encode("utf-8"))
+            if encoded_size > self.settings.mcp_max_result_bytes:
+                raise ToolExecutionError(
+                    f"Kết quả công cụ '{tool_name}' vượt quá giới hạn kích thước"
+                )
 
             # Record healthy execution in circuit breaker
             await self.circuit_breaker.record_success(tool_name)
 
             elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+            record_mcp_tool(tool_name, "success", elapsed_ms / 1000.0)
 
             raw_output = (
-                json.dumps(raw_data, ensure_ascii=False)
+                json.dumps(raw_data, ensure_ascii=False, default=str)
                 if isinstance(raw_data, (dict, list))
                 else str(raw_data)
             )
@@ -150,6 +167,7 @@ class MCPGatewayImpl:
         except asyncio.TimeoutError as exc:
             await self.circuit_breaker.record_failure(tool_name, exc)
             elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+            record_mcp_tool(tool_name, "timeout", elapsed_ms / 1000.0)
             err_msg = (
                 f"Công cụ '{tool_name}' vượt quá thời gian phản hồi cho phép "
                 f"({effective_timeout:.1f}s) sau {elapsed_ms}ms"
@@ -160,6 +178,7 @@ class MCPGatewayImpl:
         except CoreAIError as exc:
             # Domain errors (e.g. ToolExecutionError)
             await self.circuit_breaker.record_failure(tool_name, exc)
+            record_mcp_tool(tool_name, "error", time.perf_counter() - start_time)
             logger.error("CoreAIError executing tool '%s': %s", tool_name, exc.message)
             raise
 
@@ -167,14 +186,15 @@ class MCPGatewayImpl:
             # Unhandled errors
             await self.circuit_breaker.record_failure(tool_name, exc)
             elapsed_ms = int((time.perf_counter() - start_time) * 1000)
-            err_msg = f"Lỗi không xác định khi thực thi công cụ '{tool_name}': {str(exc)}"
+            record_mcp_tool(tool_name, "error", elapsed_ms / 1000.0)
+            err_msg = f"Không thể thực thi công cụ '{tool_name}'"
             logger.error(err_msg, exc_info=True)
             raise ToolExecutionError(err_msg) from exc
 
     async def _dispatch_tool_execution(
         self,
         registered: RegisteredTool,
-        arguments: Dict[str, Any],
+        request: ToolRequest,
         timeout_seconds: float,
     ) -> Dict[str, Any]:
         """Dispatches tool execution to either local handler or remote MCP server."""
@@ -182,11 +202,22 @@ class MCPGatewayImpl:
             return await self.client_manager.execute_remote_tool(
                 server_id=registered.server_id,
                 tool_name=registered.definition.name,
-                arguments=arguments,
+                arguments=request.arguments,
                 timeout_seconds=timeout_seconds,
+                context_headers={
+                    "X-Tenant-ID": request.tenant_id,
+                    "X-User-ID": str(request.user_id or ""),
+                    "X-Request-ID": request.request_id,
+                    "Idempotency-Key": request.request_id,
+                },
             )
         elif registered.handler:
-            return await registered.handler(arguments)
+            trusted_arguments = dict(request.arguments)
+            trusted_arguments["_tenant_id"] = request.tenant_id
+            trusted_arguments["_user_id"] = request.user_id
+            trusted_arguments["_request_id"] = request.request_id
+            trusted_arguments["_settings"] = self.settings
+            return await registered.handler(trusted_arguments)
         else:
             raise ToolExecutionError(
                 f"Không có handler hoặc cấu hình server nào cho công cụ '{registered.definition.name}'"

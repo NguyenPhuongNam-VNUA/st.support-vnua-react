@@ -18,6 +18,7 @@ services:
     restart: unless-stopped
     command: >
       redis-server
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
       --appendonly yes
       --maxmemory 256mb
       --maxmemory-policy volatile-lru
@@ -29,8 +30,10 @@ services:
       - redis_data:/data
     networks:
       - core_ai_internal_net
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -53,6 +56,8 @@ services:
       APP_ENV: ${APP_ENV:-production}
       CORE_AI_HOST: 0.0.0.0
       CORE_AI_PORT: 5001
+      MAX_REQUEST_BODY_BYTES: ${MAX_REQUEST_BODY_BYTES:-1048576}
+      REQUEST_DEADLINE_SECONDS: ${REQUEST_DEADLINE_SECONDS:-30}
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN must be set}
       DEFAULT_TENANT: ${DEFAULT_TENANT:-vnua}
       ALLOWED_TENANTS: ${ALLOWED_TENANTS:-vnua}
@@ -75,6 +80,10 @@ services:
       EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
       EMBEDDING_TIMEOUT_SECONDS: ${EMBEDDING_TIMEOUT_SECONDS:-20.0}
       EMBEDDING_MAX_CONCURRENCY: ${EMBEDDING_MAX_CONCURRENCY:-5}
+      RERANKER_TIMEOUT_SECONDS: ${RERANKER_TIMEOUT_SECONDS:-0.25}
+      INGESTION_ALLOWED_HOSTS: ${INGESTION_ALLOWED_HOSTS:?INGESTION_ALLOWED_HOSTS must be set}
+      INGESTION_MAX_FILE_BYTES: ${INGESTION_MAX_FILE_BYTES:-26214400}
+      INGESTION_MAX_PDF_PAGES: ${INGESTION_MAX_PDF_PAGES:-200}
 
       # Database & Supavisor Connection Pooler
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@host.docker.internal:6543/postgres}
@@ -84,13 +93,19 @@ services:
       DB_STATEMENT_CACHE_SIZE: 0
 
       # Internal Redis Cache (points to internal compose service)
-      REDIS_URL: redis://redis:6379/0
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
       REDIS_MAX_CONNECTIONS: 30
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
+      IDEMPOTENCY_TTL_SECONDS: ${IDEMPOTENCY_TTL_SECONDS:-600}
 
       # MCP Gateway
       MCP_TRANSPORT: ${MCP_TRANSPORT:-streamable-http}
       MCP_TOOL_TIMEOUT_SECONDS: ${MCP_TOOL_TIMEOUT_SECONDS:-3.0}
+      MCP_MAX_RESULT_BYTES: ${MCP_MAX_RESULT_BYTES:-65536}
       MCP_ALLOWED_TOOLS: "search_knowledge,lookup_schedule,check_tuition,get_regulations,create_support_case"
+      BUSINESS_API_BASE_URL: ${BUSINESS_API_BASE_URL:-}
+      BUSINESS_API_TOKEN: ${BUSINESS_API_TOKEN:-}
+      BUSINESS_API_TIMEOUT_SECONDS: ${BUSINESS_API_TIMEOUT_SECONDS:-2.5}
 
       # Observability
       OTEL_SERVICE_NAME: "st-care-core-ai"
@@ -102,7 +117,7 @@ services:
     networks:
       - core_ai_internal_net
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health/live', timeout=3)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health/ready', timeout=3)"]
       interval: 10s
       timeout: 3s
       retries: 3

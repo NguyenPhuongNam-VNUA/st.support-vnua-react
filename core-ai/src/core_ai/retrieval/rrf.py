@@ -114,15 +114,5 @@ def reciprocal_rank_fusion(
             if len(final_ranked) >= top_k:
                 break
 
-    # If top_k not reached and remaining candidates exist, fill up without cap if needed
-    if len(final_ranked) < top_k:
-        existing_ids = {c.chunk_id for c in final_ranked}
-        for chunk in scored_candidates:
-            if chunk.chunk_id not in existing_ids:
-                chunk.rank = len(final_ranked) + 1
-                final_ranked.append(chunk)
-                if len(final_ranked) >= top_k:
-                    break
-
     logger.debug("RRF merged %d candidates into %d top ranked chunks", len(merged_chunks), len(final_ranked))
     return final_ranked

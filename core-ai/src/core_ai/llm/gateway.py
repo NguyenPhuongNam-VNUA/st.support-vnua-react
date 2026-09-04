@@ -30,6 +30,11 @@ from core_ai.llm.prompts.st_care import (
     get_budget_exceeded_response,
     get_safe_fallback_response,
 )
+from core_ai.observability.metrics import (
+    record_estimated_cost,
+    record_external_call,
+    record_llm_tokens,
+)
 
 logger = logging.getLogger("core_ai.llm.gateway")
 
@@ -82,6 +87,7 @@ class LLMGateway(LLMPort):
         request: GenerationRequest,
         fallback_text: str,
         reason: str,
+        external_calls_used: int = 0,
     ) -> GenerationResult:
         """Constructs a deterministic safe GenerationResult without external calls."""
         return GenerationResult(
@@ -94,6 +100,7 @@ class LLMGateway(LLMPort):
             model=self._active_config.model,
             provider=self._active_config.provider,
             latency_ms=0,
+            external_calls_used=external_calls_used,
             finish_reason="stop",
         )
 
@@ -102,8 +109,8 @@ class LLMGateway(LLMPort):
 
         Call Budget Enforcement:
         - Ceiling: Maximum 2 external AI calls per request.
-        - Normal path: 1 external call.
-        - Failover: 1 retry permitted if request.external_calls_already_made == 0 (making total 2).
+        - This gateway normally spends 1 answer-generation call.
+        - Failover is permitted only while the request-wide budget has capacity.
         - If budget exceeded: raises CallBudgetExceededError (or returns safe fallback if configured).
         """
         # 1. Check budget ceiling before initiating call
@@ -119,6 +126,7 @@ class LLMGateway(LLMPort):
                     request=request,
                     fallback_text=get_budget_exceeded_response(),
                     reason="call_budget_exceeded",
+                    external_calls_used=0,
                 )
             raise CallBudgetExceededError(
                 f"Vượt quá giới hạn cuộc gọi AI bên ngoài (tối đa {self._active_config.max_external_calls} calls). "
@@ -136,7 +144,19 @@ class LLMGateway(LLMPort):
                 self._active_config.provider,
                 self._active_config.model,
             )
+            record_external_call(
+                self._active_config.provider, self._active_config.model, "answer_generation"
+            )
             result = await self._adapter.execute(self._active_config, request)
+            record_llm_tokens(
+                result.provider,
+                result.model_name,
+                result.usage.prompt_tokens,
+                result.usage.completion_tokens,
+            )
+            record_estimated_cost(
+                result.provider, result.model_name, result.usage.estimated_cost_usd
+            )
             return result
         except (ProviderTimeoutError, ProviderUnavailableError) as primary_err:
             calls_spent += 1
@@ -165,6 +185,7 @@ class LLMGateway(LLMPort):
                         request=request,
                         fallback_text=get_safe_fallback_response(primary_err.message),
                         reason=primary_err.code.value,
+                        external_calls_used=1,
                     )
                 raise primary_err
 
@@ -195,19 +216,34 @@ class LLMGateway(LLMPort):
             )
 
             try:
+                record_external_call(
+                    fallback_config.provider, fallback_config.model, "answer_generation_failover"
+                )
                 failover_result = await self._adapter.execute(fallback_config, request)
-                return failover_result
+                record_llm_tokens(
+                    failover_result.provider,
+                    failover_result.model_name,
+                    failover_result.usage.prompt_tokens,
+                    failover_result.usage.completion_tokens,
+                )
+                record_estimated_cost(
+                    failover_result.provider,
+                    failover_result.model_name,
+                    failover_result.usage.estimated_cost_usd,
+                )
+                return failover_result.model_copy(update={"external_calls_used": 2})
             except Exception as failover_err:
                 logger.error(
                     "Failover LLM call also failed for request_id=%s: %s",
                     request.request_id,
-                    failover_err,
+                    type(failover_err).__name__,
                 )
                 if self._safe_fallback_on_exhaustion:
                     return self._create_safe_fallback_result(
                         request=request,
-                        fallback_text=get_safe_fallback_response(str(failover_err)),
+                        fallback_text=get_safe_fallback_response("provider failover unavailable"),
                         reason="failover_exhausted",
+                        external_calls_used=2,
                     )
                 raise primary_err from failover_err
 

@@ -31,37 +31,32 @@ async def readiness_probe(response: Response) -> Dict[str, Any]:
     Degraded-safe: If Redis is unavailable, returns HTTP 200 with status='degraded'.
     If primary Database connection fails, returns HTTP 503 with status='unhealthy'.
     """
-    db_pool = get_component("db_pool")
-    redis_client = get_component("redis_client")
+    from core_ai.data.postgres import check_db_health
+    from core_ai.data.redis import check_redis_health
+
+    embedding_service = get_component("embedding_service")
 
     db_status = "unconfigured"
     redis_status = "unconfigured"
     is_ready = True
     is_degraded = False
 
-    # Check Database Pool
-    if db_pool is not None:
-        try:
-            async with db_pool.acquire() as conn:
-                await conn.fetchval("SELECT 1")
-            db_status = "healthy"
-        except Exception as e:
-            db_status = f"unhealthy: {str(e)}"
-            is_ready = False
+    if await check_db_health():
+        db_status = "healthy"
     else:
-        # Before pool initialization, mark as initialized/ready for startup probe
-        db_status = "ready"
+        db_status = "unhealthy"
+        is_ready = False
 
     # Check Redis Client
-    if redis_client is not None:
-        try:
-            await redis_client.ping()
-            redis_status = "healthy"
-        except Exception:
-            redis_status = "unavailable (degraded mode active)"
-            is_degraded = True
+    if await check_redis_health():
+        redis_status = "healthy"
     else:
-        redis_status = "ready"
+        redis_status = "unavailable (degraded mode active)"
+        is_degraded = True
+
+    embedding_status = "configured" if embedding_service is not None else "unavailable"
+    if embedding_service is None:
+        is_ready = False
 
     # Determine overall status
     if not is_ready:
@@ -76,5 +71,6 @@ async def readiness_probe(response: Response) -> Dict[str, Any]:
         "status": overall_status,
         "database": db_status,
         "redis": redis_status,
+        "embedding": embedding_status,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }

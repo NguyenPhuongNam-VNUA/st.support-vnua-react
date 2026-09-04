@@ -57,6 +57,12 @@ class SemanticCache:
         env = self.settings.app_env.lower()
         return f"{env}:{tenant_id}:semantic_answer:{self.knowledge_version}:{query_hash}"
 
+    @staticmethod
+    def _scoped_query_hash(query: str, locale: str, user_scope: str) -> str:
+        """Bind cached answers to locale and caller ACL without storing raw identity."""
+        scope_hash = hashlib.sha256(user_scope.encode("utf-8")).hexdigest()[:16]
+        return compute_query_hash(f"{locale}:{scope_hash}:{query}")
+
     def _build_lock_key(self, tenant_id: str, query_hash: str) -> str:
         """Format distributed stampede lock key."""
         env = self.settings.app_env.lower()
@@ -66,6 +72,8 @@ class SemanticCache:
         self,
         query: str,
         tenant_id: str = "vnua",
+        locale: str = "vi-VN",
+        user_scope: str = "anonymous",
     ) -> Optional[CachedAnswer]:
         """Look up cached response for a query.
 
@@ -78,7 +86,7 @@ class SemanticCache:
         if client is None:
             return None
 
-        query_hash = compute_query_hash(query)
+        query_hash = self._scoped_query_hash(query, locale, user_scope)
         cache_key = self._build_key(tenant_id, query_hash)
 
         try:
@@ -105,6 +113,8 @@ class SemanticCache:
         citations: List[Citation],
         confidence: float = 0.90,
         tenant_id: str = "vnua",
+        locale: str = "vi-VN",
+        user_scope: str = "anonymous",
         ttl_seconds: Optional[int] = None,
     ) -> bool:
         """Store verified answer and citations in cache with TTL.
@@ -118,7 +128,7 @@ class SemanticCache:
         if client is None:
             return False
 
-        query_hash = compute_query_hash(query)
+        query_hash = self._scoped_query_hash(query, locale, user_scope)
         cache_key = self._build_key(tenant_id, query_hash)
         ttl = ttl_seconds or self.default_ttl
 
@@ -143,10 +153,12 @@ class SemanticCache:
         query: str,
         token: str,
         tenant_id: str = "vnua",
+        locale: str = "vi-VN",
+        user_scope: str = "anonymous",
         ttl_seconds: int = 20,
     ) -> bool:
         """Acquire distributed lock before generating answer to prevent cache stampedes."""
-        query_hash = compute_query_hash(query)
+        query_hash = self._scoped_query_hash(query, locale, user_scope)
         lock_key = self._build_lock_key(tenant_id, query_hash)
         return await acquire_lock(lock_key=lock_key, token=token, ttl_seconds=ttl_seconds)
 
@@ -155,8 +167,10 @@ class SemanticCache:
         query: str,
         token: str,
         tenant_id: str = "vnua",
+        locale: str = "vi-VN",
+        user_scope: str = "anonymous",
     ) -> bool:
         """Release distributed lock after generation is completed."""
-        query_hash = compute_query_hash(query)
+        query_hash = self._scoped_query_hash(query, locale, user_scope)
         lock_key = self._build_lock_key(tenant_id, query_hash)
         return await release_lock(lock_key=lock_key, token=token)

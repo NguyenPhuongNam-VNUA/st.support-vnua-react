@@ -15,16 +15,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const upstream = await callAiAgent('/ask-ai', {
-      method: 'POST',
-      body: JSON.stringify({ ...body, question }),
-    });
+    const requestId = crypto.randomUUID();
+    const tenantId = process.env.CORE_AI_TENANT_ID || 'vnua';
+    const upstream = await callAiAgent(
+      '/ask-ai',
+      {
+        method: 'POST',
+        body: JSON.stringify({ ...body, question }),
+      },
+      { requestId, tenantId }
+    );
 
     return new Response(upstream.body, {
       status: upstream.status,
       headers: {
         'Content-Type': upstream.headers.get('content-type') || 'application/json; charset=utf-8',
         'Cache-Control': 'no-store',
+        'X-Request-ID': upstream.headers.get('x-request-id') || requestId,
       },
     });
   } catch (error) {

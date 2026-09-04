@@ -29,8 +29,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy pyproject.toml to resolve and cache dependencies first
-COPY pyproject.toml ./
+# Copy package metadata and source required by the build backend.
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
 
 # Install pip and wheel tools, then install project dependencies
 RUN pip install --upgrade pip setuptools wheel && \
@@ -59,6 +60,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
+    tesseract-ocr \
+    tesseract-ocr-vie \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-privileged service user and group
@@ -83,9 +86,9 @@ USER appuser
 # Expose microservice HTTP port
 EXPOSE 5001
 
-# Healthcheck probe querying FastAPI /health/live endpoint
+# Healthcheck includes mandatory database and embedding readiness.
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5001/health/live', timeout=3)" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5001/health/ready', timeout=3)" || exit 1
 
 # Launch production server via uvicorn
-CMD ["uvicorn", "core_ai.main:app", "--host", "0.0.0.0", "--port", "5001", "--workers", "2", "--no-access-log"]
+CMD ["uvicorn", "core_ai.main:app", "--host", "0.0.0.0", "--port", "5001", "--workers", "1", "--no-access-log"]

@@ -6,21 +6,24 @@ and registers chat, documents, and health routers.
 
 from contextlib import asynccontextmanager
 import logging
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 import uvicorn
 
 from core_ai.api.middleware.auth import InternalAuthMiddleware
+from core_ai.api.middleware.body_limit import RequestBodyLimitMiddleware
 from core_ai.api.middleware.request_context import RequestContextMiddleware
 from core_ai.api.routes.chat import router as chat_router
 from core_ai.api.routes.documents import router as documents_router
 from core_ai.api.routes.health import router as health_router
-from core_ai.config import get_settings
+from core_ai.config import Settings, get_settings
 from core_ai.contracts.errors import CoreAIError, ErrorCode
+from core_ai.observability.metrics import metrics_router, record_request_duration
+from core_ai.observability.tracer import setup_tracing
 
 # Configure structured root logger
 logging.basicConfig(
@@ -33,27 +36,39 @@ logger = logging.getLogger("core_ai.main")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan context managing startup warm-up and graceful shutdown."""
-    settings = get_settings()
+    settings = getattr(app.state, "settings", None) or get_settings()
     logger.info("Initializing ST-Care Core AI Microservice...")
     logger.info("Environment: %s | Default Tenant: %s", settings.app_env, settings.default_tenant)
     logger.info("Configured LLM Provider: %s | Model: %s", settings.llm_provider, settings.llm_model)
+    setup_tracing(
+        service_name=settings.otel_service_name,
+        otlp_endpoint=settings.otel_exporter_otlp_endpoint,
+        app_env=settings.app_env,
+    )
+    from core_ai.mcp.server import get_mcp_server
+
+    mcp_session_context = get_mcp_server().session_manager.run()
+    await mcp_session_context.__aenter__()
+
+    from core_ai.dependencies import get_component, register_component
+    register_component("settings", settings)
 
     # 1. Safe connection pool warm-up
-    try:
-        from core_ai.data.postgres import init_db_pool
-        await init_db_pool(settings)
-    except Exception as exc:
-        logger.warning("PostgreSQL connection pool initialization bypassed/failed: %s", exc)
+    if get_component("db_pool") is None:
+        try:
+            from core_ai.data.postgres import init_db_pool
+            await init_db_pool(settings)
+        except Exception as exc:
+            logger.warning("PostgreSQL connection pool initialization bypassed/failed: %s", exc)
 
-    try:
-        from core_ai.data.redis import init_redis_client
-        await init_redis_client(settings)
-    except Exception as exc:
-        logger.warning("Redis client initialization bypassed/failed: %s", exc)
+    if get_component("redis_client") is None:
+        try:
+            from core_ai.data.redis import init_redis_client
+            await init_redis_client(settings)
+        except Exception as exc:
+            logger.warning("Redis client initialization bypassed/failed: %s", exc)
 
     # 2. Eagerly call and wire singletons into the registry
-    from core_ai.dependencies import get_component, register_component
-
     eager_components = [
         "db_pool",
         "redis_client",
@@ -75,25 +90,34 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         except Exception as exc:
             logger.warning("Safe fallback: could not eagerly wire '%s': %s", comp_name, exc)
 
-    yield
-
-    logger.info("Shutting down ST-Care Core AI Microservice...")
     try:
-        from core_ai.data.postgres import close_db_pool
-        await close_db_pool()
-    except Exception as exc:
-        logger.warning("Error closing PostgreSQL pool: %s", exc)
+        yield
+    finally:
+        logger.info("Shutting down ST-Care Core AI Microservice...")
+        try:
+            from core_ai.data.postgres import close_db_pool
+            await close_db_pool()
+        except Exception as exc:
+            logger.warning("Error closing PostgreSQL pool: %s", exc)
 
-    try:
-        from core_ai.data.redis import close_redis_client
-        await close_redis_client()
-    except Exception as exc:
-        logger.warning("Error closing Redis client: %s", exc)
+        try:
+            from core_ai.data.redis import close_redis_client
+            await close_redis_client()
+        except Exception as exc:
+            logger.warning("Error closing Redis client: %s", exc)
+
+        mcp_gateway = get_component("mcp_gateway")
+        if mcp_gateway is not None:
+            try:
+                await mcp_gateway.close()
+            except Exception as exc:
+                logger.warning("Error closing MCP gateway: %s", exc)
+        await mcp_session_context.__aexit__(None, None, None)
 
 
-def create_app() -> FastAPI:
+def create_app(settings: Optional[Settings] = None) -> FastAPI:
     """Application factory constructing the FastAPI instance with all middlewares and routers."""
-    settings = get_settings()
+    settings = settings or get_settings()
 
     app = FastAPI(
         title="ST-Care Core AI Microservice",
@@ -101,21 +125,32 @@ def create_app() -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+    app.state.settings = settings
 
-    # 1. CORS Middleware
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    # Middleware is executed in reverse registration order. Authentication stays
+    # outside body buffering/context parsing for cheap rejection of untrusted calls.
+    app.add_middleware(RequestContextMiddleware, settings=settings)
+    app.add_middleware(RequestBodyLimitMiddleware, settings=settings)
+    app.add_middleware(InternalAuthMiddleware, settings=settings)
 
-    # 2. Internal Auth Middleware
-    app.add_middleware(InternalAuthMiddleware)
+    from core_ai.dependencies import get_app_settings
 
-    # 3. Request Context Middleware
-    app.add_middleware(RequestContextMiddleware)
+    app.dependency_overrides[get_app_settings] = lambda: settings
+
+    @app.middleware("http")
+    async def prometheus_request_metrics(request: Request, call_next):
+        import time
+
+        started = time.perf_counter()
+        response = await call_next(request)
+        record_request_duration(
+            route=request.url.path,
+            status=str(response.status_code),
+            duration_seconds=time.perf_counter() - started,
+            tenant_id=getattr(request.state, "tenant_id", settings.default_tenant),
+            method=request.method,
+        )
+        return response
 
     # 4. Global Exception Handlers
     @app.exception_handler(CoreAIError)
@@ -141,7 +176,12 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-        logger.error("Unhandled exception on %s: %s", request.url.path, str(exc), exc_info=True)
+        logger.error(
+            "Unhandled exception on %s: %s",
+            request.url.path,
+            type(exc).__name__,
+            exc_info=True,
+        )
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
@@ -155,6 +195,12 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(chat_router)
     app.include_router(documents_router)
+    app.include_router(metrics_router)
+
+    from core_ai.mcp.server import get_mcp_asgi_app
+
+    app.mount("/", get_mcp_asgi_app(settings))
+    FastAPIInstrumentor.instrument_app(app)
 
     return app
 

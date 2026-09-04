@@ -5,13 +5,13 @@ for route handlers and background pipelines.
 """
 
 from typing import Any, Optional
-from fastapi import Depends, Header, HTTPException, Request, Security, status
+from fastapi import Depends, HTTPException, Request, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from core_ai.api.middleware.auth import validate_token
 from core_ai.api.middleware.request_context import RequestContext, request_id_ctx, tenant_id_ctx, user_id_ctx
 from core_ai.config import Settings, get_settings
-from core_ai.contracts.errors import AuthenticationError, ErrorCode
+from core_ai.contracts.errors import ErrorCode
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -77,6 +77,16 @@ def register_component(name: str, instance: Any) -> None:
     _component_registry[name] = instance
 
 
+def clear_components() -> None:
+    """Clear process-local overrides; intended for isolated app/test lifecycles."""
+    _component_registry.clear()
+
+
+def _runtime_settings() -> Settings:
+    configured = _component_registry.get("settings")
+    return configured if isinstance(configured, Settings) else get_settings()
+
+
 def get_component(name: str) -> Optional[Any]:
     """Retrieve a singleton component from the app container with lazy fallbacks."""
     if name in _component_registry and _component_registry[name] is not None:
@@ -104,7 +114,7 @@ def get_component(name: str) -> Optional[Any]:
     if name == "llm_port":
         try:
             from core_ai.llm.gateway import get_llm_gateway
-            gateway = get_llm_gateway()
+            gateway = get_llm_gateway(_runtime_settings())
             if gateway is not None:
                 _component_registry["llm_port"] = gateway
             return gateway
@@ -114,7 +124,7 @@ def get_component(name: str) -> Optional[Any]:
     if name == "mcp_gateway":
         try:
             from core_ai.mcp.gateway import get_mcp_gateway
-            gateway = get_mcp_gateway()
+            gateway = get_mcp_gateway(_runtime_settings())
             if gateway is not None:
                 _component_registry["mcp_gateway"] = gateway
             return gateway
@@ -189,6 +199,12 @@ def get_component(name: str) -> Optional[Any]:
         return get_output_guardrail()
     if name == "ingestion_worker":
         return get_ingestion_worker()
+    if name == "embedding_service":
+        return get_embedding_service()
+    if name == "local_reranker":
+        return get_local_reranker()
+    if name == "context_builder":
+        return get_context_builder()
 
     return None
 
@@ -198,7 +214,7 @@ def get_document_repository() -> Any:
     repo = _component_registry.get("document_repo")
     if repo is None:
         from core_ai.data.repositories.document_repo import DocumentRepository
-        repo = DocumentRepository()
+        repo = DocumentRepository(settings=_runtime_settings())
         register_component("document_repo", repo)
     return repo
 
@@ -211,7 +227,7 @@ def get_question_repository() -> Any:
     repo = _component_registry.get("question_repo")
     if repo is None:
         from core_ai.data.repositories.question_repo import QuestionRepository
-        repo = QuestionRepository()
+        repo = QuestionRepository(settings=_runtime_settings())
         register_component("question_repo", repo)
     return repo
 
@@ -221,7 +237,7 @@ def get_embedding_service() -> Any:
     service = _component_registry.get("embedding_service")
     if service is None:
         from core_ai.retrieval.embeddings import GeminiEmbedding2Embeddings
-        service = GeminiEmbedding2Embeddings()
+        service = GeminiEmbedding2Embeddings(settings=_runtime_settings())
         register_component("embedding_service", service)
     return service
 
@@ -231,7 +247,7 @@ def get_semantic_cache() -> Any:
     cache = _component_registry.get("semantic_cache")
     if cache is None:
         from core_ai.retrieval.semantic_cache import SemanticCache
-        cache = SemanticCache()
+        cache = SemanticCache(settings=_runtime_settings())
         register_component("semantic_cache", cache)
     return cache
 
@@ -299,7 +315,6 @@ def get_ingestion_worker() -> Any:
     worker = _component_registry.get("ingestion_worker")
     if worker is None:
         from core_ai.ingestion.worker import IngestionWorker
-        worker = IngestionWorker()
+        worker = IngestionWorker(settings=_runtime_settings())
         register_component("ingestion_worker", worker)
     return worker
-

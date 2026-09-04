@@ -1,9 +1,7 @@
 """Document and Chunk repository for PostgreSQL.
 
-Interacts with public.documents and public.document_chunks tables.
-Enforces single-tenant ('vnua') isolation strictly at the application boundary,
-querying only active and ready documents (is_active = true, pipeline_stage = 'ready')
-without referencing non-existent tenant_id database columns.
+Interacts with public.documents and public.document_chunks tables and enforces
+tenant predicates in every read/write query.
 """
 
 from datetime import datetime
@@ -107,14 +105,25 @@ class DocumentRepository:
             JOIN public.documents d ON d.id = dc.document_id
             WHERE d.is_active = true
               AND d.pipeline_stage = 'ready'
+              AND d.tenant_id = $3
+              AND dc.tenant_id = $3
               AND dc.embedding IS NOT NULL
+              AND dc.embedding_model = $4
+              AND dc.embedding_dimension = $5
             ORDER BY dc.embedding <=> $1::vector ASC
             LIMIT $2;
         """
 
         try:
-            async with get_db_connection() as conn:
-                rows = await conn.fetch(query, vector_str, top_k)
+            async with get_db_connection(tenant_id) as conn:
+                rows = await conn.fetch(
+                    query,
+                    vector_str,
+                    top_k,
+                    tenant_id,
+                    self.settings.embedding_model,
+                    self.settings.embedding_dimension,
+                )
                 results: List[ChunkRecord] = []
                 for row in rows:
                     sim = float(row["similarity"]) if row["similarity"] is not None else 0.0
@@ -137,7 +146,7 @@ class DocumentRepository:
                 return results
         except Exception as exc:
             logger.error("Error executing vector search: %s", exc, exc_info=True)
-            raise RetrievalError(message=f"Lỗi truy vấn vector similarity: {exc}") from exc
+            raise RetrievalError(message="Không thể truy vấn kho vector tài liệu") from exc
 
     async def search_chunks_by_bm25(
         self,
@@ -180,14 +189,16 @@ class DocumentRepository:
             JOIN public.documents d ON d.id = dc.document_id
             WHERE d.is_active = true
               AND d.pipeline_stage = 'ready'
+              AND d.tenant_id = $3
+              AND dc.tenant_id = $3
               AND to_tsvector('simple', dc.content) @@ plainto_tsquery('simple', $1)
             ORDER BY fts_score DESC
             LIMIT $2;
         """
 
         try:
-            async with get_db_connection() as conn:
-                rows = await conn.fetch(query, cleaned_text, top_k)
+            async with get_db_connection(tenant_id) as conn:
+                rows = await conn.fetch(query, cleaned_text, top_k, tenant_id)
                 if not rows:
                     # Fallback to ILIKE substring search if tsquery matched 0 tokens
                     fallback_query = """
@@ -205,11 +216,13 @@ class DocumentRepository:
                         JOIN public.documents d ON d.id = dc.document_id
                         WHERE d.is_active = true
                           AND d.pipeline_stage = 'ready'
+                          AND d.tenant_id = $3
+                          AND dc.tenant_id = $3
                           AND (dc.content ILIKE $1 OR d.title ILIKE $1)
                         LIMIT $2;
                     """
                     pattern = f"%{cleaned_text[:50]}%"
-                    rows = await conn.fetch(fallback_query, pattern, top_k)
+                    rows = await conn.fetch(fallback_query, pattern, top_k, tenant_id)
 
                 results: List[ChunkRecord] = []
                 for row in rows:
@@ -230,7 +243,7 @@ class DocumentRepository:
                 return results
         except Exception as exc:
             logger.error("Error executing BM25/FTS search: %s", exc, exc_info=True)
-            raise RetrievalError(message=f"Lỗi truy vấn BM25 full-text: {exc}") from exc
+            raise RetrievalError(message="Không thể tìm kiếm toàn văn trong kho tài liệu") from exc
 
     async def get_document_by_id(
         self, document_id: int, tenant_id: str = "vnua"
@@ -243,10 +256,10 @@ class DocumentRepository:
             SELECT id, title, description, version, is_active, validity,
                    pipeline_stage, progress, file_path, created_at, updated_at
             FROM public.documents
-            WHERE id = $1;
+            WHERE id = $1 AND tenant_id = $2;
         """
-        async with get_db_connection() as conn:
-            row = await conn.fetchrow(query, document_id)
+        async with get_db_connection(tenant_id) as conn:
+            row = await conn.fetchrow(query, document_id, tenant_id)
             if row is None:
                 return None
             return DocumentRecord(
@@ -275,11 +288,11 @@ class DocumentRepository:
                    dc.content, d.title AS document_title, dc.created_at
             FROM public.document_chunks dc
             JOIN public.documents d ON d.id = dc.document_id
-            WHERE dc.document_id = $1
+            WHERE dc.document_id = $1 AND d.tenant_id = $2 AND dc.tenant_id = $2
             ORDER BY dc.chunk_index ASC;
         """
-        async with get_db_connection() as conn:
-            rows = await conn.fetch(query, document_id)
+        async with get_db_connection(tenant_id) as conn:
+            rows = await conn.fetch(query, document_id, tenant_id)
             return [
                 ChunkRecord(
                     id=row["id"],
@@ -300,24 +313,32 @@ class DocumentRepository:
             return 0
 
         upsert_query = """
-            INSERT INTO public.document_chunks (document_id, chunk_index, page, tokens, content, embedding)
-            VALUES ($1, $2, $3, $4, $5, $6::vector)
+            INSERT INTO public.document_chunks
+                (document_id, tenant_id, chunk_index, page, tokens, content, embedding,
+                 embedding_model, embedding_dimension)
+            SELECT $1, $9, $2, $3, $4, $5, $6::vector, $7, $8
+            WHERE EXISTS (
+                SELECT 1 FROM public.documents WHERE id = $1 AND tenant_id = $9
+            )
             ON CONFLICT (document_id, chunk_index) DO UPDATE
             SET page = EXCLUDED.page,
+                tenant_id = EXCLUDED.tenant_id,
                 tokens = EXCLUDED.tokens,
                 content = EXCLUDED.content,
-                embedding = EXCLUDED.embedding;
+                embedding = EXCLUDED.embedding,
+                embedding_model = EXCLUDED.embedding_model,
+                embedding_dimension = EXCLUDED.embedding_dimension;
         """
 
         count = 0
-        async with get_db_connection() as conn:
+        async with get_db_connection(tenant_id) as conn:
             for ch in chunks:
                 vec_str = (
                     f"[{','.join(str(round(x, 6)) for x in ch.embedding)}]"
                     if ch.embedding
                     else None
                 )
-                await conn.execute(
+                result = await conn.execute(
                     upsert_query,
                     ch.document_id,
                     ch.chunk_index,
@@ -325,8 +346,12 @@ class DocumentRepository:
                     ch.tokens,
                     ch.content,
                     vec_str,
+                    self.settings.embedding_model,
+                    self.settings.embedding_dimension,
+                    tenant_id,
                 )
-                count += 1
+                if result.endswith(" 1"):
+                    count += 1
         return count
 
     async def update_document_stage(
@@ -345,8 +370,8 @@ class DocumentRepository:
             SET pipeline_stage = $2,
                 progress = $3,
                 updated_at = now()
-            WHERE id = $1;
+            WHERE id = $1 AND tenant_id = $4;
         """
-        async with get_db_connection() as conn:
-            res = await conn.execute(query, document_id, stage, progress)
+        async with get_db_connection(tenant_id) as conn:
+            res = await conn.execute(query, document_id, stage, progress, tenant_id)
             return "UPDATE 1" in res

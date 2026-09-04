@@ -20,12 +20,16 @@ from core_ai.observability.metrics import (
     REQUEST_DURATION_SECONDS,
     metrics_registry,
     record_cache_access,
+    record_estimated_cost,
     record_external_call,
     record_fallback,
     record_llm_tokens,
     record_mcp_tool,
     record_redis_degraded,
     record_request_duration,
+    record_retrieval_evidence,
+    record_time_to_safe_answer,
+    record_time_to_status,
 )
 from core_ai.observability.tracer import (
     SafeSpan,
@@ -76,6 +80,12 @@ class TestObservability:
         record_mcp_tool(tool_name="search_knowledge", status="success", duration_seconds=0.15)
         record_redis_degraded(reason="connection_refused")
         record_llm_tokens(provider="gemini", model="gemini-3.5-flash", prompt_tokens=50, completion_tokens=30)
+        record_estimated_cost(provider="gemini", model="gemini-3.5-flash", cost_usd=0.001)
+        record_retrieval_evidence(sufficient=False, tenant_id="vnua")
+        record_time_to_status(tenant_id="vnua", duration_seconds=0.05)
+        record_time_to_safe_answer(
+            tenant_id="vnua", outcome="answered", duration_seconds=0.8
+        )
 
         # Scrape registry
         scraped_text = generate_latest(metrics_registry).decode("utf-8")
@@ -85,3 +95,7 @@ class TestObservability:
         assert "core_ai_fallback_total" in scraped_text
         assert "core_ai_mcp_tool_duration_seconds" in scraped_text
         assert "core_ai_redis_degraded_total" in scraped_text
+        assert "estimated_cost_total" in scraped_text
+        assert "retrieval_no_evidence_ratio" in scraped_text
+        assert "core_ai_time_to_status_seconds" in scraped_text
+        assert "core_ai_time_to_safe_answer_seconds" in scraped_text

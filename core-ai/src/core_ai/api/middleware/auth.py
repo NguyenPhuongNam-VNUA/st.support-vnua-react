@@ -5,14 +5,13 @@ for inter-service calls between Node.js BFF and core-ai.
 """
 
 import hmac
-import json
-from typing import Callable, Set
+from typing import Callable, Optional, Set
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-from core_ai.config import get_settings
+from core_ai.config import Settings, get_settings
 from core_ai.contracts.errors import AuthenticationError, ErrorCode
 
 
@@ -23,6 +22,7 @@ EXEMPT_PATHS: Set[str] = {
     "/docs",
     "/redoc",
     "/openapi.json",
+    "/metrics",
 }
 
 
@@ -49,11 +49,15 @@ def validate_token(token: str, expected_token: str) -> bool:
 class InternalAuthMiddleware(BaseHTTPMiddleware):
     """Middleware enforcing Bearer internal service token on non-exempt routes."""
 
+    def __init__(self, app, settings: Optional[Settings] = None) -> None:
+        super().__init__(app)
+        self.settings = settings or get_settings()
+
     async def dispatch(self, request: Request, call_next: Callable[[Request], Response]) -> Response:
         if is_path_exempt(request.url.path):
             return await call_next(request)
 
-        settings = get_settings()
+        settings = self.settings
         expected_token = settings.internal_service_token
 
         # If running in development and no token configured, permit request with warning

@@ -17,9 +17,22 @@ import pytest
 
 from core_ai.config import Settings
 from core_ai.contracts.chat import ChatRequest
+from core_ai.contracts.mcp import ToolResult
+from core_ai.dependencies import register_component
 
 
 class TestChatFlowE2E:
+    @staticmethod
+    def _completed_payload(response) -> dict:
+        lines = response.text.splitlines()
+        for index, line in enumerate(lines):
+            if "event: answer.completed" not in line:
+                continue
+            for data_line in lines[index + 1 :]:
+                if data_line.startswith("data:"):
+                    return json.loads(data_line.replace("data:", "", 1).strip())
+        raise AssertionError("answer.completed event was not emitted")
+
     def test_auth_rejection_missing_token(self, client: TestClient) -> None:
         """Request without Authorization Bearer header is rejected with HTTP 401."""
         payload = {"message": "Học phí bao nhiêu?"}
@@ -126,3 +139,40 @@ class TestChatFlowE2E:
         assert data["conversation_id"] == "legacy-conv-1"
         assert "sources" in data
         assert isinstance(data["sources"], list)
+
+    def test_explicit_approved_support_request_is_escalated(self, client: TestClient) -> None:
+        """An escalation is a trusted explicit action and never inferred from chat text."""
+        gateway = AsyncMock()
+        gateway.call_tool.return_value = ToolResult(
+            tool_name="create_support_case",
+            success=True,
+            data={"ticket_id": "CASE-2026-0042"},
+            latency_ms=10,
+        )
+        register_component("mcp_gateway", gateway)
+        response = client.post(
+            "/v1/chat",
+            json={
+                "message": "Tôi xác nhận tạo phiếu hỗ trợ.",
+                "requested_tool": "create_support_case",
+                "tool_approved": True,
+                "tool_arguments": {
+                    "student_id": "ignored-body-id",
+                    "category": "dao_tao",
+                    "subject": "Không đăng ký được học phần",
+                    "details": "Tôi không thể đăng ký học phần bắt buộc.",
+                },
+            },
+            headers={
+                "Authorization": "Bearer test-secret-token-123",
+                "X-Request-ID": "e2e-escalation",
+                "X-Tenant-ID": "vnua",
+                "X-User-ID": "42",
+            },
+        )
+
+        payload = self._completed_payload(response)
+        assert payload["status"] == "escalated"
+        assert payload["fallback"]["ticket_id"] == "CASE-2026-0042"
+        assert payload["usage"]["external_calls_count"] == 0
+        gateway.call_tool.assert_awaited_once()

@@ -36,6 +36,7 @@ class VectorRetriever:
         top_k: int = 10,
         tenant_id: str = "vnua",
         min_similarity: float = 0.0,
+        include_dense: bool = True,
     ) -> List[RankedChunk]:
         """Generate query embedding (if not provided) and query document_chunks by vector similarity.
 
@@ -111,23 +112,32 @@ class ParallelHybridRetriever:
         top_k: int = 15,
         tenant_id: str = "vnua",
         min_similarity: float = 0.0,
+        include_dense: bool = True,
     ) -> Tuple[List[RankedChunk], List[RankedChunk]]:
         """Run dense vector search and sparse BM25 search concurrently via asyncio.gather.
 
         Returns:
             Tuple of (dense_results, sparse_results)
         """
-        logger.debug("Executing parallel hybrid retrieval for query: '%s' (top_k=%d)", query[:50], top_k)
+        logger.debug(
+            "Executing parallel hybrid retrieval (query_chars=%d, top_k=%d)",
+            len(query),
+            top_k,
+        )
 
         # Launch dense and sparse tasks simultaneously
-        dense_task = asyncio.create_task(
-            self.vector_retriever.retrieve(
-                query=query,
-                query_embedding=query_embedding,
-                top_k=top_k,
-                tenant_id=tenant_id,
-                min_similarity=min_similarity,
+        dense_task = (
+            asyncio.create_task(
+                self.vector_retriever.retrieve(
+                    query=query,
+                    query_embedding=query_embedding,
+                    top_k=top_k,
+                    tenant_id=tenant_id,
+                    min_similarity=min_similarity,
+                )
             )
+            if include_dense
+            else None
         )
         sparse_task = asyncio.create_task(
             self.bm25_retriever.retrieve(
@@ -137,11 +147,31 @@ class ParallelHybridRetriever:
             )
         )
 
-        dense_results, sparse_results = await asyncio.gather(
-            dense_task,
-            sparse_task,
-            return_exceptions=False,
-        )
+        if dense_task is None:
+            dense_outcome: Any = []
+            sparse_outcome: Any = await asyncio.gather(
+                sparse_task,
+                return_exceptions=True,
+            )
+            sparse_outcome = sparse_outcome[0]
+        else:
+            dense_outcome, sparse_outcome = await asyncio.gather(
+                dense_task,
+                sparse_task,
+                return_exceptions=True,
+            )
+
+        dense_error = isinstance(dense_outcome, BaseException)
+        sparse_error = isinstance(sparse_outcome, BaseException)
+        if dense_error:
+            logger.warning("Dense retrieval degraded: %s", type(dense_outcome).__name__)
+        if sparse_error:
+            logger.warning("Sparse retrieval degraded: %s", type(sparse_outcome).__name__)
+        if dense_error and sparse_error:
+            raise RuntimeError("Both dense and sparse retrieval backends failed")
+
+        dense_results = [] if dense_error else dense_outcome
+        sparse_results = [] if sparse_error else sparse_outcome
 
         logger.debug(
             "Parallel retrieval completed: %d dense candidates, %d sparse candidates",

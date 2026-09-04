@@ -2,10 +2,8 @@
 
 Invokes LLMPort (default Gemini 3.5 Flash) with strict grounding on retrieved
 evidence snippets and MCP tool outputs.
-Strictly enforces the hard Call Budget ceiling:
-- Cache hit: 0 external AI calls
-- Normal path: 1 Answer Generation call
-- Retry/failover: at most 1 additional call (max 2 external AI calls per request)
+Strictly enforces the hard Call Budget ceiling. A normal RAG request spends one
+call on Gemini Embedding 2 and one on answer generation; cache hits spend zero.
 """
 
 from __future__ import annotations
@@ -105,9 +103,10 @@ async def generation_node(state: GraphState) -> GraphState:
         )
 
         try:
-            # Increment call count strictly before external API execution
-            state["external_calls_count"] = current_calls + 1
             gen_result: GenerationResult = await llm_port.generate(gen_request)
+            state["external_calls_count"] = min(
+                max_calls, current_calls + gen_result.external_calls_used
+            )
             answer_text = gen_result.content
             model_name = gen_result.model_name
             provider = gen_result.provider
@@ -115,6 +114,7 @@ async def generation_node(state: GraphState) -> GraphState:
                 p_tokens = gen_result.usage.prompt_tokens
                 c_tokens = gen_result.usage.completion_tokens
         except Exception as exc:
+            state["external_calls_count"] = min(max_calls, current_calls + 1)
             logger.error(
                 "LLM Generation call failed for request_id=%s: %s",
                 state.get("request_id"),
@@ -138,28 +138,21 @@ async def generation_node(state: GraphState) -> GraphState:
             )
             return state
     else:
-        # Grounded fallback synthesis directly from retrieved snippets
-        logger.info(
-            "LLMPort not registered, synthesizing answer directly from evidence chunks for request_id=%s",
-            state.get("request_id"),
+        state["status"] = RouteStatus.DEGRADED
+        state["fallback"] = FallbackInfo(
+            reason="llm_gateway_unavailable",
+            original_route="generation",
+            fallback_strategy="safe_template",
+            contact_channel="Ban Quản lý Đào tạo VNUA: phongdaotao@vnua.edu.vn",
         )
-        chunks = state.get("retrieved_chunks", [])
-        if chunks:
-            top_chunk = chunks[0]
-            answer_text = (
-                f"Căn cứ theo quy định của Học viện Nông nghiệp Việt Nam [{top_chunk.get('citation_id', 'src_1')}]: "
-                f"{top_chunk.get('snippet', '')}\n\n"
-                "Sinh viên vui lòng tra cứu thêm tại cổng thông tin https://daotao.vnua.edu.vn "
-                "hoặc liên hệ Ban Quản lý Đào tạo nếu có thắc mắc chi tiết."
-            )
-        else:
-            answer_text = (
-                "Học viện Nông nghiệp Việt Nam hỗ trợ sinh viên tra cứu thông tin qua cổng thông tin https://daotao.vnua.edu.vn. "
-                "Vui lòng liên hệ trực tiếp Ban Quản lý Đào tạo nếu cần hỗ trợ thêm."
-            )
-        # Baseline internal synthesis consumes 0 external calls
-        p_tokens = len(user_prompt.split())
-        c_tokens = len(answer_text.split())
+        add_execution_trace(
+            state,
+            "generation",
+            "failed",
+            int((time.perf_counter() - t0) * 1000),
+            {"reason": "llm_gateway_unavailable"},
+        )
+        return state
 
     state["answer"] = answer_text
     state["confidence"] = 0.92

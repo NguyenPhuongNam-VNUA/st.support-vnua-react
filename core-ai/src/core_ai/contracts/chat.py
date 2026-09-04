@@ -29,8 +29,9 @@ class Citation(BaseModel):
         description="Unique reference identifier matching inline citation tag (e.g. 'src_1')",
         examples=["src_1"],
     )
-    document_id: Union[int, str] = Field(
+    document_id: int = Field(
         ...,
+        gt=0,
         description="ID of the source document in PostgreSQL documents table",
         examples=[42, "doc_42"],
     )
@@ -163,6 +164,18 @@ class ChatRequest(BaseModel):
     question: Optional[str] = Field(
         default=None,
         description="Legacy field alias for message supported during migration",
+    )
+    requested_tool: Optional[Literal["create_support_case"]] = Field(
+        default=None,
+        description="Explicit side-effect tool requested by the trusted BFF flow",
+    )
+    tool_arguments: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Arguments for an explicitly approved tool; never inferred by the model",
+    )
+    tool_approved: bool = Field(
+        default=False,
+        description="True only after explicit user confirmation in the trusted BFF flow",
     )
 
     @model_validator(mode="before")
@@ -304,6 +317,9 @@ class DocumentEmbedRequest(BaseModel):
     )
     file_url: str = Field(
         ...,
+        min_length=10,
+        max_length=4096,
+        pattern=r"^https://",
         description="Short-lived signed URL (max 5 mins) to fetch PDF from Supabase Storage",
     )
 

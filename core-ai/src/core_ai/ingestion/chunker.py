@@ -30,8 +30,8 @@ class DocumentChunk:
 def estimate_tokens(text: str) -> int:
     """Estimates token count for Vietnamese/multilingual text.
 
-    Vietnamese words average ~1.3 subword tokens in standard BPE/SentencePiece models
-    (such as XLM-RoBERTa / BGE-M3).
+    Vietnamese words are conservatively estimated at roughly 1.3 subword tokens;
+    this is a local sizing heuristic and does not call the embedding provider.
     """
     if not text or not text.strip():
         return 0

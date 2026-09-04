@@ -7,7 +7,17 @@ export class AiAgentError extends Error {
   }
 }
 
-export async function callAiAgent(path: string, init: RequestInit): Promise<Response> {
+export interface AiAgentContext {
+  requestId: string;
+  tenantId: string;
+  userId?: string | number | null;
+}
+
+export async function callAiAgent(
+  path: string,
+  init: RequestInit,
+  context: AiAgentContext
+): Promise<Response> {
   const baseUrl = process.env.PYTHON_AGENT_BASE_URL;
   const serviceToken = process.env.AI_AGENT_SERVICE_TOKEN;
   if (!baseUrl || !serviceToken) {
@@ -19,6 +29,9 @@ export async function callAiAgent(path: string, init: RequestInit): Promise<Resp
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${serviceToken}`,
+      'X-Request-ID': context.requestId,
+      'X-Tenant-ID': context.tenantId,
+      ...(context.userId == null ? {} : { 'X-User-ID': String(context.userId) }),
       ...init.headers,
     },
     cache: 'no-store',

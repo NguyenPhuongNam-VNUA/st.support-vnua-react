@@ -80,7 +80,7 @@ Toàn bộ request/response schemas và typed events được đóng băng tại
   - OpenAI-compatible endpoints (vLLM hoặc Ollama chạy Llama-3, Qwen local).
 - **Enforced Call Budget**:
   - Trần tuyệt đối: **Tối đa 2 external AI calls** cho một request (kể cả retry và failover).
-  - Normal path: Chỉ tiêu thụ đúng **1 external call** (Answer Generation).
+  - Normal RAG path: **2 external AI calls** — Gemini Embedding 2 cho query và Answer Generation.
   - Cache hit: Tiêu thụ đúng **0 external call**.
   - Không bao giờ gọi LLM lần thứ 3; nếu hết budget, chuyển sang verified fallback template hoặc HITL escalation.
 - **Local Structured Output Repair**: Mọi output JSON sai cú pháp hoặc bị cắt ngắn đều được phân tích, sửa chữa cục bộ bằng regex/heuristic mà **không tốn thêm LLM call sửa JSON**.
@@ -125,6 +125,7 @@ Toàn bộ request/response schemas và typed events được đóng băng tại
 | `APP_ENV` | string | `development` | Môi trường triển khai: `development`, `staging`, `production`, `testing` |
 | `CORE_AI_HOST` | string | `0.0.0.0` | Địa chỉ IP lắng nghe của FastAPI server |
 | `CORE_AI_PORT` | integer | `5001` | Cổng HTTP của microservice |
+| `REQUEST_DEADLINE_SECONDS` | number | `30` | Deadline tổng cho graph của một request |
 | `INTERNAL_SERVICE_TOKEN` | string | `""` | Bearer token bí mật dùng để xác thực các request nội bộ từ Node.js BFF |
 | `DEFAULT_TENANT` | string | `vnua` | Tenant mặc định của hệ thống |
 | `ALLOWED_TENANTS` | string / list | `vnua` | Danh sách tenant được cấp quyền (ngăn chặn cross-tenant access) |
@@ -268,13 +269,14 @@ pytest tests/ --cov=src/core_ai --cov-report=term-missing
 - **Headers**:
   - `Content-Type: application/json`
   - `Authorization: Bearer <INTERNAL_SERVICE_TOKEN>`
+  - `X-Request-ID: <uuid>`
+  - `X-Tenant-ID: vnua`
+  - `X-User-ID: <trusted-user-id>` (nếu người dùng đã đăng nhập)
+- Các trường identity trong body (nếu client cũ còn gửi) bị bỏ qua; chỉ header từ BFF đã xác thực được tin cậy.
 - **Request Body**:
 
 ```json
 {
-  "request_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
-  "tenant_id": "vnua",
-  "user_id": "sv_651234",
   "conversation_id": "c73bcdcc-1234-4567-89ab-cdef01234567",
   "message": "Sinh viên đại học chính quy được đăng ký tối đa bao nhiêu tín chỉ một học kỳ?",
   "locale": "vi-VN",
@@ -328,7 +330,7 @@ data: {
     "prompt_tokens": 120,
     "completion_tokens": 45,
     "total_tokens": 165,
-    "external_calls_count": 1
+    "external_calls_count": 2
   }
 }
 ```
@@ -350,6 +352,10 @@ data: {
 - **URL**: `GET /metrics`
 - **Output**: Định dạng chuẩn của Prometheus Text Exporter phục vụ thu thập dữ liệu bởi hệ thống giám sát.
 
+### 6.4. Tạo phiếu hỗ trợ có xác nhận
+
+BFF gửi `requested_tool="create_support_case"`, `tool_approved=true` và `tool_arguments` sau khi người dùng xác nhận. Request bắt buộc có `X-User-ID`; `student_id` trong body không được dùng làm danh tính. Khi API nghiệp vụ tạo phiếu thành công, response có `status="escalated"`, `fallback.ticket_id` và dùng 0 external AI call. Nếu chưa xác nhận hoặc tool lỗi, hệ thống không tạo phiếu giả.
+
 ---
 
 ## 7. Nguyên tắc An toàn & Cơ chế Phòng thủ
@@ -358,3 +364,32 @@ data: {
 2. **Ngăn chặn Suy đoán (Hallucination)**: Mọi câu trả lời liên quan đến quy định, học phí, lịch học bắt buộc phải có trích dẫn nguồn (`citations`). Nếu điểm bằng chứng (`evidence_score`) thấp hơn `0.55`, hệ thống từ chối trả lời tự suy diễn và kích hoạt hỏi lại hoặc chuyển tiếp hỗ trợ cán bộ (HITL).
 3. **Chống Chiếm quyền Điều khiển (Prompt Injection)**: Bộ nhận diện song ngữ quét và ngăn chặn ngay lập tức các câu lệnh yêu cầu tiết lộ system prompt, vượt qua bộ lọc hoặc đổi nhân vật.
 4. **Phòng thủ Tắc nghẽn Hạ tầng**: Circuit Breaker tự động ngắt kết nối với các công cụ MCP bị lỗi hoặc timeout quá 3 giây. Redis degraded-safe đảm bảo nếu cache gặp sự cố thì hệ thống vẫn phục vụ bình thường từ cơ sở dữ liệu.
+
+---
+
+## 8. Migration và tái tạo vector Gemini Embedding 2
+
+Migration mới xóa giá trị vector cũ vì vector từ hai model khác nhau không được phép so sánh trong cùng không gian. Thứ tự người vận hành tự chạy:
+
+```powershell
+# 1. Áp dụng migration theo quy trình Supabase của dự án
+# supabase/migrations/202609040001_core_ai_tenant_isolation.sql
+
+# 2. Từ thư mục core-ai, tái tạo toàn bộ vector theo từng tenant
+uv run python scripts/reembed_existing.py --tenant vnua --batch-size 50
+
+# 3. Chỉ đưa service vào traffic sau khi documents về trạng thái ready
+```
+
+Script sử dụng `gemini-embedding-2`, 1024 chiều và cần `GOOGLE_API_KEY` (hoặc `GEMINI_API_KEY`/`EMBEDDING_API_KEY`). Không chạy script trước migration.
+
+## 9. Tích hợp API nghiệp vụ
+
+Các tool `lookup_schedule`, `check_tuition` và `create_support_case` không dùng dữ liệu giả. Chúng fail-closed cho đến khi Phase 4 cấu hình `BUSINESS_API_BASE_URL` và `BUSINESS_API_TOKEN`, đồng thời Node cung cấp các endpoint `/internal/v1/...` tương ứng. `search_knowledge` và `get_regulations` đọc trực tiếp kho tài liệu tenant-safe.
+
+## 10. Rollback an toàn
+
+- Nếu Gemini Embedding 2 lỗi, dừng traffic tới bản mới và khôi phục image ứng dụng trước đó; không trộn vector cũ với vector mới.
+- Migration chủ động đặt vector cũ thành `NULL`, vì vậy rollback dữ liệu cần khôi phục từ backup/snapshot trước migration hoặc chạy lại pipeline embedding của model cũ trên schema tương ứng.
+- Redis chỉ là cache/idempotency; có thể dừng Redis và service tiếp tục ở degraded mode. Không dùng thao tác xóa DB để rollback cache.
+- Nếu API nghiệp vụ Node chưa sẵn sàng, để trống cấu hình business API; tool sẽ trả lỗi có kiểm soát thay vì tạo dữ liệu giả.

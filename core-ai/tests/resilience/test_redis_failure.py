@@ -69,3 +69,17 @@ class TestRedisFailureResilience:
         data = response.json()
         assert data["status"] == "degraded"
         assert "unavailable" in data["redis"].lower() or "degraded" in data["redis"].lower()
+
+    def test_readiness_returns_503_when_primary_database_is_down(self, client) -> None:
+        """Database is mandatory even though Redis may degrade safely."""
+        with patch(
+            "core_ai.data.postgres.check_db_health",
+            new=AsyncMock(return_value=False),
+        ), patch(
+            "core_ai.data.redis.check_redis_health",
+            new=AsyncMock(return_value=True),
+        ):
+            response = client.get("/health/ready")
+
+        assert response.status_code == 503
+        assert response.json()["status"] == "unhealthy"

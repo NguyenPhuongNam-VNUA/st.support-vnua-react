@@ -37,12 +37,15 @@ class PipelineStatusPayload(BaseModel):
     request_id: str = Field(..., description="Request UUID")
     stage: Literal[
         "input_guardrail",
+        "cache_check",
         "semantic_cache",
         "retrieval",
         "rerank",
         "evidence_eval",
         "tool_execution",
+        "tool_node",
         "generation",
+        "fallback",
         "output_guardrail",
         "completed",
         "error",

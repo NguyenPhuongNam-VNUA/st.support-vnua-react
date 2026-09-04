@@ -51,6 +51,9 @@ def setup_tracing(
     """
     global _TRACER, _IS_INITIALIZED
 
+    if _IS_INITIALIZED and _TRACER is not None:
+        return _TRACER
+
     settings = get_settings()
     svc_name = service_name or settings.otel_service_name or "st-care-core-ai"
     endpoint = otlp_endpoint or settings.otel_exporter_otlp_endpoint

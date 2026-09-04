@@ -178,7 +178,7 @@ class LiteLLMAdapter:
                 "LiteLLM timeout for request_id=%s after %.1fs: %s",
                 request.request_id,
                 request.timeout_seconds,
-                err,
+                type(err).__name__,
             )
             raise ProviderTimeoutError(
                 f"Nhà cung cấp mô hình {config.provider} ({config.model}) phản hồi quá thời gian quy định ({request.timeout_seconds}s)"
@@ -194,20 +194,20 @@ class LiteLLMAdapter:
                 "LiteLLM provider failure [%s] for request_id=%s: %s",
                 config.provider,
                 request.request_id,
-                err,
+                type(err).__name__,
             )
             raise ProviderUnavailableError(
-                f"Dịch vụ mô hình AI ({config.provider}) gặp sự cố: {str(err)}"
+                f"Dịch vụ mô hình AI ({config.provider}) tạm thời không khả dụng"
             ) from err
         except Exception as err:
             self._logger.error(
                 "Unexpected error during LiteLLM call for request_id=%s: %s",
                 request.request_id,
-                err,
+                type(err).__name__,
                 exc_info=True,
             )
             raise ProviderUnavailableError(
-                f"Lỗi không xác định khi kết nối dịch vụ AI ({config.provider}): {str(err)}"
+                f"Không thể kết nối dịch vụ AI ({config.provider})"
             ) from err
 
         latency_ms = int((time.perf_counter() - start_time) * 1000)

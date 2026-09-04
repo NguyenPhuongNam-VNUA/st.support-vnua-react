@@ -9,7 +9,7 @@ from core_ai.mcp.circuit_breaker import ToolCircuitBreaker
 from core_ai.mcp.client_manager import MCPClientManager
 from core_ai.mcp.gateway import MCPGatewayImpl, get_mcp_gateway
 from core_ai.mcp.registry import RegisteredTool, ToolRegistry
-from core_ai.mcp.server import MCPServer, create_mcp_server
+from core_ai.mcp.server import get_mcp_asgi_app, get_mcp_server
 from core_ai.mcp.tools import (
     CHECK_TUITION_DEF,
     CORE_TOOL_DEFINITIONS,
@@ -28,8 +28,8 @@ __all__ = [
     "MCPClientManager",
     "ToolRegistry",
     "RegisteredTool",
-    "MCPServer",
-    "create_mcp_server",
+    "get_mcp_server",
+    "get_mcp_asgi_app",
     "SEARCH_KNOWLEDGE_DEF",
     "LOOKUP_SCHEDULE_DEF",
     "CHECK_TUITION_DEF",

@@ -103,6 +103,29 @@ LLM_TOKENS_TOTAL = Counter(
     registry=metrics_registry,
 )
 
+ESTIMATED_COST_TOTAL = Counter(
+    "estimated_cost_total",
+    "Estimated external model cost in USD as reported by the provider adapter",
+    ["provider", "model"],
+    registry=metrics_registry,
+)
+
+TIME_TO_STATUS_SECONDS = Histogram(
+    "core_ai_time_to_status_seconds",
+    "Time from request start until the first safe pipeline status event",
+    ["tenant_id"],
+    buckets=[0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0],
+    registry=metrics_registry,
+)
+
+TIME_TO_SAFE_ANSWER_SECONDS = Histogram(
+    "core_ai_time_to_safe_answer_seconds",
+    "Time from request start until a guarded answer or safe error is emitted",
+    ["tenant_id", "outcome"],
+    buckets=[0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 10.0, 20.0],
+    registry=metrics_registry,
+)
+
 # 9. Database Connection Pool Gauge
 DB_POOL_IN_USE = Gauge(
     "core_ai_db_pool_in_use",
@@ -119,8 +142,16 @@ RETRIEVAL_NO_EVIDENCE_TOTAL = Counter(
     registry=metrics_registry,
 )
 
+RETRIEVAL_NO_EVIDENCE_RATIO = Gauge(
+    "retrieval_no_evidence_ratio",
+    "Process-local ratio of evaluated retrievals without sufficient evidence",
+    ["tenant_id"],
+    registry=metrics_registry,
+)
+
 # Internal tracking for cache ratio computation
 _cache_stats: Dict[str, Dict[str, int]] = {}
+_retrieval_stats: Dict[str, Dict[str, int]] = {}
 
 
 def record_request_duration(
@@ -128,6 +159,7 @@ def record_request_duration(
     status: str,
     duration_seconds: float,
     tenant_id: str = "vnua",
+    method: str = "POST",
 ) -> None:
     """Records completion latency of a request."""
     REQUEST_DURATION_SECONDS.labels(
@@ -137,7 +169,7 @@ def record_request_duration(
     ).observe(duration_seconds)
     REQUESTS_TOTAL.labels(
         route=route,
-        method="POST",
+        method=method,
         status=status,
     ).inc()
 
@@ -234,14 +266,45 @@ def record_llm_tokens(
         ).inc(completion_tokens)
 
 
+def record_estimated_cost(provider: str, model: str, cost_usd: Optional[float]) -> None:
+    """Adds a non-negative provider-reported cost estimate when available."""
+    if cost_usd is not None and cost_usd >= 0:
+        ESTIMATED_COST_TOTAL.labels(provider=provider, model=model).inc(cost_usd)
+
+
+def record_time_to_status(tenant_id: str, duration_seconds: float) -> None:
+    TIME_TO_STATUS_SECONDS.labels(tenant_id=tenant_id).observe(max(0.0, duration_seconds))
+
+
+def record_time_to_safe_answer(
+    tenant_id: str, outcome: str, duration_seconds: float
+) -> None:
+    TIME_TO_SAFE_ANSWER_SECONDS.labels(
+        tenant_id=tenant_id,
+        outcome=outcome,
+    ).observe(max(0.0, duration_seconds))
+
+
 def record_db_pool_usage(in_use: int, pool_name: str = "supavisor") -> None:
     """Updates the active DB connection pool gauge."""
     DB_POOL_IN_USE.labels(pool_name=pool_name).set(in_use)
 
 
+def record_retrieval_evidence(sufficient: bool, tenant_id: str = "vnua") -> None:
+    """Records every evidence evaluation and updates its no-evidence ratio."""
+    stats = _retrieval_stats.setdefault(tenant_id, {"total": 0, "no_evidence": 0})
+    stats["total"] += 1
+    if not sufficient:
+        stats["no_evidence"] += 1
+        RETRIEVAL_NO_EVIDENCE_TOTAL.labels(tenant_id=tenant_id).inc()
+    RETRIEVAL_NO_EVIDENCE_RATIO.labels(tenant_id=tenant_id).set(
+        stats["no_evidence"] / stats["total"]
+    )
+
+
 def record_no_evidence(tenant_id: str = "vnua") -> None:
-    """Records a retrieval result where evidence was insufficient."""
-    RETRIEVAL_NO_EVIDENCE_TOTAL.labels(tenant_id=tenant_id).inc()
+    """Compatibility wrapper for callers that only report failed evidence."""
+    record_retrieval_evidence(False, tenant_id)
 
 
 # Prometheus Scrape Route

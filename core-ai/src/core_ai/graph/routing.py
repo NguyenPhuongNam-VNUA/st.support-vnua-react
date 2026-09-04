@@ -23,11 +23,17 @@ logger = logging.getLogger("core_ai.graph.routing")
 
 def route_after_input_guardrail(
     state: GraphState,
-) -> Literal["cache_check", "fallback"]:
+) -> Literal["cache_check", "tool_node", "fallback"]:
     """Routes to semantic cache if input is safe, or directly to fallback if blocked."""
     if state.get("is_blocked", False):
         logger.info("Routing after input_guardrail: BLOCKED -> fallback")
         return "fallback"
+    if (
+        state.get("tool_name_requested") == "create_support_case"
+        and state.get("tool_approved", False)
+    ):
+        logger.info("Routing explicitly approved support request to MCP tool")
+        return "tool_node"
     return "cache_check"
 
 
@@ -64,7 +70,15 @@ def route_after_evidence(
 
     # 3. If corrective retrieval already exhausted, attempt MCP tool lookup
     tool_calls = state.get("tool_calls_made", 0)
-    if tool_calls == 0:
+    structured_tool_terms = (
+        "học phí", "công nợ", "đóng học", "lịch thi", "thời khóa biểu",
+        "lịch học", "quy chế", "quy định", "tốt nghiệp", "hỗ trợ",
+        "khiếu nại", "ticket", "cán bộ",
+    )
+    needs_structured_tool = any(
+        term in state.get("message", "").lower() for term in structured_tool_terms
+    )
+    if tool_calls == 0 and needs_structured_tool:
         logger.info("Routing after evidence_eval: INSUFFICIENT -> tool_node (MCP lookup)")
         return "tool_node"
 
@@ -75,8 +89,10 @@ def route_after_evidence(
 
 def route_after_tool(
     state: GraphState,
-) -> Literal["generation", "fallback"]:
+) -> Literal["generation", "output_guardrail", "fallback"]:
     """Routes to generation if tool provided sufficient context, else fallback."""
+    if state.get("status") == RouteStatus.ESCALATED:
+        return "output_guardrail"
     if state.get("is_sufficient_evidence", False):
         logger.info("Routing after tool_node: TOOL_SUCCESS -> generation")
         return "generation"

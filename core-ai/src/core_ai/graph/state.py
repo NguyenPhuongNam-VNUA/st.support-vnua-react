@@ -40,6 +40,8 @@ class GraphState(TypedDict, total=False):
     cached_answer: Optional[str]
     cached_citations: List[Citation]
     cached_confidence: Optional[float]
+    cache_lock_acquired: bool
+    cache_lock_token: Optional[str]
 
     # 4. Retrieval & Corrective Search
     query_variants: List[str]
@@ -55,6 +57,7 @@ class GraphState(TypedDict, total=False):
     tool_results: List[Dict[str, Any]]
     tool_name_requested: Optional[str]
     tool_args_requested: Optional[Dict[str, Any]]
+    tool_approved: bool
 
     # 6. Generation & Model Accounting
     external_calls_count: int  # Hard ceiling <= 2
@@ -90,6 +93,9 @@ def create_initial_state(
     channel: str = "web",
     evidence_threshold: float = 0.60,
     max_external_calls: int = 2,
+    tool_name_requested: Optional[str] = None,
+    tool_args_requested: Optional[Dict[str, Any]] = None,
+    tool_approved: bool = False,
 ) -> GraphState:
     """Instantiate a clean GraphState dictionary with secure defaults."""
     return {
@@ -107,6 +113,8 @@ def create_initial_state(
         "cached_answer": None,
         "cached_citations": [],
         "cached_confidence": None,
+        "cache_lock_acquired": False,
+        "cache_lock_token": None,
         "query_variants": [message.strip()],
         "retrieval_attempts": 0,
         "retrieved_chunks": [],
@@ -116,8 +124,9 @@ def create_initial_state(
         "is_sufficient_evidence": False,
         "tool_calls_made": 0,
         "tool_results": [],
-        "tool_name_requested": None,
-        "tool_args_requested": None,
+        "tool_name_requested": tool_name_requested,
+        "tool_args_requested": tool_args_requested,
+        "tool_approved": tool_approved,
         "external_calls_count": 0,
         "max_external_calls": max_external_calls,
         "answer": "",

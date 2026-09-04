@@ -12,6 +12,7 @@ from typing import Optional
 
 from core_ai.contracts.chat import FallbackInfo, RouteStatus
 from core_ai.graph.state import GraphState, add_execution_trace
+from core_ai.observability.metrics import record_fallback
 
 logger = logging.getLogger("core_ai.graph.nodes.fallback_node")
 
@@ -49,7 +50,7 @@ async def fallback_node(state: GraphState) -> GraphState:
             )
 
     # 2. Call Budget Ceiling Exceeded
-    elif reason == "budget_exceeded" or state.get("external_calls_count", 0) >= state.get("max_external_calls", 2):
+    elif reason == "budget_exceeded":
         state["status"] = RouteStatus.DEGRADED
         answer = (
             "Hệ thống trợ lý ST-Care VNUA hiện đang tiếp nhận lượng lớn yêu cầu và đã đạt ngưỡng xử lý cho phiên này. "
@@ -64,7 +65,16 @@ async def fallback_node(state: GraphState) -> GraphState:
                 contact_channel=VNUA_STAFF_CONTACT,
             )
 
-    # 3. Weak / Insufficient Grounding Evidence (Clarify / HITL)
+    # 3. Explicit support action could not be completed
+    elif reason == "tool_unavailable":
+        state["status"] = RouteStatus.DEGRADED
+        answer = (
+            "Chưa thể tạo phiếu hỗ trợ vào lúc này. Hệ thống không ghi nhận phiếu giả. "
+            "Bạn vui lòng thử lại hoặc liên hệ trực tiếp:\n\n"
+            f"{VNUA_STAFF_CONTACT}"
+        )
+
+    # 4. Weak / Insufficient Grounding Evidence (Clarify / HITL)
     elif not state.get("is_sufficient_evidence", True) or reason in ("low_evidence_confidence", "insufficient_evidence"):
         state["status"] = RouteStatus.CLARIFIED
         answer = (
@@ -81,7 +91,7 @@ async def fallback_node(state: GraphState) -> GraphState:
             contact_channel=VNUA_STAFF_CONTACT,
         )
 
-    # 4. Provider Unavailable or Timeout
+    # 5. Provider Unavailable or Timeout
     else:
         state["status"] = RouteStatus.DEGRADED
         answer = (
@@ -99,6 +109,11 @@ async def fallback_node(state: GraphState) -> GraphState:
 
     state["answer"] = answer
     state["confidence"] = 0.50
+    fallback = state.get("fallback")
+    record_fallback(
+        reason=fallback.reason if fallback else reason,
+        strategy=fallback.fallback_strategy if fallback else "safe_template",
+    )
 
     latency = int((time.perf_counter() - t0) * 1000)
     add_execution_trace(

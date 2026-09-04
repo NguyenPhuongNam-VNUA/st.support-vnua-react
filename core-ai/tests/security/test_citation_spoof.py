@@ -117,3 +117,23 @@ class TestCitationSpoofDefense:
         assert "[src_2]" not in result.sanitized_answer
         assert len(result.validated_citations) == 1
         assert result.has_hallucinations is True
+
+    def test_required_answer_without_inline_citation_uses_safe_fallback(
+        self, guardrail: OutputGuardrail
+    ) -> None:
+        citation = Citation(
+            citation_id="src_1",
+            document_id=101,
+            chunk_index=0,
+            title="Quy chế đào tạo",
+            snippet="Đăng ký tối đa 24 tín chỉ.",
+        )
+        result = guardrail.validate(
+            answer="Sinh viên được đăng ký tối đa 24 tín chỉ.",
+            citations=[citation],
+            retrieved_chunks=[{"document_id": 101, "chunk_index": 0}],
+            require_citations=True,
+        )
+
+        assert result.is_safe is False
+        assert result.sanitized_answer == guardrail.SAFE_UNGROUNDED_FALLBACK

@@ -76,6 +76,7 @@ class ToolRequest(BaseModel):
     tool_name: str = Field(..., description="Name of tool to execute")
     arguments: Dict[str, Any] = Field(default_factory=dict, description="Tool invocation parameters")
     timeout_seconds: float = Field(default=3.0, ge=0.5, le=10.0)
+    approved: bool = Field(default=False, description="Approval for tools with side effects")
 
 
 class ToolResult(BaseModel):

@@ -3,10 +3,8 @@
 
 Usage examples:
     # Ingest using a signed URL:
-    python scripts/run_ingestion.py --document-id 42 --file-url "https://supabase.../sample.pdf"
-
-    # Ingest using a local PDF file:
-    python scripts/run_ingestion.py --document-id 42 --file-path "tests/data/sample_regulations.pdf"
+    python scripts/run_ingestion.py --document-id 42 --tenant-id vnua \
+        --file-url "https://allowed-host.example/signed/sample.pdf"
 """
 
 import argparse
@@ -17,6 +15,7 @@ import time
 
 # Ensure src/ is on sys.path when script is executed directly
 from pathlib import Path
+from urllib.parse import urlparse
 repo_root = Path(__file__).resolve().parent.parent
 src_path = repo_root / "src"
 if str(src_path) not in sys.path:
@@ -42,16 +41,19 @@ async def main_async(args: argparse.Namespace) -> int:
     settings = get_settings()
     logger = logging.getLogger("run_ingestion")
 
-    file_source = args.file_url or args.file_path
-    if not file_source:
-        logger.error("Error: Either --file-url or --file-path must be specified.")
+    file_source = args.file_url
+    allowed = settings.allowed_tenants
+    if isinstance(allowed, str):
+        allowed = [item.strip() for item in allowed.split(",") if item.strip()]
+    if args.tenant_id not in allowed:
+        logger.error("Tenant is not present in ALLOWED_TENANTS.")
         return 1
 
     logger.info("=" * 60)
     logger.info("ST-Care Core AI — Offline Document Ingestion Runner")
     logger.info("=" * 60)
     logger.info("Document ID : %d", args.document_id)
-    logger.info("File Source : %s", file_source)
+    logger.info("File Host   : %s", urlparse(file_source).hostname or "invalid")
     logger.info("Tenant ID   : %s", args.tenant_id)
     logger.info("Database URL: %s", settings.database_url.split("@")[-1] if "@" in settings.database_url else settings.database_url)
 
@@ -112,13 +114,8 @@ def main() -> None:
         "--file-url",
         type=str,
         default=None,
-        help="Remote HTTP/HTTPS signed URL to download PDF from.",
-    )
-    parser.add_argument(
-        "--file-path",
-        type=str,
-        default=None,
-        help="Local filesystem path to PDF document.",
+        required=True,
+        help="HTTPS signed PDF URL on a host in INGESTION_ALLOWED_HOSTS.",
     )
     parser.add_argument(
         "--tenant-id",

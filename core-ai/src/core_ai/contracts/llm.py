@@ -126,6 +126,7 @@ class GenerationResult(BaseModel):
         description="Active provider identifier ('gemini', 'openai', 'openai_compatible')",
     )
     latency_ms: int = Field(..., ge=0, description="Model generation latency in ms")
+    external_calls_used: int = Field(default=1, ge=0, le=2)
     finish_reason: Literal["stop", "length", "tool_calls", "content_filter", "error"] = Field(
         default="stop",
         description="Reason generation terminated",

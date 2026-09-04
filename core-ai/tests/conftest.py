@@ -23,7 +23,11 @@ from core_ai.config import Settings, get_settings
 from core_ai.contracts.chat import ChatRequest, Citation, RouteStatus
 from core_ai.contracts.llm import ChatMessage, GenerationRequest, GenerationResult, TokenUsage
 from core_ai.contracts.mcp import ToolRequest, ToolResult
-from core_ai.dependencies import register_component
+from core_ai.dependencies import clear_components, register_component
+from core_ai.guardrails.input_guardrail import InputGuardrail
+from core_ai.guardrails.output_guardrail import OutputGuardrail
+from core_ai.llm.gateway import LLMGateway
+from core_ai.mcp.gateway import MCPGatewayImpl
 from core_ai.main import create_app
 from core_ai.retrieval.bm25 import RankedChunk
 
@@ -75,6 +79,7 @@ class InMemoryMockRedis:
         self.store: Dict[str, str] = {}
         self.ttls: Dict[str, float] = {}
         self.is_connected = True
+        self.counters: Dict[str, int] = {}
 
     async def ping(self) -> bool:
         if not self.is_connected:
@@ -109,6 +114,14 @@ class InMemoryMockRedis:
 
     async def setex(self, key: str, time_secs: int, value: str) -> bool:
         return await self.set(key, value, ex=time_secs)
+
+    async def incr(self, key: str) -> int:
+        self.counters[key] = self.counters.get(key, 0) + 1
+        return self.counters[key]
+
+    async def expire(self, key: str, seconds: int) -> bool:
+        self.ttls[key] = time.time() + seconds
+        return True
 
     async def delete(self, *keys: str) -> int:
         if not self.is_connected:
@@ -162,17 +175,27 @@ def mock_db_conn() -> AsyncMock:
             "id": 1,
             "document_id": 101,
             "chunk_index": 0,
+            "page": 12,
+            "tokens": 20,
             "content": "Sinh viên đại học chính quy Học viện Nông nghiệp Việt Nam cần tích lũy tối thiểu 125 tín chỉ để tốt nghiệp.",
+            "document_title": "Quy chế đào tạo đại học",
             "metadata": {"title": "Quy chế đào tạo đại học", "page": 12},
             "similarity": 0.88,
+            "fts_score": 0.85,
+            "created_at": None,
         },
         {
             "id": 2,
             "document_id": 102,
             "chunk_index": 1,
+            "page": 3,
+            "tokens": 18,
             "content": "Học phí tín chỉ được tính theo định mức của từng chuyên ngành đào tạo và công bố vào đầu năm học.",
+            "document_title": "Quy định thu học phí 2024",
             "metadata": {"title": "Quy định thu học phí 2024", "page": 3},
             "similarity": 0.82,
+            "fts_score": 0.80,
+            "created_at": None,
         },
     ]
     conn.fetchrow.return_value = {"total": 2, "status": "ready"}
@@ -187,11 +210,16 @@ def mock_db_pool(mock_db_conn: AsyncMock) -> MagicMock:
     pool = MagicMock()
 
     @asynccontextmanager
-    async def _acquire() -> AsyncGenerator[AsyncMock, None]:
+    async def _acquire(timeout: Optional[float] = None) -> AsyncGenerator[AsyncMock, None]:
+        del timeout
         yield mock_db_conn
 
     pool.acquire = _acquire
+    pool.release = AsyncMock()
     pool.close = AsyncMock()
+    pool.is_closing.return_value = False
+    pool.get_size.return_value = 1
+    pool.get_idle_size.return_value = 1
     return pool
 
 
@@ -203,6 +231,7 @@ class MockEmbeddingService:
 
     def __init__(self, dimension: int = 1024) -> None:
         self.dimension = dimension
+        self.is_external = True
 
     async def embed_query(self, text: str) -> List[float]:
         # Generate deterministic vector based on text hash
@@ -366,15 +395,36 @@ def test_app(
     mock_redis: InMemoryMockRedis,
     mock_db_pool: MagicMock,
     mock_embedding_service: MockEmbeddingService,
+    sample_ranked_chunks: List[RankedChunk],
 ) -> FastAPI:
     """Instantiates a test FastAPI application with mocked singletons registered."""
+    clear_components()
     with patch("core_ai.config.get_settings", return_value=mock_settings):
-        app = create_app()
+        app = create_app(settings=mock_settings)
 
         # Pre-populate dependency container singletons with mocks
         register_component("db_pool", mock_db_pool)
         register_component("redis_client", mock_redis)
         register_component("embedding_service", mock_embedding_service)
+        vector_retriever = MagicMock()
+        vector_retriever.embedding_service = mock_embedding_service
+        hybrid_retriever = MagicMock()
+        hybrid_retriever.vector_retriever = vector_retriever
+        hybrid_retriever.retrieve_parallel = AsyncMock(
+            return_value=(sample_ranked_chunks, [])
+        )
+        register_component("hybrid_retriever", hybrid_retriever)
+        register_component("llm_port", LLMGateway(settings=mock_settings))
+        register_component("mcp_gateway", MCPGatewayImpl(settings=mock_settings))
+        register_component("input_guardrail", InputGuardrail())
+        register_component("output_guardrail", OutputGuardrail())
+        cache = AsyncMock()
+        cache.get.return_value = None
+        cache.acquire_stampede_lock.return_value = True
+        cache.release_stampede_lock.return_value = True
+        cache.set.return_value = True
+        register_component("semantic_cache", cache)
+        register_component("ingestion_worker", AsyncMock())
 
         return app
 

@@ -1,8 +1,6 @@
 """Question (FAQ Knowledge Bank) repository for PostgreSQL.
 
-Interacts with public.questions table.
-Enforces single-tenant ('vnua') isolation at application boundary,
-querying exclusively approved questions (status = 'approved').
+Interacts with public.questions and applies an explicit tenant predicate to every query.
 """
 
 from datetime import datetime
@@ -78,14 +76,24 @@ class QuestionRepository:
                 created_at
             FROM public.questions
             WHERE status = 'approved'
+              AND tenant_id = $3
               AND embedding IS NOT NULL
+              AND embedding_model = $4
+              AND embedding_dimension = $5
             ORDER BY embedding <=> $1::vector ASC
             LIMIT $2;
         """
 
         try:
-            async with get_db_connection() as conn:
-                rows = await conn.fetch(query, vector_str, top_k)
+            async with get_db_connection(tenant_id) as conn:
+                rows = await conn.fetch(
+                    query,
+                    vector_str,
+                    top_k,
+                    tenant_id,
+                    self.settings.embedding_model,
+                    self.settings.embedding_dimension,
+                )
                 results: List[QuestionRecord] = []
                 for row in rows:
                     sim = float(row["similarity"]) if row["similarity"] is not None else 0.0
@@ -108,7 +116,7 @@ class QuestionRepository:
                 return results
         except Exception as exc:
             logger.error("Error executing questions vector search: %s", exc, exc_info=True)
-            raise RetrievalError(message=f"Lỗi truy vấn câu hỏi tương tự: {exc}") from exc
+            raise RetrievalError(message="Không thể truy vấn kho câu hỏi tương tự") from exc
 
     async def search_questions_by_text(
         self,
@@ -138,14 +146,15 @@ class QuestionRepository:
                 created_at
             FROM public.questions
             WHERE status = 'approved'
+              AND tenant_id = $3
               AND question ILIKE $1
             LIMIT $2;
         """
 
         try:
             pattern = f"%{cleaned}%"
-            async with get_db_connection() as conn:
-                rows = await conn.fetch(query, pattern, top_k)
+            async with get_db_connection(tenant_id) as conn:
+                rows = await conn.fetch(query, pattern, top_k, tenant_id)
                 return [
                     QuestionRecord(
                         id=row["id"],
@@ -163,7 +172,7 @@ class QuestionRepository:
                 ]
         except Exception as exc:
             logger.error("Error executing questions text search: %s", exc, exc_info=True)
-            raise RetrievalError(message=f"Lỗi tìm kiếm câu hỏi: {exc}") from exc
+            raise RetrievalError(message="Không thể tìm kiếm trong kho câu hỏi") from exc
 
     async def get_question_by_id(
         self, question_id: int, tenant_id: str = "vnua"
@@ -176,10 +185,10 @@ class QuestionRepository:
             SELECT id, question, answer, topic, status, duplicate_score,
                    duplicate_of_question_id, source_document_id, created_at
             FROM public.questions
-            WHERE id = $1;
+            WHERE id = $1 AND tenant_id = $2;
         """
-        async with get_db_connection() as conn:
-            row = await conn.fetchrow(query, question_id)
+        async with get_db_connection(tenant_id) as conn:
+            row = await conn.fetchrow(query, question_id, tenant_id)
             if row is None:
                 return None
             return QuestionRecord(

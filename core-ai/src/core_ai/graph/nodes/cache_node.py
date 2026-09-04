@@ -10,6 +10,7 @@ If cache miss or Redis degraded:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import Any, Dict, List, Optional
@@ -17,6 +18,7 @@ from typing import Any, Dict, List, Optional
 from core_ai.contracts.chat import Citation, RouteStatus
 from core_ai.dependencies import get_component
 from core_ai.graph.state import GraphState, add_execution_trace
+from core_ai.observability.metrics import record_cache_access
 
 logger = logging.getLogger("core_ai.graph.nodes.cache_node")
 
@@ -36,9 +38,12 @@ async def cache_node(state: GraphState) -> GraphState:
                 query=query,
                 tenant_id=tenant_id,
                 locale=state.get("locale", "vi-VN"),
+                user_scope=str(state.get("user_id") or "anonymous"),
             )
             if cached_result is not None:
                 latency = int((time.perf_counter() - t0) * 1000)
+                if hasattr(cached_result, "model_dump"):
+                    cached_result = cached_result.model_dump()
                 cached_answer = cached_result.get("answer", "")
                 cached_citations_raw = cached_result.get("citations", [])
                 cached_citations: List[Citation] = []
@@ -67,6 +72,7 @@ async def cache_node(state: GraphState) -> GraphState:
                     latency,
                     {"hit": True, "source": "redis_semantic_cache"},
                 )
+                record_cache_access(hit=True, tenant_id=tenant_id)
                 logger.info(
                     "Semantic cache HIT for request_id=%s (0 external AI calls consumed)",
                     state.get("request_id"),
@@ -80,9 +86,49 @@ async def cache_node(state: GraphState) -> GraphState:
                 exc,
             )
 
+    # Cache Miss: acquire a short distributed generation lock. A concurrent
+    # request gets a brief opportunity to consume the first request's result.
+    if semantic_cache is not None and hasattr(semantic_cache, "acquire_stampede_lock"):
+        token = str(state.get("request_id", ""))
+        acquired = await semantic_cache.acquire_stampede_lock(
+            query=query,
+            token=token,
+            tenant_id=tenant_id,
+            locale=state.get("locale", "vi-VN"),
+            user_scope=str(state.get("user_id") or "anonymous"),
+        )
+        state["cache_lock_acquired"] = acquired
+        state["cache_lock_token"] = token if acquired else None
+        if not acquired:
+            for _ in range(20):
+                await asyncio.sleep(0.25)
+                cached_result = await semantic_cache.get(
+                    query=query,
+                    tenant_id=tenant_id,
+                    locale=state.get("locale", "vi-VN"),
+                    user_scope=str(state.get("user_id") or "anonymous"),
+                )
+                if cached_result is not None:
+                    cached = cached_result.model_dump()
+                    state["cache_hit"] = True
+                    state["answer"] = cached["answer"]
+                    state["citations"] = cached["citations"]
+                    state["confidence"] = cached["confidence"]
+                    state["external_calls_count"] = 0
+                    record_cache_access(hit=True, tenant_id=tenant_id)
+                    add_execution_trace(
+                        state,
+                        "semantic_cache",
+                        "cached",
+                        int((time.perf_counter() - t0) * 1000),
+                        {"hit": True, "waited_for_lock": True},
+                    )
+                    return state
+
     # Cache Miss or Degraded Fallback
     latency = int((time.perf_counter() - t0) * 1000)
     state["cache_hit"] = False
+    record_cache_access(hit=False, tenant_id=tenant_id)
     add_execution_trace(
         state,
         "semantic_cache",

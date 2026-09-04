@@ -12,6 +12,7 @@ import time
 from typing import Any, Dict, List
 
 from core_ai.graph.state import GraphState, add_execution_trace
+from core_ai.observability.metrics import record_retrieval_evidence
 
 logger = logging.getLogger("core_ai.graph.nodes.evidence_node")
 
@@ -35,7 +36,7 @@ async def evidence_node(state: GraphState) -> GraphState:
             if score is not None and isinstance(score, (int, float)):
                 top_scores.append(float(score))
             else:
-                top_scores.append(0.70)  # Default baseline score
+                top_scores.append(0.0)
 
         evidence_score = sum(top_scores) / len(top_scores) if top_scores else 0.0
 
@@ -54,6 +55,7 @@ async def evidence_node(state: GraphState) -> GraphState:
 
     state["evidence_score"] = round(evidence_score, 4)
     state["is_sufficient_evidence"] = is_sufficient
+    record_retrieval_evidence(is_sufficient, state.get("tenant_id", "vnua"))
 
     latency = int((time.perf_counter() - t0) * 1000)
     add_execution_trace(

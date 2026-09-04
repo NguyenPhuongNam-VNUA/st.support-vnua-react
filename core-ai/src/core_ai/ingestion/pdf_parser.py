@@ -46,8 +46,9 @@ class ParsedPDF:
 class PDFParser:
     """Extracts text page-by-page from PDF files or raw binary byte streams."""
 
-    def __init__(self, preserve_tables: bool = True) -> None:
+    def __init__(self, preserve_tables: bool = True, max_pages: int = 200) -> None:
         self.preserve_tables = preserve_tables
+        self.max_pages = max_pages
 
     def clean_text(self, raw_text: str) -> str:
         """Cleans and normalizes extracted page text."""
@@ -88,7 +89,10 @@ class PDFParser:
 
         # Attempt 1: Try pdfplumber
         try:
-            return self._parse_with_pdfplumber(file_path=file_path, pdf_bytes=pdf_bytes)
+            parsed = self._parse_with_pdfplumber(file_path=file_path, pdf_bytes=pdf_bytes)
+            if parsed.total_chars > 0:
+                return parsed
+            raise ValueError("PDF contains no extractable text")
         except Exception as exc:
             logger.warning(
                 "Primary parser pdfplumber failed (%s). Falling back to pypdf...",
@@ -97,9 +101,17 @@ class PDFParser:
 
         # Attempt 2: Fallback to pypdf
         try:
-            return self._parse_with_pypdf(file_path=file_path, pdf_bytes=pdf_bytes)
+            parsed = self._parse_with_pypdf(file_path=file_path, pdf_bytes=pdf_bytes)
+            if parsed.total_chars > 0:
+                return parsed
+            raise ValueError("PDF contains no extractable text")
         except Exception as exc:
-            logger.error("Secondary parser pypdf also failed: %s", exc, exc_info=True)
+            logger.warning("Secondary parser pypdf failed (%s). Falling back to OCR...", exc)
+
+        try:
+            return self._parse_with_ocr(file_path=file_path, pdf_bytes=pdf_bytes)
+        except Exception as exc:
+            logger.error("OCR fallback also failed: %s", exc, exc_info=True)
             raise RuntimeError(f"Failed to extract text from PDF: {exc}") from exc
 
     def _parse_with_pdfplumber(
@@ -113,6 +125,8 @@ class PDFParser:
         stream = open(file_path, "rb") if file_path else io.BytesIO(pdf_bytes or b"")
         try:
             with pdfplumber.open(stream) as pdf:
+                if len(pdf.pages) > self.max_pages:
+                    raise ValueError("PDF exceeds configured page limit")
                 pages: List[PDFPage] = []
                 total_chars = 0
 
@@ -180,6 +194,8 @@ class PDFParser:
         stream = open(file_path, "rb") if file_path else io.BytesIO(pdf_bytes or b"")
         try:
             reader = pypdf.PdfReader(stream)
+            if len(reader.pages) > self.max_pages:
+                raise ValueError("PDF exceeds configured page limit")
             pages: List[PDFPage] = []
             total_chars = 0
 
@@ -212,3 +228,43 @@ class PDFParser:
         finally:
             if file_path and not stream.closed:
                 stream.close()
+
+    def _parse_with_ocr(
+        self,
+        file_path: Optional[str] = None,
+        pdf_bytes: Optional[bytes] = None,
+    ) -> ParsedPDF:
+        """OCR scanned PDFs locally with PyMuPDF and Tesseract (Vietnamese + English)."""
+        import fitz  # type: ignore
+        import pytesseract  # type: ignore
+        from PIL import Image  # type: ignore
+
+        document = fitz.open(file_path) if file_path else fitz.open(stream=pdf_bytes, filetype="pdf")
+        try:
+            if document.page_count > self.max_pages:
+                raise ValueError("PDF exceeds configured page limit")
+            pages: List[PDFPage] = []
+            total_chars = 0
+            for index in range(document.page_count):
+                page = document.load_page(index)
+                pixmap = page.get_pixmap(matrix=fitz.Matrix(2.0, 2.0), alpha=False)
+                image = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
+                text = self.clean_text(pytesseract.image_to_string(image, lang="vie+eng"))
+                total_chars += len(text)
+                pages.append(
+                    PDFPage(
+                        page_number=index + 1,
+                        text=text,
+                        char_count=len(text),
+                    )
+                )
+            if total_chars == 0:
+                raise ValueError("OCR produced no text")
+            return ParsedPDF(
+                pages=pages,
+                total_pages=len(pages),
+                total_chars=total_chars,
+                parser_used="tesseract-ocr",
+            )
+        finally:
+            document.close()

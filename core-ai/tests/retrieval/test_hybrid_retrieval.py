@@ -141,6 +141,52 @@ class TestHybridRetrieval:
         else:
             assert res == []
 
+    @pytest.mark.asyncio
+    async def test_sparse_results_survive_dense_backend_failure(self) -> None:
+        """A Gemini/vector outage must not discard usable BM25 evidence."""
+        dense_mock = MagicMock()
+        sparse_mock = MagicMock()
+        dense_mock.retrieve = AsyncMock(side_effect=RuntimeError("embedding unavailable"))
+        sparse_candidate = RankedChunk(
+            chunk_id=7,
+            document_id=21,
+            chunk_index=0,
+            document_title="Quy chế",
+            content="Nội dung đã xác minh",
+            rank=1,
+            fts_score=0.9,
+        )
+        sparse_mock.retrieve = AsyncMock(return_value=[sparse_candidate])
+        hybrid = ParallelHybridRetriever(dense_mock, sparse_mock)
+
+        dense, sparse = await hybrid.retrieve_parallel("quy chế", tenant_id="vnua")
+
+        assert dense == []
+        assert sparse == [sparse_candidate]
+
+    @pytest.mark.asyncio
+    async def test_dense_results_survive_sparse_backend_failure(self) -> None:
+        """A PostgreSQL FTS failure must not discard usable dense evidence."""
+        dense_mock = MagicMock()
+        sparse_mock = MagicMock()
+        dense_candidate = RankedChunk(
+            chunk_id=8,
+            document_id=22,
+            chunk_index=0,
+            document_title="Quy định",
+            content="Nguồn vector đã xác minh",
+            rank=1,
+            similarity=0.91,
+        )
+        dense_mock.retrieve = AsyncMock(return_value=[dense_candidate])
+        sparse_mock.retrieve = AsyncMock(side_effect=RuntimeError("fts unavailable"))
+        hybrid = ParallelHybridRetriever(dense_mock, sparse_mock)
+
+        dense, sparse = await hybrid.retrieve_parallel("quy định", tenant_id="vnua")
+
+        assert dense == [dense_candidate]
+        assert sparse == []
+
     def test_reranker_selects_top_snippets_from_hybrid_candidates(self) -> None:
         """Reranker processes RRF candidates and returns top 3 snippets with evidence score."""
         candidates = [

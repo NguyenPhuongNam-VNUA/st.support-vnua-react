@@ -83,7 +83,15 @@ class ContextBuilder:
             context_blocks.append(block)
             accumulated_chars += len(block)
 
-            score = chunk.rerank_score or chunk.similarity or 0.85
+            score = (
+                chunk.rerank_score
+                if chunk.rerank_score is not None
+                else chunk.similarity
+                if chunk.similarity is not None
+                else chunk.rrf_score
+                if chunk.rrf_score is not None
+                else 0.0
+            )
             citations.append(
                 Citation(
                     citation_id=citation_id,

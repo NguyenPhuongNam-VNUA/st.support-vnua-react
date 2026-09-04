@@ -17,6 +17,8 @@ from typing import Any, Dict, List, Set
 from core_ai.contracts.chat import Citation, FallbackInfo, RouteStatus
 from core_ai.dependencies import get_component
 from core_ai.graph.state import GraphState, add_execution_trace
+from core_ai.guardrails.pii_filter import PIIFilter
+from core_ai.observability.metrics import record_fallback
 
 # Regular expressions for prompt injection heuristics
 INJECTION_PATTERNS = [
@@ -91,14 +93,18 @@ async def input_guardrail_node(state: GraphState) -> GraphState:
 
     # 3. Check registered input guardrail component if available
     ext_guardrail = get_component("input_guardrail")
-    if ext_guardrail is not None and hasattr(ext_guardrail, "validate_input"):
+    if ext_guardrail is not None and hasattr(ext_guardrail, "validate"):
         try:
-            result = await ext_guardrail.validate_input(normalized)
-            if not getattr(result, "is_valid", True):
+            result = ext_guardrail.validate(normalized)
+            state["message"] = getattr(result, "sanitized_text", normalized)
+            if not getattr(result, "is_safe", True):
                 latency = int((time.perf_counter() - t0) * 1000)
                 state["is_blocked"] = True
-                state["block_reason"] = getattr(result, "reason", "Yêu cầu bị chặn bởi chính sách an toàn")
-                state["block_category"] = getattr(result, "category", "guardrail_violation")
+                violations = getattr(result, "violations", [])
+                state["block_reason"] = (
+                    violations[0] if violations else "Yêu cầu bị chặn bởi chính sách an toàn"
+                )
+                state["block_category"] = "guardrail_violation"
                 state["status"] = RouteStatus.BLOCKED
                 state["fallback"] = FallbackInfo(
                     reason="guardrail_blocked",
@@ -125,6 +131,7 @@ async def input_guardrail_node(state: GraphState) -> GraphState:
                 fallback_strategy="safe_template",
                 contact_channel="Ban Quản lý Đào tạo VNUA: phongdaotao@vnua.edu.vn",
             )
+            record_fallback("output_guardrail_blocked", "safe_template")
             add_execution_trace(state, "input_guardrail", "failed", latency, {"reason": "prompt_injection"})
             return state
 
@@ -158,18 +165,7 @@ async def output_guardrail_node(state: GraphState) -> GraphState:
     state["current_stage"] = "output_guardrail"
     answer = state.get("answer", "")
 
-    # 1. Check registered output guardrail component if available
-    ext_guardrail = get_component("output_guardrail")
-    if ext_guardrail is not None and hasattr(ext_guardrail, "validate_output"):
-        try:
-            chunks = state.get("retrieved_chunks", [])
-            res = await ext_guardrail.validate_output(answer, chunks)
-            if hasattr(res, "sanitized_answer"):
-                answer = res.sanitized_answer
-        except Exception:
-            pass
-
-    # 2. 100% Citation Whitelist Check
+    # 1. 100% Citation Whitelist Check
     # Collect all valid citation IDs from retrieved chunks and verified state citations
     valid_citation_ids: Set[str] = set()
     verified_citations: List[Citation] = []
@@ -199,6 +195,35 @@ async def output_guardrail_node(state: GraphState) -> GraphState:
         if c_id:
             valid_citation_ids.add(str(c_id))
 
+    # Apply the full guardrail implementation for grounded answers. It checks
+    # document/chunk membership, sanitizes HTML and masks PII.
+    ext_guardrail = get_component("output_guardrail")
+    if (
+        state.get("status") == RouteStatus.ANSWERED
+        and not state.get("cache_hit", False)
+        and ext_guardrail is not None
+        and hasattr(ext_guardrail, "validate")
+    ):
+        result = ext_guardrail.validate(
+            answer=answer,
+            citations=verified_citations,
+            retrieved_chunks=state.get("retrieved_chunks", []),
+            require_citations=True,
+        )
+        answer = result.sanitized_answer
+        verified_citations = result.validated_citations
+        valid_citation_ids = {citation.citation_id for citation in verified_citations}
+        if not result.is_safe:
+            state["status"] = RouteStatus.DEGRADED
+            state["fallback"] = FallbackInfo(
+                reason="output_guardrail_blocked",
+                original_route="output_guardrail",
+                fallback_strategy="safe_template",
+                contact_channel="Ban Quản lý Đào tạo VNUA: phongdaotao@vnua.edu.vn",
+            )
+            verified_citations = []
+            valid_citation_ids = set()
+
     # Verify inline citations in answer text (e.g., [src_1], [src_2])
     def replace_invalid_citation(match: re.Match[str]) -> str:
         tag = match.group(1)
@@ -219,7 +244,59 @@ async def output_guardrail_node(state: GraphState) -> GraphState:
     for pii_pat in PII_PATTERNS:
         answer = pii_pat.sub("[THÔNG TIN ĐÃ ĐƯỢC ẨN]", answer)
 
+    pii_filter = PIIFilter()
+    verified_citations = [
+        citation.model_copy(
+            update={
+                "title": pii_filter.mask_pii(citation.title),
+                "snippet": pii_filter.mask_pii(citation.snippet),
+            }
+        )
+        for citation in verified_citations
+    ]
+    state["citations"] = verified_citations
+
     state["answer"] = answer.strip()
+
+    # Cache only grounded, fully guarded answers. Cache failures are degraded-safe.
+    if (
+        not state.get("cache_hit", False)
+        and state.get("status") == RouteStatus.ANSWERED
+        and state.get("answer")
+        and verified_citations
+        and not any(
+            str(citation.document_id).startswith("mcp_") for citation in verified_citations
+        )
+    ):
+        semantic_cache = get_component("semantic_cache")
+        if semantic_cache is not None:
+            try:
+                await semantic_cache.set(
+                    query=state.get("message", ""),
+                    answer=state["answer"],
+                    citations=verified_citations,
+                    confidence=state.get("confidence", 0.0),
+                    tenant_id=state.get("tenant_id", "vnua"),
+                    locale=state.get("locale", "vi-VN"),
+                    user_scope=str(state.get("user_id") or "anonymous"),
+                )
+            except Exception:
+                pass
+
+    if state.get("cache_lock_acquired"):
+        semantic_cache = get_component("semantic_cache")
+        if semantic_cache is not None:
+            try:
+                await semantic_cache.release_stampede_lock(
+                    query=state.get("message", ""),
+                    token=state.get("cache_lock_token") or "",
+                    tenant_id=state.get("tenant_id", "vnua"),
+                    locale=state.get("locale", "vi-VN"),
+                    user_scope=str(state.get("user_id") or "anonymous"),
+                )
+            except Exception:
+                pass
+        state["cache_lock_acquired"] = False
 
     latency = int((time.perf_counter() - t0) * 1000)
     add_execution_trace(

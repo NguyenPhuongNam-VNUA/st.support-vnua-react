@@ -39,6 +39,7 @@ class ErrorCode(str, Enum):
 
     # Internal Failures
     INTERNAL_ERROR = "INTERNAL_ERROR"
+    DUPLICATE_REQUEST = "DUPLICATE_REQUEST"
 
 
 class CoreAIError(Exception):
@@ -107,6 +108,16 @@ class RateLimitExceededError(CoreAIError):
             code=ErrorCode.RATE_LIMITED,
             status_code=429,
             retryable=True,
+        )
+
+
+class DuplicateRequestError(CoreAIError):
+    def __init__(self, message: str = "Yêu cầu có mã request_id này đang hoặc đã được xử lý") -> None:
+        super().__init__(
+            message=message,
+            code=ErrorCode.DUPLICATE_REQUEST,
+            status_code=409,
+            retryable=False,
         )
 
 

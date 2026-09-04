@@ -244,15 +244,29 @@ class OutputGuardrail:
             if num_match:
                 valid_indices.add(int(num_match.group(0)))
 
+        inline_matches = list(self._INLINE_CITATION_PATTERN.finditer(sanitized))
+        invalid_inline = any(int(match.group(1)) not in valid_indices for match in inline_matches)
         sanitized = self.clean_inline_citations(sanitized, valid_indices)
 
         # 5. Hallucination Blocking Policy
         # If citations were strictly required (e.g. tuition, regulations) but none valid remain
-        if require_citations and raw_citations and not validated_citations:
-            logger.warning("All citations were hallucinated! Triggering safe ungrounded fallback.")
+        missing_required_inline = require_citations and bool(validated_citations) and not inline_matches
+        if require_citations and (
+            (raw_citations and not validated_citations)
+            or invalid_inline
+            or missing_required_inline
+        ):
+            logger.warning("Citation grounding failed; triggering safe ungrounded fallback.")
             sanitized = self.SAFE_UNGROUNDED_FALLBACK
             is_safe = False
-            violations.append("Toàn bộ nguồn trích dẫn không hợp lệ; đã áp dụng phản hồi an toàn.")
+            if invalid_inline:
+                violations.append("Câu trả lời chứa thẻ trích dẫn không thuộc nguồn đã xác minh.")
+                has_hallucinations = True
+            elif missing_required_inline:
+                violations.append("Câu trả lời thiếu thẻ trích dẫn bắt buộc.")
+            else:
+                violations.append("Toàn bộ nguồn trích dẫn không hợp lệ.")
+            violations.append("Đã áp dụng phản hồi an toàn.")
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
 

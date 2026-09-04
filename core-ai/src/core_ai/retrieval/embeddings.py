@@ -8,6 +8,7 @@ from typing import List, Optional, Protocol, runtime_checkable
 import httpx
 
 from core_ai.config import Settings, get_settings
+from core_ai.observability.metrics import record_external_call
 
 logger = logging.getLogger("core_ai.retrieval.embeddings")
 
@@ -80,13 +81,19 @@ class GeminiEmbedding2Embeddings:
     def dimension(self) -> int:
         return self._dimension
 
+    @property
+    def is_external(self) -> bool:
+        """Signals call-budget accounting in the orchestration layer."""
+        return True
+
     async def _request_embedding(self, client: httpx.AsyncClient, text: str) -> List[float]:
         payload = {
             "model": f"models/{self.model_name}",
             "content": {"parts": [{"text": text}]},
-            "output_dimensionality": self._dimension,
+            "outputDimensionality": self._dimension,
         }
         try:
+            record_external_call("gemini", self.model_name, "embedding")
             response = await client.post(
                 self.endpoint,
                 headers={"x-goog-api-key": self.api_key},
