@@ -13,6 +13,7 @@ import time
 from typing import Any, Dict, List, Literal, cast
 
 from core_ai.contracts.chat import FallbackInfo, RouteStatus
+from core_ai.contracts.events import AnswerDeltaPayload, SSEEvent
 from core_ai.contracts.llm import ChatMessage, GenerationRequest, GenerationResult
 from core_ai.dependencies import get_component
 from core_ai.graph.state import GraphState, add_execution_trace
@@ -25,7 +26,7 @@ Quy tắc:
 2. Dùng Markdown vừa đủ. Không lặp lại câu hỏi và không dùng lời mở đầu dài.
 3. Chỉ dùng dữ liệu trong [TRÍCH DẪN TÀI LIỆU]. Không suy đoán hay bịa thông tin.
 4. Đặt [src_X] ngay sau thông tin tương ứng. Không tự tạo mã nguồn trích dẫn.
-5. Nếu nguồn chưa đủ, nói rõ điều còn thiếu và đề xuất bước tiếp theo hoặc hỗ trợ từ cán bộ.
+5. Nếu nguồn chưa đủ, nói rõ điều còn thiếu và hướng dẫn sinh viên đặt lại câu hỏi rõ ràng hơn.
 6. Giữ cá tính ấm áp, thực tế; một câu dí dỏm nhẹ chỉ khi phù hợp, không làm loãng câu trả lời.
 """
 
@@ -91,7 +92,8 @@ async def generation_node(state: GraphState) -> GraphState:
     p_tokens = 0
     c_tokens = 0
 
-    if llm_port is not None and hasattr(llm_port, "generate"):
+    event_queue = state.get("event_queue")
+    if llm_port is not None:
         history_messages = [
             ChatMessage(
                 role=cast(Literal["system", "user", "assistant", "tool"], item["role"]),
@@ -112,39 +114,114 @@ async def generation_node(state: GraphState) -> GraphState:
             external_calls_already_made=current_calls,
         )
 
-        try:
-            gen_result: GenerationResult = await llm_port.generate(gen_request)
-            state["external_calls_count"] = min(
-                max_calls, current_calls + gen_result.external_calls_used
-            )
-            answer_text = gen_result.content
-            model_name = gen_result.model_name
-            provider = gen_result.provider
-            if gen_result.usage:
-                p_tokens = gen_result.usage.prompt_tokens
-                c_tokens = gen_result.usage.completion_tokens
-        except Exception as exc:
-            state["external_calls_count"] = min(max_calls, current_calls + 1)
-            logger.error(
-                "LLM Generation call failed for request_id=%s: %s",
-                state.get("request_id"),
-                exc,
-                exc_info=True,
-            )
+        if event_queue is not None and hasattr(llm_port, "generate_stream"):
+            try:
+                collected_chunks: List[str] = []
+                idx = 0
+                req_id = state.get("request_id", "")
+                async for chunk in llm_port.generate_stream(gen_request):
+                    if chunk:
+                        collected_chunks.append(chunk)
+                        delta_payload = AnswerDeltaPayload(
+                            request_id=req_id,
+                            delta=chunk,
+                            index=idx,
+                        )
+                        await event_queue.put(
+                            SSEEvent(event="answer.delta", data=delta_payload).to_dict()
+                        )
+                        idx += 1
+                answer_text = "".join(collected_chunks)
+                state["streamed_deltas_count"] = idx
+                state["external_calls_count"] = min(max_calls, current_calls + 1)
+                active_cfg = getattr(llm_port, "_active_config", None)
+                if active_cfg:
+                    model_name = active_cfg.model
+                    provider = active_cfg.provider
+            except Exception as exc:
+                state["external_calls_count"] = min(max_calls, current_calls + 1)
+                logger.error(
+                    "LLM Generation stream call failed for request_id=%s: %s",
+                    state.get("request_id"),
+                    exc,
+                    exc_info=True,
+                )
+                state["status"] = RouteStatus.DEGRADED
+                state["fallback"] = FallbackInfo(
+                    reason="provider_unavailable",
+                    original_route="generation",
+                    fallback_strategy="safe_template",
+                    contact_channel="Ban Quản lý Đào tạo VNUA: phongdaotao@vnua.edu.vn",
+                )
+                latency = int((time.perf_counter() - t0) * 1000)
+                add_execution_trace(
+                    state,
+                    "generation",
+                    "failed",
+                    latency,
+                    {"error_type": type(exc).__name__},
+                )
+                return state
+        elif hasattr(llm_port, "generate"):
+            try:
+                gen_result: GenerationResult = await llm_port.generate(gen_request)
+                state["external_calls_count"] = min(
+                    max_calls, current_calls + gen_result.external_calls_used
+                )
+                answer_text = gen_result.content
+                model_name = gen_result.model_name
+                provider = gen_result.provider
+                if gen_result.usage:
+                    p_tokens = gen_result.usage.prompt_tokens
+                    c_tokens = gen_result.usage.completion_tokens
+                if event_queue is not None and answer_text:
+                    delta_payload = AnswerDeltaPayload(
+                        request_id=state.get("request_id", ""),
+                        delta=answer_text,
+                        index=0,
+                    )
+                    await event_queue.put(
+                        SSEEvent(event="answer.delta", data=delta_payload).to_dict()
+                    )
+                    state["streamed_deltas_count"] = 1
+            except Exception as exc:
+                state["external_calls_count"] = min(max_calls, current_calls + 1)
+                logger.error(
+                    "LLM Generation call failed for request_id=%s: %s",
+                    state.get("request_id"),
+                    exc,
+                    exc_info=True,
+                )
+                state["status"] = RouteStatus.DEGRADED
+                state["fallback"] = FallbackInfo(
+                    reason="provider_unavailable",
+                    original_route="generation",
+                    fallback_strategy="safe_template",
+                    contact_channel="Ban Quản lý Đào tạo VNUA: phongdaotao@vnua.edu.vn",
+                )
+                latency = int((time.perf_counter() - t0) * 1000)
+                add_execution_trace(
+                    state,
+                    "generation",
+                    "failed",
+                    latency,
+                    {"error_type": type(exc).__name__},
+                )
+                return state
+        else:
             state["status"] = RouteStatus.DEGRADED
             state["fallback"] = FallbackInfo(
-                reason="provider_unavailable",
+                reason="llm_gateway_unavailable",
                 original_route="generation",
                 fallback_strategy="safe_template",
                 contact_channel="Ban Quản lý Đào tạo VNUA: phongdaotao@vnua.edu.vn",
             )
-            latency = int((time.perf_counter() - t0) * 1000)
             add_execution_trace(
                 state,
                 "generation",
                 "failed",
-                latency,
-                {"error_type": type(exc).__name__},
+                int((time.perf_counter() - t0) * 1000),
+                {"reason": "llm_gateway_unavailable"},
             )
             return state
     else:

@@ -7,7 +7,8 @@ Tests:
 4. LiteLLMAdapter generation returning typed GenerationResult.
 """
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
+
 import pytest
 
 from core_ai.config import Settings
@@ -19,7 +20,7 @@ from core_ai.contracts.llm import (
     ProviderCapability,
 )
 from core_ai.llm.gateway import LLMGateway
-from core_ai.llm.litellm_adapter import LiteLLMAdapter, get_provider_capabilities
+from core_ai.llm.litellm_adapter import get_provider_capabilities
 
 
 class TestLLMGateway:

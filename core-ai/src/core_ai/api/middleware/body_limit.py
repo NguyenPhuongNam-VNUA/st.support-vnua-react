@@ -51,7 +51,7 @@ class RequestBodyLimitMiddleware:
         async def replay() -> dict:
             nonlocal delivered
             if delivered:
-                return {"type": "http.request", "body": b"", "more_body": False}
+                return await receive()
             delivered = True
             return {"type": "http.request", "body": bytes(body), "more_body": False}
 

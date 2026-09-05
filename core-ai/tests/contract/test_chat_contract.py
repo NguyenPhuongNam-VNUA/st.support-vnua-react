@@ -16,7 +16,6 @@ from core_ai.contracts.chat import (
     ChatResponse,
     Citation,
     ExecutionTraceStep,
-    FallbackInfo,
     LegacyAskAiRequest,
     RouteStatus,
 )

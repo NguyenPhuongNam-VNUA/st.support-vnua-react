@@ -4,10 +4,11 @@ Provides Vietnamese text tokenization, database-backed BM25 search via DocumentR
 and an in-memory BM25Okapi engine for candidate re-scoring.
 """
 
-from collections import Counter
 import math
 import re
+from collections import Counter
 from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 from core_ai.data.repositories.document_repo import DocumentRepository

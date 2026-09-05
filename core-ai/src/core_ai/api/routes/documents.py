@@ -6,6 +6,7 @@ POST /documents/embed (legacy backwards compatibility)
 """
 
 import uuid
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 
 from core_ai.contracts.chat import DocumentEmbedRequest, DocumentEmbedResponse

@@ -32,7 +32,7 @@ TOPICS: dict[str, dict[str, Any]] = {
             "điểm",
             "phúc khảo",
         ),
-        "slots": ("khóa", "năm", "học kỳ", "chương trình"),
+        "slots": ("khóa", "năm", "học kỳ", "chương trình", "chính quy", "đại học", "hệ"),
         "clarification": "Bạn muốn hỏi quy định nào và áp dụng cho khóa hoặc chương trình nào?",
     },
     "admissions": {
@@ -41,7 +41,7 @@ TOPICS: dict[str, dict[str, Any]] = {
         "clarification": "Bạn cần thông tin tuyển sinh của năm, ngành hoặc phương thức nào?",
     },
     "student_support": {
-        "keywords": ("hỗ trợ", "khiếu nại", "cán bộ", "liên hệ", "xin giấy", "xác nhận"),
+        "keywords": ("hỗ trợ", "khiếu nại", "liên hệ", "xin giấy", "xác nhận"),
         "slots": ("loại", "khoa", "đơn vị"),
         "clarification": "Bạn cần hỗ trợ thủ tục nào hoặc muốn liên hệ đơn vị nào?",
     },

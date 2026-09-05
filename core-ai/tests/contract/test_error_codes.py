@@ -7,13 +7,11 @@ Verifies:
 4. Serialized error payload structure via to_dict().
 """
 
-import pytest
 
 from core_ai.contracts.errors import (
     AuthenticationError,
     CallBudgetExceededError,
     CircuitBreakerOpenError,
-    CoreAIError,
     DatabaseUnavailableError,
     ErrorCode,
     ForbiddenError,
@@ -26,7 +24,6 @@ from core_ai.contracts.errors import (
     RateLimitExceededError,
     RetrievalError,
     TenantForbiddenError,
-    ToolExecutionError,
     ToolNotAllowedError,
 )
 

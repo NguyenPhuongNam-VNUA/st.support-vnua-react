@@ -1,6 +1,9 @@
 begin;
 
+create extension if not exists vector;
+
 alter table public.documents
+  add column if not exists tenant_id text not null default 'vnua',
   add column if not exists content_sha256 text,
   add column if not exists knowledge_version bigint not null default 1,
   add column if not exists ingestion_quality numeric(5,4),
@@ -11,6 +14,10 @@ alter table public.documents
   add column if not exists valid_to timestamptz;
 
 alter table public.document_chunks
+  add column if not exists tenant_id text not null default 'vnua',
+  add column if not exists chunk_index integer default 0,
+  add column if not exists embedding_model text,
+  add column if not exists embedding_dimension integer,
   add column if not exists content_hash text,
   add column if not exists heading_path jsonb not null default '[]'::jsonb,
   add column if not exists parser_used text,

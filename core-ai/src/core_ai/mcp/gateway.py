@@ -17,11 +17,9 @@ from core_ai.contracts.errors import (
     CoreAIError,
     TenantForbiddenError,
     ToolExecutionError,
-    ToolNotAllowedError,
 )
 from core_ai.contracts.mcp import (
     CircuitBreakerConfig,
-    MCPGateway as MCPGatewayProtocol,
     ToolCircuitStatus,
     ToolDefinition,
     ToolRequest,

@@ -4,19 +4,18 @@ Captures request_id, tenant_id, and user_id from incoming HTTP headers and propa
 them through asynchronous ContextVars for structured logging and pipeline execution.
 """
 
-from contextvars import ContextVar
-from dataclasses import dataclass
 import re
 import time
-from typing import Callable, Optional, Union
 import uuid
+from contextvars import ContextVar
+from dataclasses import dataclass
+from typing import Any, Callable, Optional, Union
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from core_ai.config import Settings, get_settings
-
 
 # ContextVars for async task propagation
 request_id_ctx: ContextVar[str] = ContextVar("request_id_ctx", default="")
@@ -40,7 +39,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.settings = settings or get_settings()
 
-    async def dispatch(self, request: Request, call_next: Callable[[Request], Response]) -> Response:
+    async def dispatch(self, request: Request, call_next: Any) -> Response:
         settings = self.settings
 
         # 1. Extract or generate Request ID
@@ -54,7 +53,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                     "retryable": False,
                 },
             )
-        
+
         # 2. Extract or default Tenant ID
         tenant_id = request.headers.get("X-Tenant-ID") or settings.default_tenant
         allowed_tenants = settings.allowed_tenants
@@ -69,7 +68,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                     "retryable": False,
                 },
             )
-        
+
         # 3. Extract optional User ID
         raw_user_id = request.headers.get("X-User-ID")
         user_id: Optional[Union[int, str]] = None

@@ -7,16 +7,15 @@ Tests:
 """
 
 from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from core_ai.config import Settings
-from core_ai.contracts.errors import ProviderTimeoutError, ProviderUnavailableError
+from core_ai.contracts.errors import ProviderTimeoutError
 from core_ai.contracts.llm import (
     ChatMessage,
     GenerationRequest,
     GenerationResult,
-    ModelConfig,
-    ProviderCapability,
     TokenUsage,
 )
 from core_ai.llm.gateway import LLMGateway

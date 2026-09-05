@@ -8,6 +8,7 @@ Tests:
 """
 
 from unittest.mock import AsyncMock, patch
+
 import pytest
 
 from core_ai.config import Settings
@@ -74,7 +75,7 @@ class TestTenantIsolation:
         from contextlib import asynccontextmanager
 
         @asynccontextmanager
-        async def mock_get_conn():
+        async def mock_get_conn(*args, **kwargs):
             yield mock_db_conn
 
         with patch("core_ai.data.repositories.document_repo.get_db_connection", mock_get_conn):

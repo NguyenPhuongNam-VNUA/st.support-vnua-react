@@ -3,9 +3,7 @@
 import React, { useState } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import IconButton from '@mui/material/IconButton';
-import Tooltip from '@mui/material/Tooltip';
-import { Activity, Check, ChevronDown, Copy, ExternalLink, ShieldCheck, Wrench } from 'lucide-react';
+import { Check, ChevronDown, Copy, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -42,34 +40,85 @@ interface ChatMsgProps {
   trace?: ChatTraceStep[];
   isStreaming?: boolean;
   fallback?: ChatFallback | null;
-  onRequestHuman?: () => void;
   onConfirmRedaction?: () => void;
-  status?: string;
-  confidence?: number;
 }
 
-const STEP_LABELS: Record<string, string> = {
-  accepted: 'Đã tiếp nhận câu hỏi',
-  input_guardrail: 'Kiểm tra an toàn',
-  cache_check: 'Tra bộ nhớ',
-  semantic_cache: 'Tra bộ nhớ',
-  retrieval: 'Tìm tài liệu',
-  evidence_eval: 'Đánh giá nguồn',
-  tool_execution: 'Gọi công cụ MCP',
-  tool_node: 'Gọi công cụ MCP',
-  generation: 'Soạn câu trả lời',
-  fallback: 'Dùng phương án dự phòng',
-  output_guardrail: 'Kiểm chứng câu trả lời',
+function ClaudeThinkingIcon({ animate = false }: { animate?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`h-4 w-4 flex-shrink-0 text-[#d96b43] ${animate ? 'animate-spin' : ''}`}
+      style={animate ? { animationDuration: '3.5s', animationTimingFunction: 'linear' } : undefined}
+    >
+      <path
+        d="M8 1.5V14.5M1.5 8H14.5M3.4 3.4L12.6 12.6M3.4 12.6L12.6 3.4"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+const FRIENDLY_STEP_TITLES: Record<string, string> = {
+  input_guardrail: 'Kiểm tra nội dung an toàn',
+  guardrail: 'Kiểm tra nội dung an toàn',
+  cache_check: 'Kiểm tra bộ nhớ đệm',
+  semantic_cache: 'Tra cứu câu hỏi tương tự trong bộ nhớ',
+  query_prep: 'Phân tích yêu cầu câu hỏi',
+  topic_scoring: 'Xác định lĩnh vực & chủ đề câu hỏi',
+  retrieval: 'Tìm kiếm tài liệu & quy định đào tạo',
+  evidence_eval: 'Đánh giá độ xác thực của tài liệu',
+  tool_node: 'Tra cứu thông tin chính thức từ hệ thống',
+  tool_execution: 'Tra cứu thông tin chính thức từ hệ thống',
+  generation: 'Soạn câu trả lời cho sinh viên',
+  output_guardrail: 'Kiểm tra câu trả lời trước khi gửi',
+  fallback: 'Xử lý phương án dự phòng an toàn',
 };
 
-export default function ChatMsg({ message, timestamp, citations = [], trace = [], isStreaming, fallback, onRequestHuman, onConfirmRedaction, status, confidence }: ChatMsgProps) {
+function formatTraceStep(item: ChatTraceStep): string {
+  // If backend provided a custom friendly human message that isn't raw technical code
+  if (item.message && !item.message.includes('_') && !item.message.includes('(') && !item.message.includes('{')) {
+    if (/[\p{L}]/u.test(item.message) && !/^[a-z_]+$/.test(item.message)) {
+      return item.message;
+    }
+  }
+
+  // If tool was called, map to clean human description without exposing function name or args
+  const rawTool = typeof item.details?.tool_name === 'string' ? item.details.tool_name : '';
+  if (rawTool) {
+    if (rawTool.includes('schedule')) return 'Tra cứu thời khóa biểu và lịch học';
+    if (rawTool.includes('tuition')) return 'Tra cứu biểu phí và học phí';
+    if (rawTool.includes('regulation')) return 'Tra cứu văn bản quy chế đào tạo';
+    if (rawTool.includes('knowledge') || rawTool.includes('search')) return 'Tìm kiếm dữ liệu tài liệu';
+    return 'Tra cứu dữ liệu chính thức từ hệ thống';
+  }
+
+  const key = (item.step || '').toLowerCase();
+  return FRIENDLY_STEP_TITLES[key] || 'Xử lý thông tin yêu cầu';
+}
+
+export default function ChatMsg({ message, timestamp, citations = [], trace = [], isStreaming, fallback, onConfirmRedaction }: ChatMsgProps) {
   const [copied, setCopied] = useState(false);
-  const [showTrace, setShowTrace] = useState(Boolean(isStreaming));
+  const [showTrace, setShowTrace] = useState(false);
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const totalLatencyMs = trace.reduce((acc, cur) => acc + (cur.latency_ms || 0), 0);
+  const totalDuration = totalLatencyMs > 0
+    ? totalLatencyMs >= 1000
+      ? `${(totalLatencyMs / 1000).toFixed(1)}s`
+      : `${totalLatencyMs} ms`
+    : undefined;
+
+  const currentStepTitle = trace.length > 0 ? formatTraceStep(trace[trace.length - 1]) : 'Đang suy nghĩ...';
+  const hasThinking = isStreaming || trace.length > 0;
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, my: 1.5, maxWidth: { md: '88%', xs: '97%' } }}>
@@ -77,104 +126,120 @@ export default function ChatMsg({ message, timestamp, citations = [], trace = []
         <Image src="/st.png" alt="ST - Care" width={36} height={36} className="object-contain drop-shadow-sm" />
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Box sx={{ display: 'flex', gap: 1, mb: 0.5, px: 0.5 }}>
-          <Typography variant="caption" sx={{ fontWeight: 700, color: '#006837' }}>ST - Care</Typography>
-          <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>
+        {/* Assistant Header */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.8, px: 0.5 }}>
+          <Typography variant="caption" sx={{ fontWeight: 700, color: '#006837', fontSize: '0.75rem' }}>ST - Care</Typography>
+          <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 500 }}>
             {timestamp || (isStreaming ? 'Đang xử lý' : 'Vừa xong')}
           </Typography>
-          {status && (
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${status === 'answered' ? 'bg-emerald-100 text-emerald-800' : status === 'escalated' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}`}>
-              {status === 'answered' ? 'Đã kiểm chứng' : status === 'escalated' ? 'Đã chuyển cán bộ' : status === 'clarified' ? 'Cần bổ sung' : status === 'redirected' ? 'Ngoài phạm vi' : 'Cần kiểm tra thêm'}
-            </span>
-          )}
-          {confidence != null && (
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-              {confidence >= 0.78 ? 'Tin cậy cao' : confidence >= 0.58 ? 'Tin cậy vừa' : 'Tin cậy thấp'}
-            </span>
-          )}
         </Box>
 
-        <Box sx={{ position: 'relative', px: 2.2, py: 1.6, borderRadius: '4px 20px 20px 20px', background: 'rgba(255,255,255,.94)', border: '1px solid rgba(226,232,240,.8)', boxShadow: '0 4px 20px -4px rgba(0,0,0,.06)', color: '#1e293b', fontSize: '.925rem', lineHeight: 1.65 }}>
-          {message ? (
-            <Box className="prose prose-sm max-w-none prose-emerald">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message}</ReactMarkdown>
-            </Box>
-          ) : (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#64748b' }}>
-              <Activity size={15} className="animate-pulse" /> ST - Care bắt tay vào việc rồi đây…
-            </Box>
-          )}
-
-          {!!message && (
-            <Tooltip title={copied ? 'Đã sao chép' : 'Sao chép'}>
-              <IconButton onClick={handleCopy} size="small" sx={{ position: 'absolute', top: 8, right: 8, width: 26, height: 26 }}>
-                {copied ? <Check size={14} color="#006837" /> : <Copy size={14} color="#64748b" />}
-              </IconButton>
-            </Tooltip>
-          )}
-
-          {trace.length > 0 && (
-            <Box sx={{ mt: message ? 1.5 : 0 }}>
-              <button onClick={() => setShowTrace((value) => !value)} className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-emerald-700">
-                <ShieldCheck size={14} /> Tiến trình xử lý
-                <ChevronDown size={13} className={`transition-transform ${showTrace ? 'rotate-180' : ''}`} />
-              </button>
-              {showTrace && (
-                <div className="mt-2 space-y-1.5 border-l-2 border-emerald-100 pl-3">
-                  {trace.map((item, index) => {
-                    const tool = item.details?.tool_name;
-                    return (
-                      <div key={`${item.step}-${index}`} className="flex items-center justify-between gap-3 text-xs text-slate-600">
-                        <span className="flex items-center gap-1.5">
-                          {tool ? <Wrench size={12} /> : <Check size={12} className="text-emerald-600" />}
-                          {item.message || STEP_LABELS[item.step] || item.step}
-                          {typeof tool === 'string' && <code className="rounded bg-slate-100 px-1">{tool}</code>}
-                        </span>
-                        {item.latency_ms != null && <span className="text-slate-400">{item.latency_ms} ms</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Box>
-          )}
-
-          {citations.length > 0 && (
-            <Box sx={{ mt: 1.8, pt: 1.4, borderTop: '1px solid #e2e8f0' }}>
-              <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569' }}>Nguồn tham khảo</Typography>
-              <div className="mt-1.5 grid gap-1.5">
-                {citations.slice(0, 3).map((source) => (
-                  <div key={source.citation_id} className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-600">
-                    <div className="flex items-center gap-1 font-semibold text-slate-700">
-                      <ExternalLink size={12} /> [{source.citation_id}] {source.title}
-                      {source.page ? ` · Trang ${source.page}` : ''}
-                    </div>
-                    {source.snippet && <p className="mt-1 line-clamp-2">{source.snippet}</p>}
-                  </div>
-                ))}
-              </div>
-            </Box>
-          )}
-
-          {fallback && (fallback.contact_channel || fallback.ticket_id) && (
-            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              <strong>Hỗ trợ từ cán bộ</strong>
-              {fallback.ticket_id && <span> · Mã phiếu: {fallback.ticket_id}</span>}
-              {fallback.contact_channel && <p className="mt-1">{fallback.contact_channel}</p>}
-              {onRequestHuman && !fallback.ticket_id && (
-                <button onClick={onRequestHuman} className="mt-2 rounded-lg bg-amber-900 px-2.5 py-1.5 font-semibold text-white hover:bg-amber-800">
-                  Chuyển câu hỏi tới cán bộ
-                </button>
-              )}
-            </div>
-          )}
-
-          {fallback?.redacted_query && onConfirmRedaction && (
-            <button onClick={onConfirmRedaction} className="mt-3 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800">
-              Xác nhận dùng câu hỏi đã ẩn thông tin
+        {/* Claude-style Thinking Section (ABOVE the answer) */}
+        {hasThinking && (
+          <Box sx={{ mb: 1.2 }}>
+            <button
+              type="button"
+              onClick={() => setShowTrace((prev) => !prev)}
+              className="group inline-flex items-center gap-1.5 py-0.5 text-xs font-medium text-slate-600 transition-colors hover:text-slate-900 cursor-pointer"
+            >
+              <ClaudeThinkingIcon animate={isStreaming} />
+              <span>
+                {isStreaming
+                  ? currentStepTitle
+                  : `Đã suy nghĩ (${trace.length} bước${totalDuration ? ` · ${totalDuration}` : ''})`}
+              </span>
+              <ChevronDown
+                size={13}
+                className={`text-slate-400 transition-transform duration-200 group-hover:text-slate-600 ${showTrace ? 'rotate-180' : ''}`}
+              />
             </button>
-          )}
-        </Box>
+
+            {/* Expanded Dropdown Panel */}
+            {showTrace && trace.length > 0 && (
+              <div className="mt-1.5 space-y-1.5 border-l-2 border-slate-200/80 pl-3 py-1 text-xs text-slate-600 max-w-xl">
+                {trace.map((item, index) => {
+                  const title = formatTraceStep(item);
+                  const isDone = item.status === 'completed' || item.status === 'passed';
+                  return (
+                    <div
+                      key={`${item.step}-${index}`}
+                      className="flex items-center justify-between gap-3 text-slate-600 py-0.5"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                          {isDone ? (
+                            <Check size={11} strokeWidth={2.5} />
+                          ) : (
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          )}
+                        </span>
+                        <span className="font-medium text-slate-700">{title}</span>
+                      </div>
+                      {item.latency_ms != null && (
+                        <span className="flex-shrink-0 text-[11px] text-slate-400 font-mono">
+                          {item.latency_ms} ms
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Box>
+        )}
+
+        {/* Message Bubble */}
+        {(message || (!isStreaming && !message)) && (
+          <Box sx={{ position: 'relative', px: 2.2, py: 1.6, borderRadius: '4px 20px 20px 20px', background: 'rgba(255,255,255,.94)', border: '1px solid rgba(226,232,240,.8)', boxShadow: '0 4px 20px -4px rgba(0,0,0,.06)', color: '#1e293b', fontSize: '.925rem', lineHeight: 1.65 }}>
+            {message ? (
+              <Box className="prose prose-sm max-w-none prose-emerald">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message}</ReactMarkdown>
+                {isStreaming && (
+                  <span className="inline-block h-3.5 w-1.5 ml-1 rounded-sm bg-emerald-600 animate-pulse align-middle" />
+                )}
+              </Box>
+            ) : (
+              <Typography variant="body2" sx={{ color: '#64748b' }}>Không có nội dung phản hồi.</Typography>
+            )}
+
+            {message && !isStreaming && (
+              <div className="mt-2.5 flex items-center justify-end pt-1.5 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
+                  title="Sao chép nội dung"
+                >
+                  {copied ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                  <span>{copied ? 'Đã chép' : 'Chép'}</span>
+                </button>
+              </div>
+            )}
+
+            {citations.length > 0 && (
+              <Box sx={{ mt: 1.8, pt: 1.4, borderTop: '1px solid #e2e8f0' }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569' }}>Nguồn tham khảo</Typography>
+                <div className="mt-1.5 grid gap-1.5">
+                  {citations.slice(0, 3).map((source) => (
+                    <div key={source.citation_id} className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-600">
+                      <div className="flex items-center gap-1 font-semibold text-slate-700">
+                        <ExternalLink size={12} /> [{source.citation_id}] {source.title}
+                        {source.page ? ` · Trang ${source.page}` : ''}
+                      </div>
+                      {source.snippet && <p className="mt-1 line-clamp-2">{source.snippet}</p>}
+                    </div>
+                  ))}
+                </div>
+              </Box>
+            )}
+
+            {fallback?.redacted_query && onConfirmRedaction && (
+              <button onClick={onConfirmRedaction} className="mt-3 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800">
+                Xác nhận dùng câu hỏi đã ẩn thông tin
+              </button>
+            )}
+          </Box>
+        )}
       </Box>
     </Box>
   );

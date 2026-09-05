@@ -6,14 +6,14 @@ The response is immediately served from Redis with verified citations and safe m
 """
 
 import json
-from unittest.mock import AsyncMock, patch
-from fastapi.testclient import TestClient
+from unittest.mock import AsyncMock
+
 import pytest
+from fastapi.testclient import TestClient
 
 from core_ai.contracts.chat import Citation
 from core_ai.retrieval.semantic_cache import (
     CachedAnswer,
-    SemanticCache,
     compute_query_hash,
 )
 

@@ -96,7 +96,7 @@ class GeminiEmbedding2Embeddings:
             record_external_call("gemini", self.model_name, "embedding")
             response = await client.post(
                 self.endpoint,
-                headers={"x-goog-api-key": self.api_key},
+                headers={"x-goog-api-key": self.api_key or ""},
                 json=payload,
             )
             response.raise_for_status()

@@ -7,6 +7,7 @@ Học viện Nông nghiệp Việt Nam (VNUA).
 """
 
 from typing import Any, Dict, List, Optional
+
 from core_ai.contracts.llm import ChatMessage
 
 ST_CARE_SYSTEM_PROMPT = """Bạn là ST-Care — Trợ lý ảo sinh viên chính thức của Học viện Nông nghiệp Việt Nam (VNUA).
@@ -53,7 +54,7 @@ def format_evidence_context(evidence_list: List[Dict[str, Any]]) -> str:
         page = snippet.get("page")
         page_info = f", Trang: {page}" if page else ""
         content = snippet.get("snippet") or snippet.get("content") or ""
-        
+
         lines.append(f"\n--- [Nguồn {idx}: {doc_id} | {title}{page_info}] ---")
         lines.append(content.strip())
 

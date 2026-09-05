@@ -7,9 +7,9 @@ Specifically designed for Vietnamese administrative and academic contexts:
 - Raw passwords, API keys, tokens, and secret credentials
 """
 
-from dataclasses import dataclass
 import re
-from typing import List, Optional
+from dataclasses import dataclass
+from typing import List
 
 
 @dataclass
@@ -55,7 +55,7 @@ class PIIFilter:
 
     # Student ID is only treated as PII with explicit Vietnamese/English context.
     _MSSV_PATTERN = re.compile(
-        r"(?i)(?:mssv|mã\s+sinh\s+viên|student\s*id)\s*[:=#-]?\s*([A-Z]{0,3}\d{6,12})\b"
+        r"(?i)(?:mssv|mã\s+sinh\s+viên|student\s*id)(?:\s+(?:của\s+tôi\s+)?(?:là|la))?\s*[:=#-]?\s*([A-Z]{0,3}\d{6,12})\b"
     )
 
     # Raw Passwords and Credential exposures:
@@ -226,6 +226,8 @@ class PIIFilter:
         """Returns True if the text exposes raw credentials (passwords, tokens, api keys)."""
         entities = self.detect_pii(text)
         return any(e.entity_type == "secret" for e in entities)
+
+    contains_credentials = has_credentials
 
     def has_sensitive_raw_pii(self, text: str) -> bool:
         """Returns True if the text contains high-risk PII: CCCD or raw secrets."""

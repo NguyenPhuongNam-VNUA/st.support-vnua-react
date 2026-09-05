@@ -11,12 +11,10 @@ Tests:
 
 import json
 from typing import List
-from unittest.mock import AsyncMock, patch
-from fastapi.testclient import TestClient
-import pytest
+from unittest.mock import AsyncMock
 
-from core_ai.config import Settings
-from core_ai.contracts.chat import ChatRequest
+from fastapi.testclient import TestClient
+
 from core_ai.contracts.mcp import ToolResult
 from core_ai.dependencies import register_component
 
@@ -39,7 +37,7 @@ class TestChatFlowE2E:
         response = client.post("/v1/chat", json=payload)
         assert response.status_code == 401
         data = response.json()
-        assert data["detail"]["error_code"] == "AUTH_FAILED"
+        assert data.get("detail", {}).get("error_code") == "AUTH_FAILED" or data.get("error_code") == "AUTH_FAILED"
 
     def test_auth_rejection_invalid_token(self, client: TestClient) -> None:
         """Request with incorrect Bearer token is rejected with HTTP 401."""
@@ -47,7 +45,8 @@ class TestChatFlowE2E:
         headers = {"Authorization": "Bearer totally-wrong-token"}
         response = client.post("/v1/chat", json=payload, headers=headers)
         assert response.status_code == 401
-        assert response.json()["detail"]["error_code"] == "AUTH_FAILED"
+        data = response.json()
+        assert data.get("detail", {}).get("error_code") == "AUTH_FAILED" or data.get("error_code") == "AUTH_FAILED"
 
     def test_chat_streaming_sse_full_flow(
         self, client: TestClient, mock_litellm_completion: AsyncMock

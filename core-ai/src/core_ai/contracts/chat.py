@@ -4,10 +4,10 @@ Exchanged between the Next.js BFF / frontend and the core-ai microservice.
 Supports both modern typed streaming payloads and legacy backwards compatibility.
 """
 
-from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union
 import unicodedata
 import uuid
+from enum import Enum
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, model_validator
 

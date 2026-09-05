@@ -10,6 +10,7 @@ Tests:
 """
 
 import time
+
 import pytest
 
 from core_ai.contracts.mcp import CircuitBreakerConfig, CircuitBreakerState

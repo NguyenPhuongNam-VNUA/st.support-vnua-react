@@ -6,10 +6,9 @@ The microservice automatically degrades: bypassing semantic cache and proceeding
 """
 
 from unittest.mock import AsyncMock, patch
+
 import pytest
 
-from core_ai.contracts.chat import Citation
-from core_ai.data.redis import get_redis_client, is_redis_degraded
 from core_ai.retrieval.semantic_cache import CachedAnswer, SemanticCache
 
 
@@ -58,12 +57,14 @@ class TestRedisFailureResilience:
         broken_redis.ping.side_effect = ConnectionError("Redis down")
 
         from fastapi.testclient import TestClient
+
         from core_ai.dependencies import register_component
 
         register_component("redis_client", broken_redis)
 
-        client = TestClient(test_app)
-        response = client.get("/health/ready")
+        with patch("core_ai.data.postgres.check_db_health", new_callable=AsyncMock, return_value=True):
+            client = TestClient(test_app)
+            response = client.get("/health/ready")
 
         assert response.status_code == 200
         data = response.json()

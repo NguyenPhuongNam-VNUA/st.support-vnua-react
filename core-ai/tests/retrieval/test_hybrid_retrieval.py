@@ -9,6 +9,7 @@ Tests:
 """
 
 from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from core_ai.retrieval.bm25 import BM25Retriever, RankedChunk

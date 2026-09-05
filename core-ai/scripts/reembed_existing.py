@@ -6,7 +6,7 @@ Run after applying the tenant/embedding metadata migration:
 
 import argparse
 import asyncio
-from typing import Any, List
+from typing import List
 
 from core_ai.config import get_settings
 from core_ai.data.postgres import close_db_pool, get_db_connection, init_db_pool

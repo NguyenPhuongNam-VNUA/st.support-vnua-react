@@ -10,10 +10,12 @@ from core_ai.contracts.llm import (
     ChatMessage,
     GenerationRequest,
     GenerationResult,
-    LLMPort as ContractLLMPort,
     ModelConfig,
     ProviderCapability,
     TokenUsage,
+)
+from core_ai.contracts.llm import (
+    LLMPort as ContractLLMPort,
 )
 
 

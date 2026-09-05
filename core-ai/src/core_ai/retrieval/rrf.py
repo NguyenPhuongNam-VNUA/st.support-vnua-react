@@ -6,9 +6,10 @@ Applies candidate deduplication, source capping per document for diversity,
 and ranking normalization.
 """
 
-from collections import defaultdict
 import logging
+from collections import defaultdict
 from typing import Dict, List
+
 from core_ai.retrieval.bm25 import RankedChunk
 
 logger = logging.getLogger("core_ai.retrieval.rrf")

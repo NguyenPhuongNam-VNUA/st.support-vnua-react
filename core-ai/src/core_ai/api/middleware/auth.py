@@ -5,15 +5,14 @@ for inter-service calls between Node.js BFF and core-ai.
 """
 
 import hmac
-from typing import Callable, Optional, Set
+from typing import Any, Callable, Optional, Set
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from core_ai.config import Settings, get_settings
-from core_ai.contracts.errors import AuthenticationError, ErrorCode
-
+from core_ai.contracts.errors import ErrorCode
 
 EXEMPT_PATHS: Set[str] = {
     "/health",
@@ -53,7 +52,7 @@ class InternalAuthMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.settings = settings or get_settings()
 
-    async def dispatch(self, request: Request, call_next: Callable[[Request], Response]) -> Response:
+    async def dispatch(self, request: Request, call_next: Any) -> Response:
         if is_path_exempt(request.url.path):
             return await call_next(request)
 

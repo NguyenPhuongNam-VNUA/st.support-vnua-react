@@ -5,7 +5,6 @@ Output Guardrail must enforce 100% citation whitelist checking against retrieved
 Any fabricated, hallucinated, or spoofed citation IDs MUST be detected and blocked.
 """
 
-from typing import List
 import pytest
 
 from core_ai.contracts.chat import Citation

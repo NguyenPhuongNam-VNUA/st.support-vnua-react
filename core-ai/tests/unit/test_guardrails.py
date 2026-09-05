@@ -17,7 +17,7 @@ from core_ai.contracts.errors import (
     PayloadTooLargeError,
 )
 from core_ai.guardrails.input_guardrail import InputGuardrail, InputGuardrailResult
-from core_ai.guardrails.output_guardrail import OutputGuardrail, OutputGuardrailResult
+from core_ai.guardrails.output_guardrail import OutputGuardrail
 
 
 class TestInputGuardrail:

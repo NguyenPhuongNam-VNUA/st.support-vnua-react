@@ -26,6 +26,8 @@ logger = logging.getLogger("core_ai.graph.nodes.cache_node")
 def _apply_cached(state: GraphState, cached_result: Any, level: str) -> None:
     if hasattr(cached_result, "model_dump"):
         cached_result = cached_result.model_dump()
+    if not isinstance(cached_result, dict):
+        return
     citations = [
         item if isinstance(item, Citation) else Citation(**item)
         for item in cached_result.get("citations", [])

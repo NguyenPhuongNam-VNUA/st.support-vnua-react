@@ -13,22 +13,32 @@ from typing import Any, Awaitable, Callable, Dict, List, Tuple
 from core_ai.contracts.mcp import ToolDefinition
 from core_ai.mcp.tools.check_tuition import (
     TOOL_DEFINITION as CHECK_TUITION_DEF,
+)
+from core_ai.mcp.tools.check_tuition import (
     execute_check_tuition,
 )
 from core_ai.mcp.tools.create_support_case import (
     TOOL_DEFINITION as CREATE_SUPPORT_CASE_DEF,
+)
+from core_ai.mcp.tools.create_support_case import (
     execute_create_support_case,
 )
 from core_ai.mcp.tools.get_regulations import (
     TOOL_DEFINITION as GET_REGULATIONS_DEF,
+)
+from core_ai.mcp.tools.get_regulations import (
     execute_get_regulations,
 )
 from core_ai.mcp.tools.lookup_schedule import (
     TOOL_DEFINITION as LOOKUP_SCHEDULE_DEF,
+)
+from core_ai.mcp.tools.lookup_schedule import (
     execute_lookup_schedule,
 )
 from core_ai.mcp.tools.search_knowledge import (
     TOOL_DEFINITION as SEARCH_KNOWLEDGE_DEF,
+)
+from core_ai.mcp.tools.search_knowledge import (
     execute_search_knowledge,
 )
 

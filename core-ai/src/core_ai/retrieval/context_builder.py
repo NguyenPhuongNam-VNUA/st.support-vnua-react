@@ -5,7 +5,8 @@ and builds structured Citation objects conforming to contracts.chat.Citation.
 """
 
 import logging
-from typing import List, Optional
+from typing import List
+
 from pydantic import BaseModel, Field
 
 from core_ai.contracts.chat import Citation

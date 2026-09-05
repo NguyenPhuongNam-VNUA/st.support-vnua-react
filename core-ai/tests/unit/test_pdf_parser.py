@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from core_ai.ingestion.pdf_parser import PDFPage, PDFParser, ParsedPDF
+from core_ai.ingestion.pdf_parser import ParsedPDF, PDFPage, PDFParser
 
 
 def test_pdf_text_cleanup_normalizes_whitespace_and_hyphenation() -> None:

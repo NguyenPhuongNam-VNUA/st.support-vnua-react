@@ -11,13 +11,6 @@ import pytest
 from prometheus_client import generate_latest
 
 from core_ai.observability.metrics import (
-    CACHE_HIT_RATIO,
-    CACHE_REQUESTS_TOTAL,
-    EXTERNAL_CALLS_TOTAL,
-    FALLBACK_TOTAL,
-    MCP_TOOL_DURATION_SECONDS,
-    REDIS_DEGRADED_TOTAL,
-    REQUEST_DURATION_SECONDS,
     metrics_registry,
     record_cache_access,
     record_estimated_cost,
@@ -32,10 +25,7 @@ from core_ai.observability.metrics import (
     record_time_to_status,
 )
 from core_ai.observability.tracer import (
-    SafeSpan,
     create_safe_span,
-    get_tracer,
-    setup_tracing,
     trace_stage,
 )
 

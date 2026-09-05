@@ -6,6 +6,7 @@ Never make a 3rd model call!
 """
 
 from unittest.mock import AsyncMock
+
 import pytest
 
 from core_ai.config import Settings

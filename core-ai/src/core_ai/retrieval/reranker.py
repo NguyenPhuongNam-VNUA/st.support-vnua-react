@@ -7,6 +7,7 @@ and phrase proximity to select the top 3-5 snippets and determine evidence suffi
 import logging
 import time
 from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 from core_ai.retrieval.bm25 import RankedChunk, tokenize_vietnamese

@@ -1,10 +1,21 @@
 begin;
 
+do $$
+begin
+  if not exists (select 1 from pg_roles where rolname = 'st_ai_agent') then
+    create role st_ai_agent nologin;
+  end if;
+  if not exists (select 1 from pg_roles where rolname = 'st_ai_ingestion_worker') then
+    create role st_ai_ingestion_worker nologin;
+  end if;
+end $$;
+
 alter table public.documents
   add column if not exists tenant_id text not null default 'vnua';
 alter table public.questions
   add column if not exists tenant_id text not null default 'vnua';
 alter table public.document_chunks
+  add column if not exists chunk_index integer default 0,
   add column if not exists tenant_id text not null default 'vnua',
   add column if not exists embedding_model text,
   add column if not exists embedding_dimension integer;

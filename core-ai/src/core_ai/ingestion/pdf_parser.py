@@ -5,13 +5,13 @@ Supports extracting clean, structured text page-by-page from:
 2. Secondary fallback: `pypdf` (fast, pure-python fallback if pdfplumber is unavailable or fails).
 """
 
-from dataclasses import dataclass, field
 import io
 import logging
-from pathlib import Path
 import re
-from typing import BinaryIO, List, Optional, Union
 import unicodedata
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import BinaryIO, List, Optional, Union
 
 logger = logging.getLogger("core_ai.ingestion.pdf_parser")
 

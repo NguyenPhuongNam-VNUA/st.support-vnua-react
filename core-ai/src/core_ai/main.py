@@ -4,16 +4,16 @@ Configures application lifespan, global exception handlers, middleware stack,
 and registers chat, documents, and health routers.
 """
 
-from contextlib import asynccontextmanager
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
 
+import uvicorn
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-import uvicorn
 
 from core_ai.api.middleware.auth import InternalAuthMiddleware
 from core_ai.api.middleware.body_limit import RequestBodyLimitMiddleware

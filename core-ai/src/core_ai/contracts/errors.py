@@ -202,12 +202,17 @@ class ProviderUnavailableError(CoreAIError):
 
 
 class MalformedOutputError(CoreAIError):
-    def __init__(self, message: str = "Đầu ra từ mô hình không đúng định dạng và không thể sửa chữa cục bộ") -> None:
+    def __init__(
+        self,
+        message: str = "Đầu ra từ mô hình không đúng định dạng và không thể sửa chữa cục bộ",
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
         super().__init__(
             message=message,
             code=ErrorCode.MALFORMED_OUTPUT,
             status_code=502,
             retryable=False,
+            details=details,
         )
 
 

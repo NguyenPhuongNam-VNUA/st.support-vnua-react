@@ -43,9 +43,9 @@ export default function UserMsg({ message, timestamp }: UserMsgProps) {
       <Typography
         variant="caption"
         sx={{
-          color: 'rgba(255, 255, 255, 0.75)',
-          textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-          fontSize: '0.68rem',
+          color: '#64748b',
+          fontSize: '0.75rem',
+          fontWeight: 500,
           mt: 0.5,
           mr: 1,
         }}

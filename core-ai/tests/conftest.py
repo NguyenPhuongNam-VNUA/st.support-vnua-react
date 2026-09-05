@@ -7,28 +7,24 @@ All test suites execute 100% offline and in-memory with ZERO dependencies on:
 - Live MCP tool servers or Docker engines
 """
 
-import asyncio
-from contextlib import asynccontextmanager
-import json
 import time
+from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 import httpx
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
-from core_ai.config import Settings, get_settings
-from core_ai.contracts.chat import ChatRequest, Citation, RouteStatus
-from core_ai.contracts.llm import ChatMessage, GenerationRequest, GenerationResult, TokenUsage
-from core_ai.contracts.mcp import ToolRequest, ToolResult
+from core_ai.config import Settings
+from core_ai.contracts.chat import ChatRequest, Citation
 from core_ai.dependencies import clear_components, register_component
 from core_ai.guardrails.input_guardrail import InputGuardrail
 from core_ai.guardrails.output_guardrail import OutputGuardrail
 from core_ai.llm.gateway import LLMGateway
-from core_ai.mcp.gateway import MCPGatewayImpl
 from core_ai.main import create_app
+from core_ai.mcp.gateway import MCPGatewayImpl
 from core_ai.retrieval.bm25 import RankedChunk
 
 
@@ -420,6 +416,7 @@ def test_app(
         register_component("output_guardrail", OutputGuardrail())
         cache = AsyncMock()
         cache.get.return_value = None
+        cache.get_semantic.return_value = None
         cache.acquire_stampede_lock.return_value = True
         cache.release_stampede_lock.return_value = True
         cache.set.return_value = True

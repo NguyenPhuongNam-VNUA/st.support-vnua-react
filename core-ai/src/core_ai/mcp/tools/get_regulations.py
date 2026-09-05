@@ -4,8 +4,8 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
-from core_ai.mcp.tools.search_knowledge import execute_search_knowledge
 from core_ai.contracts.mcp import ToolDefinition, ToolScope
+from core_ai.mcp.tools.search_knowledge import execute_search_knowledge
 
 
 class GetRegulationsInput(BaseModel):

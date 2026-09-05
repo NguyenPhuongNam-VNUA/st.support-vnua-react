@@ -84,13 +84,11 @@ export default function ChatBotPage() {
       .filter((line) => line !== '')
       .join('\n');
 
-  const handleSend = async (customQuery?: string, escalation = false, piiConfirmed = false) => {
+  const handleSend = async (customQuery?: string, piiConfirmed = false) => {
     const queryToSend = customQuery || message;
     const originalQuestion = cleanText(queryToSend);
     if (!originalQuestion || isThinking) return;
-    const userMessage = escalation
-      ? 'Vui lòng chuyển câu hỏi này tới cán bộ hỗ trợ.'
-      : originalQuestion;
+    const userMessage = originalQuestion;
 
     if (!customQuery) setMessage('');
     const timeNow = getCurrentTime();
@@ -125,24 +123,11 @@ export default function ChatBotPage() {
             role: item.role,
             content: item.text,
           })),
-          ...(escalation
-            ? {
-                requested_tool: 'create_support_case',
-                tool_approved: true,
-                tool_arguments: {
-                  student_id: 'trusted-context',
-                  category: 'student_support',
-                  subject: `Hỗ trợ: ${originalQuestion}`.slice(0, 180),
-                  details: `Sinh viên cần hỗ trợ: ${originalQuestion}`,
-                  conversation_id: conversationIdRef.current,
-                },
-              }
-            : {}),
           ...(piiConfirmed ? { pii_confirmed: true } : {}),
         },
         ({ event, data }) => {
           if (event === 'request.accepted') {
-            setLiveTrace([{ step: 'accepted', status: 'completed', message: 'Đã tiếp nhận câu hỏi' }]);
+            // Keep trace dynamic; only record actual executed stages
           } else if (event === 'pipeline.status') {
             setLiveTrace((previous) => [
               ...previous.filter((item) => item.step !== data.stage),
@@ -391,20 +376,9 @@ export default function ChatBotPage() {
                         citations={msg.citations}
                         trace={msg.trace}
                         fallback={msg.fallback}
-                        status={msg.status}
-                        confidence={msg.confidence}
                         onConfirmRedaction={
                           msg.fallback?.redacted_query
-                            ? () => handleSend(msg.fallback?.redacted_query || '', false, true)
-                            : undefined
-                        }
-                        onRequestHuman={
-                          msg.fallback && !msg.fallback.ticket_id && msg.originalQuestion
-                            ? () => {
-                                if (window.confirm('Bạn đồng ý gửi nội dung câu hỏi này tới cán bộ hỗ trợ?')) {
-                                  handleSend(msg.originalQuestion, true);
-                                }
-                              }
+                            ? () => handleSend(msg.fallback?.redacted_query || '', true)
                             : undefined
                         }
                       />
@@ -414,7 +388,7 @@ export default function ChatBotPage() {
 
                 {/* Immediate safe progress plus guarded answer stream */}
                 {isThinking && (
-                  <ChatMsg message={liveAnswer} trace={liveTrace} status={liveStatus} confidence={liveConfidence} isStreaming />
+                  <ChatMsg message={liveAnswer} trace={liveTrace} isStreaming />
                 )}
                 <div ref={bottomRef} />
               </div>

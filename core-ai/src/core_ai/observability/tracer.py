@@ -7,10 +7,10 @@ Enforces strict compliance with ST-Care security guidelines:
   model identifier, and sanitized tenant IDs.
 """
 
-from contextlib import asynccontextmanager
-from functools import wraps
 import logging
 import time
+from contextlib import asynccontextmanager
+from functools import wraps
 from typing import Any, AsyncGenerator, Callable, Dict, Optional, TypeVar
 
 from opentelemetry import trace
@@ -72,7 +72,7 @@ def setup_tracing(
     # Attach exporter: OTLP if configured, otherwise Console exporter in dev or no-op
     if endpoint:
         try:
-            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore[import-not-found]
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
                 OTLPSpanExporter,
             )
 

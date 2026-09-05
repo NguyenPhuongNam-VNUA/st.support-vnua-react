@@ -98,8 +98,6 @@ def route_after_evidence(
         "tốt nghiệp",
         "hỗ trợ",
         "khiếu nại",
-        "ticket",
-        "cán bộ",
     )
     needs_structured_tool = any(
         term in state.get("message", "").lower() for term in structured_tool_terms

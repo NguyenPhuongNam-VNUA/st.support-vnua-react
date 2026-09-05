@@ -14,9 +14,9 @@ from core_ai.ingestion.chunker import (
     estimate_tokens,
 )
 from core_ai.ingestion.pdf_parser import (
+    ParsedPDF,
     PDFPage,
     PDFParser,
-    ParsedPDF,
 )
 from core_ai.ingestion.worker import IngestionWorker
 

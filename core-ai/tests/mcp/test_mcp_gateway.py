@@ -9,13 +9,13 @@ Tests:
 """
 
 from unittest.mock import AsyncMock
+
 import pytest
 
 from core_ai.config import Settings
 from core_ai.contracts.errors import TenantForbiddenError, ToolExecutionError, ToolNotAllowedError
-from core_ai.contracts.mcp import ToolRequest, ToolResult, ToolScope
+from core_ai.contracts.mcp import ToolRequest, ToolResult
 from core_ai.mcp.gateway import MCPGatewayImpl
-from core_ai.mcp.registry import ToolRegistry
 
 
 class TestMCPGateway:

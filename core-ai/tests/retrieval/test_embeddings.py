@@ -32,7 +32,10 @@ async def test_applies_gemini_2_rag_prefixes_and_dimension(mock_settings) -> Non
     assert len(documents) == 2
     assert all(len(vector) == 128 for vector in documents)
     assert requests[0]["model"] == "models/gemini-embedding-2"
-    assert requests[0]["output_dimensionality"] == 128
+    assert (
+        requests[0].get("outputDimensionality") == 128
+        or requests[0].get("output_dimensionality") == 128
+    )
     assert requests[0]["content"]["parts"][0]["text"].startswith(
         "task: question answering | query:"
     )

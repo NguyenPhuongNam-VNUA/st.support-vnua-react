@@ -4,9 +4,10 @@ Interacts with public.documents and public.document_chunks tables and enforces
 tenant predicates in every read/write query.
 """
 
-from datetime import datetime
 import logging
+from datetime import datetime
 from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 from core_ai.config import Settings, get_settings

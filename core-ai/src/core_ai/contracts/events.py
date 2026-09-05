@@ -8,9 +8,10 @@ Defines the 5 standard SSE event payloads conforming to RFC 8895:
 5. answer.error
 """
 
-from datetime import datetime, timezone
 import json
+from datetime import datetime, timezone
 from typing import Any, Dict, Literal, Optional, Union
+
 from pydantic import BaseModel, Field, model_validator
 
 from core_ai.contracts.chat import ChatResponse, FallbackInfo
@@ -35,20 +36,25 @@ class RequestAcceptedPayload(BaseModel):
 class PipelineStatusPayload(BaseModel):
     """Real-time stage progress indicator with friendly Vietnamese labels."""
     request_id: str = Field(..., description="Request UUID")
-    stage: Literal[
-        "input_guardrail",
-        "cache_check",
-        "semantic_cache",
-        "retrieval",
-        "rerank",
-        "evidence_eval",
-        "tool_execution",
-        "tool_node",
-        "generation",
-        "fallback",
-        "output_guardrail",
-        "completed",
-        "error",
+    stage: Union[
+        Literal[
+            "input_guardrail",
+            "cache_check",
+            "query_prep",
+            "topic_scoring",
+            "semantic_cache",
+            "retrieval",
+            "rerank",
+            "evidence_eval",
+            "tool_execution",
+            "tool_node",
+            "generation",
+            "fallback",
+            "output_guardrail",
+            "completed",
+            "error",
+        ],
+        str,
     ] = Field(..., description="Current pipeline node identifier")
     status: Literal["in_progress", "completed", "skipped", "degraded", "passed", "failed"] = Field(
         ...,

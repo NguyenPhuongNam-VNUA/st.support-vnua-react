@@ -4,9 +4,10 @@ Configured specifically for Supavisor Transaction Pooler (port 6543) using async
 with statement_cache_size=0 to eliminate prepared statement collisions.
 """
 
-from contextlib import asynccontextmanager
 import logging
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
+
 import asyncpg
 
 from core_ai.config import Settings, get_settings

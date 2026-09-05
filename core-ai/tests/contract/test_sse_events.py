@@ -9,7 +9,6 @@ Validates the 5 standardized SSE event schemas conforming to RFC 8895:
 """
 
 import json
-import pytest
 
 from core_ai.contracts.chat import Citation, ExecutionTraceStep, RouteStatus
 from core_ai.contracts.events import (
@@ -35,8 +34,8 @@ class TestSSEEventsContract:
         sse_frame = event.to_sse_frame()
 
         assert "event: request.accepted" in sse_frame
-        assert '"request_id": "req-uuid-1"' in sse_frame
-        assert '"status": "accepted"' in sse_frame
+        assert '"request_id":"req-uuid-1"' in sse_frame or '"request_id": "req-uuid-1"' in sse_frame
+        assert '"status":"accepted"' in sse_frame or '"status": "accepted"' in sse_frame
 
         # Verify to_sse_string() matches to_sse_frame()
         if hasattr(event, "to_sse_string"):

@@ -6,11 +6,17 @@ for route handlers and background pipelines.
 
 import logging
 from typing import Any, Optional
+
 from fastapi import Depends, HTTPException, Request, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from core_ai.api.middleware.auth import validate_token
-from core_ai.api.middleware.request_context import RequestContext, request_id_ctx, tenant_id_ctx, user_id_ctx
+from core_ai.api.middleware.request_context import (
+    RequestContext,
+    request_id_ctx,
+    tenant_id_ctx,
+    user_id_ctx,
+)
 from core_ai.config import Settings, get_settings
 from core_ai.contracts.errors import ErrorCode
 
@@ -166,7 +172,9 @@ def get_component(name: str) -> Optional[Any]:
     if name == "document_repo":
         try:
             try:
-                from core_ai.data.repositories.document_repo import get_document_repo as _get_doc_repo
+                from core_ai.data.repositories.document_repo import (
+                    get_document_repo as _get_doc_repo,
+                )
                 repo = _get_doc_repo()
             except (ImportError, AttributeError):
                 repo = get_document_repository()

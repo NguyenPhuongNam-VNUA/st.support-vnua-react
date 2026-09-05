@@ -5,8 +5,8 @@ Validates that malformed LLM outputs are 100% repaired and validated locally
 WITHOUT making additional LLM calls.
 """
 
-from pydantic import BaseModel, Field
 import pytest
+from pydantic import BaseModel, Field
 
 from core_ai.contracts.errors import MalformedOutputError
 from core_ai.llm.structured_output import (

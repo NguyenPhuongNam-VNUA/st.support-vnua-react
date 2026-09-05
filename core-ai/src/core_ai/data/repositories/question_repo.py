@@ -3,9 +3,10 @@
 Interacts with public.questions and applies an explicit tenant predicate to every query.
 """
 
-from datetime import datetime
 import logging
+from datetime import datetime
 from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 from core_ai.config import Settings, get_settings

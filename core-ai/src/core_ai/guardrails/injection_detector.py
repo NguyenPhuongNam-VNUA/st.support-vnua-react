@@ -8,11 +8,11 @@ Implements multi-layered heuristic and pattern-matching defenses covering:
 - Obfuscated execution commands (Base64 decode + execute, eval, exec)
 """
 
-from dataclasses import dataclass, field
 import logging
 import re
-from typing import List, Optional
 import unicodedata
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 logger = logging.getLogger("core_ai.guardrails.injection_detector")
 
