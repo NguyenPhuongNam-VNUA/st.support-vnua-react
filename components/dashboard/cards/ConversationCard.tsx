@@ -20,9 +20,10 @@ import {
   MenuItem,
   FormControl,
   TablePagination,
+  Button,
 } from "@mui/material";
 import Grid from '@mui/material/Grid2';
-import { MessageSquareText, Clock, Search, Filter, CheckCircle2, AlertCircle, Cpu, PieChart } from 'lucide-react';
+import { MessageSquareText, Clock, Search, Filter, CheckCircle2, AlertCircle, Cpu, PieChart, X } from 'lucide-react';
 import { styled } from "@mui/material/styles";
 import conversationApi from "@/api/chatbot/conversationApi";
 
@@ -120,20 +121,43 @@ const StatusChip = ({ status }: { status: string }) => {
   );
 };
 
-export default function ConversationCard({ activeFilter, noCardContainer = false }: { activeFilter?: string | null; noCardContainer?: boolean }) {
+interface ConversationCardProps {
+  activeFilter?: string | null;
+  noCardContainer?: boolean;
+  timeRange?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export default function ConversationCard({
+  activeFilter,
+  noCardContainer = false,
+  timeRange,
+  startDate,
+  endDate,
+}: ConversationCardProps) {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [slotFilter, setSlotFilter] = useState<{ day: string; hour: number } | null>(null);
 
   useEffect(() => {
     if (activeFilter) {
       if (['answered', 'not_found', 'auto_generated', 'out_of_topic'].includes(activeFilter)) {
         setStatusFilter(activeFilter);
+        setSlotFilter(null);
+        setPage(0);
       } else if (activeFilter.startsWith('slot_')) {
-        setSearchTerm(activeFilter.replace('slot_', ''));
+        const parts = activeFilter.split('_');
+        if (parts.length >= 3) {
+          const day = parts[1];
+          const hour = parseInt(parts[2].replace('h', ''), 10);
+          setSlotFilter({ day, hour });
+          setPage(0);
+        }
       }
     }
   }, [activeFilter]);
@@ -151,6 +175,7 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
             context: item.context,
             answer: item.answer,
             status: item.response_type || item.status || 'answered',
+            rawDate: new Date(item.created_at || Date.now()),
             created_at: new Date(item.created_at || Date.now()).toLocaleString("vi-VN", {
               day: '2-digit',
               month: '2-digit', 
@@ -172,16 +197,46 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
   }, []);
 
   const filteredLogs = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const DAYS_VN = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+
     return logs.filter((log) => {
-      const matchesSearch = searchTerm === '' || 
+      const matchesSearch =
+        searchTerm === '' || 
         log.question?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         log.answer?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesStatus = statusFilter === '' || log.status === statusFilter;
+
+      let matchesTime = true;
+      if (timeRange === 'today') {
+        matchesTime = log.rawDate >= startOfToday;
+      } else if (timeRange === '7d') {
+        matchesTime = log.rawDate >= sevenDaysAgo;
+      } else if (timeRange === '30d') {
+        matchesTime = log.rawDate >= thirtyDaysAgo;
+      } else if (timeRange === 'custom') {
+        if (startDate) {
+          matchesTime = matchesTime && log.rawDate >= new Date(startDate);
+        }
+        if (endDate) {
+          matchesTime = matchesTime && log.rawDate <= new Date(`${endDate}T23:59:59`);
+        }
+      }
+
+      let matchesSlot = true;
+      if (slotFilter) {
+        const logDay = DAYS_VN[log.rawDate.getDay()];
+        const logHour = log.rawDate.getHours();
+        matchesSlot = logDay === slotFilter.day && logHour === slotFilter.hour;
+      }
       
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesStatus && matchesTime && matchesSlot;
     });
-  }, [logs, searchTerm, statusFilter]);
+  }, [logs, searchTerm, statusFilter, timeRange, startDate, endDate, slotFilter]);
 
   const paginatedLogs = useMemo(() => {
     const startIndex = page * rowsPerPage;
@@ -333,6 +388,23 @@ export default function ConversationCard({ activeFilter, noCardContainer = false
             </GreenSelect>
           </FormControl>
         </Box>
+
+        {/* Active Heatmap Slot Filter Badge */}
+        {slotFilter && (
+          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2.5} p={1.2} px={2} bgcolor="#f0f8f4" border="1px solid rgba(16, 185, 129, 0.3)" borderRadius="12px">
+            <Typography variant="body2" fontWeight={800} sx={{ color: '#0d8a4f' }}>
+              🎯 Đang lọc theo khung giờ Heatmap: <strong>{slotFilter.day} ({slotFilter.hour}:00 - {slotFilter.hour + 1}:00)</strong> — {filteredLogs.length} hội thoại
+            </Typography>
+            <Button
+              size="small"
+              startIcon={<X className="w-3.5 h-3.5" />}
+              onClick={() => setSlotFilter(null)}
+              sx={{ fontSize: '0.725rem', fontWeight: 700, color: '#e11d48', textTransform: 'none', py: 0.2 }}
+            >
+              Bỏ lọc khung giờ
+            </Button>
+          </Box>
+        )}
 
         {/* Loading / Table view */}
         {loading ? (

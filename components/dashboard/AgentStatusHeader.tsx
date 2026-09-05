@@ -1,6 +1,4 @@
-'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -9,6 +7,7 @@ import {
   Button,
   ButtonGroup,
   TextField,
+  CircularProgress,
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import {
@@ -20,8 +19,11 @@ import {
   CheckCircle2,
   Clock,
   ArrowUpRight,
+  AlertTriangle,
+  WifiOff,
 } from 'lucide-react';
 import { CartoonAgentRobotIcon } from '@/components/icons/SidebarIcons';
+import statsApi, { SystemStats } from '@/api/admin/statsApi';
 
 interface AgentStatusHeaderProps {
   timeRange: string;
@@ -43,6 +45,31 @@ export default function AgentStatusHeader({
   onDrillDown,
 }: AgentStatusHeaderProps) {
   const [customOpen, setCustomOpen] = useState(timeRange === 'custom');
+  const [stats, setStats] = useState<SystemStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadStats = async () => {
+      try {
+        const res = await statsApi.getSystemStats();
+        if (isMounted && res?.data) {
+          setStats(res.data);
+        }
+      } catch (err) {
+        console.warn('Không thể tải chỉ số hệ thống:', err);
+      } finally {
+        if (isMounted) setLoadingStats(false);
+      }
+    };
+
+    loadStats();
+    const interval = setInterval(loadStats, 15000); // 15s refresh
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleRangeClick = (range: string) => {
     setTimeRange(range);
@@ -232,24 +259,66 @@ export default function AgentStatusHeader({
                   </Typography>
                   <Activity className="w-5 h-5 text-[#0d8a4f]" />
                 </Box>
-                <Box display="flex" alignItems="center" gap={1.2} mb={0.5}>
-                  <div className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                  </div>
-                  <Typography variant="h5" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em' }}>
-                    Hoạt động
-                  </Typography>
-                </Box>
-                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                  RAG Pipeline & Model Online
-                </Typography>
+                {loadingStats ? (
+                  <Box py={1}><CircularProgress size={24} sx={{ color: '#0d8a4f' }} /></Box>
+                ) : (
+                  <>
+                    <Box display="flex" alignItems="center" gap={1.2} mb={0.5}>
+                      <div className="relative flex h-3 w-3">
+                        <span
+                          className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                            stats?.agent_status === 'online'
+                              ? 'bg-emerald-400'
+                              : stats?.agent_status === 'degraded'
+                              ? 'bg-amber-400'
+                              : 'bg-rose-400'
+                          }`}
+                        />
+                        <span
+                          className={`relative inline-flex rounded-full h-3 w-3 ${
+                            stats?.agent_status === 'online'
+                              ? 'bg-emerald-500'
+                              : stats?.agent_status === 'degraded'
+                              ? 'bg-amber-500'
+                              : 'bg-rose-500'
+                          }`}
+                        />
+                      </div>
+                      <Typography
+                        variant="h5"
+                        fontWeight={900}
+                        sx={{
+                          color:
+                            stats?.agent_status === 'online'
+                              ? '#0d8a4f'
+                              : stats?.agent_status === 'degraded'
+                              ? '#d97706'
+                              : '#e11d48',
+                          letterSpacing: '-0.025em',
+                        }}
+                      >
+                        {stats?.agent_status === 'online'
+                          ? 'Trực tuyến'
+                          : stats?.agent_status === 'degraded'
+                          ? 'Dự phòng'
+                          : 'Ngoại tuyến'}
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
+                      {stats?.agent_status === 'online'
+                        ? 'RAG Pipeline & Model Online'
+                        : stats?.agent_status === 'degraded'
+                        ? 'Hệ thống hoạt động ở chế độ degraded'
+                        : 'Không kết nối được Core AI'}
+                    </Typography>
+                  </>
+                )}
               </Box>
 
               {/* Bottom Section - Consistent Baseline */}
               <Box display="flex" alignItems="center" justifyContent="space-between" mt={2} pt={1.5} borderTop="1px solid rgba(13, 138, 79, 0.06)">
                 <span className="text-[11px] text-emerald-800 font-bold bg-[#f0f8f4] px-2.5 py-0.5 rounded-full border border-[#a7f3d0]/80">
-                  Uptime 99.9%
+                  {stats?.agent_status === 'online' ? 'Core AI Healthy' : 'Core AI Offline'}
                 </span>
                 <ArrowUpRight className="w-4 h-4 text-slate-400" />
               </Box>
@@ -281,17 +350,23 @@ export default function AgentStatusHeader({
                   </Typography>
                   <Zap className="w-5 h-5 text-[#0d8a4f]" />
                 </Box>
-                <Typography variant="h5" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em', mb: 0.5 }}>
-                  1.15 giây
-                </Typography>
-                <Typography variant="caption" fontWeight={700} display="block" sx={{ color: '#10b981' }}>
-                  ⚡ Nhanh hơn 12% so với tuần trước
-                </Typography>
+                {loadingStats ? (
+                  <Box py={1}><CircularProgress size={24} sx={{ color: '#0d8a4f' }} /></Box>
+                ) : (
+                  <>
+                    <Typography variant="h5" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em', mb: 0.5 }}>
+                      {stats?.latency_ms && stats.latency_ms > 0 ? `${stats.latency_ms} ms` : 'N/A'}
+                    </Typography>
+                    <Typography variant="caption" fontWeight={700} display="block" sx={{ color: '#10b981' }}>
+                      {stats?.latency_ms && stats.latency_ms < 500 ? '⚡ Phản hồi Core AI siêu tốc' : '⏱️ Độ trễ phản hồi Core AI'}
+                    </Typography>
+                  </>
+                )}
               </Box>
 
               {/* Bottom Section - Consistent Baseline */}
               <Box display="flex" alignItems="center" justifyContent="space-between" mt={2} pt={1.5} borderTop="1px solid rgba(13, 138, 79, 0.06)">
-                <span className="text-[11px] text-slate-500 font-semibold">Embedding latency: 180ms</span>
+                <span className="text-[11px] text-slate-500 font-semibold">Roundtrip Probe latency</span>
                 <Clock className="w-4 h-4 text-slate-400" />
               </Box>
             </CardContent>
@@ -323,17 +398,25 @@ export default function AgentStatusHeader({
                   </Typography>
                   <Users className="w-5 h-5 text-[#0d8a4f]" />
                 </Box>
-                <Typography variant="h5" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em', mb: 0.5 }}>
-                  18 phiên
-                </Typography>
-                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                  Sinh viên đang hỏi đáp real-time
-                </Typography>
+                {loadingStats ? (
+                  <Box py={1}><CircularProgress size={24} sx={{ color: '#0d8a4f' }} /></Box>
+                ) : (
+                  <>
+                    <Typography variant="h5" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em', mb: 0.5 }}>
+                      {stats?.active_sessions ?? 0} phiên
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
+                      Sinh viên hỏi đáp trong 24h
+                    </Typography>
+                  </>
+                )}
               </Box>
 
               {/* Bottom Section - Consistent Baseline */}
               <Box display="flex" alignItems="center" justifyContent="space-between" mt={2} pt={1.5} borderTop="1px solid rgba(13, 138, 79, 0.06)">
-                <span className="text-[11px] text-slate-500 font-semibold">Max concurrent: 120</span>
+                <span className="text-[11px] text-slate-500 font-semibold">
+                  Tổng: {stats?.total_conversations ?? 0} hội thoại
+                </span>
                 <ArrowUpRight className="w-4 h-4 text-slate-400" />
               </Box>
             </CardContent>
@@ -364,17 +447,23 @@ export default function AgentStatusHeader({
                   </Typography>
                   <Server className="w-5 h-5 text-[#0d8a4f]" />
                 </Box>
-                <Typography variant="h5" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em', mb: 0.5 }}>
-                  1,420 Chunks
-                </Typography>
-                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                  Đã index chuẩn ChromaDB 100%
-                </Typography>
+                {loadingStats ? (
+                  <Box py={1}><CircularProgress size={24} sx={{ color: '#0d8a4f' }} /></Box>
+                ) : (
+                  <>
+                    <Typography variant="h5" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em', mb: 0.5 }}>
+                      {(stats?.vector_chunks ?? 0).toLocaleString('vi-VN')} Chunks
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
+                      Từ {stats?.active_documents ?? 0} tài liệu tri thức đã duyệt
+                    </Typography>
+                  </>
+                )}
               </Box>
 
               {/* Bottom Section - Consistent Baseline */}
               <Box display="flex" alignItems="center" justifyContent="space-between" mt={2} pt={1.5} borderTop="1px solid rgba(13, 138, 79, 0.06)">
-                <span className="text-[11px] text-slate-500 font-semibold">FAISS / ChromaDB Engine</span>
+                <span className="text-[11px] text-slate-500 font-semibold">PostgreSQL pgvector Engine</span>
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
               </Box>
             </CardContent>

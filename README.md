@@ -46,7 +46,7 @@ Không đặt `SUPABASE_SECRET_KEY`, `JWT_SECRET` hoặc `AI_AGENT_SERVICE_TOKEN
 
 ## Cơ sở dữ liệu
 
-- Cài mới: chạy `mocks/DB.sql`, sau đó chạy migration trong `supabase/migrations`.
+- Cài mới: chạy `database/schema.sql`, sau đó chạy migration trong `supabase/migrations`.
 - Database đã tồn tại: chỉ chạy migration theo thứ tự trong `supabase/migrations`.
 - Bucket `documents` được đặt private; API tạo signed URL ngắn hạn khi admin xem PDF.
 - RLS được bật và quyền `anon`/`authenticated` bị thu hồi cho các bảng nội bộ.

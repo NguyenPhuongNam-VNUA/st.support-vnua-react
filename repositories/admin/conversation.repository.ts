@@ -6,6 +6,8 @@ interface MessageRow {
   sender: 'user' | 'bot';
   content: string;
   status: string | null;
+  feedback?: string | null;
+  rating?: number | null;
   created_at: string;
 }
 
@@ -14,7 +16,7 @@ export const conversationRepository = {
     const safeLimit = Math.max(1, Math.min(1000, limit));
     const { data, error } = await getSupabaseAdmin()
       .from('messages')
-      .select('id, conversation_id, sender, content, status, created_at')
+      .select('id, conversation_id, sender, content, status, feedback, rating, created_at')
       .order('created_at', { ascending: false })
       .limit(safeLimit * 2);
 
@@ -40,6 +42,8 @@ export const conversationRepository = {
         context: '',
         answer: row.content,
         response_type: row.status || 'answered',
+        feedback: row.feedback || null,
+        rating: row.rating || null,
         created_at: row.created_at,
       });
     }

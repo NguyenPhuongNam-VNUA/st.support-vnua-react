@@ -38,11 +38,31 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
   const [temperature, setTemperature] = useState(0.2);
   const [strictScope, setStrictScope] = useState(true);
   const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
-  const [apiKey, setApiKey] = useState('AIzaSyD-VNUA_GeminiKey_2026_Secured');
+  const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [embeddingModel, setEmbeddingModel] = useState('gemini-embedding-2');
   const [testApiSuccess, setTestApiSuccess] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Load saved settings from localStorage if available
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem('st_support_admin_settings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.systemPrompt) setSystemPrompt(parsed.systemPrompt);
+        if (parsed.confidenceThreshold) setConfidenceThreshold(parsed.confidenceThreshold);
+        if (parsed.temperature !== undefined) setTemperature(parsed.temperature);
+        if (parsed.strictScope !== undefined) setStrictScope(parsed.strictScope);
+        if (parsed.selectedModel) setSelectedModel(parsed.selectedModel);
+        if (parsed.embeddingModel) setEmbeddingModel(parsed.embeddingModel);
+        if (parsed.enableMultiAgent !== undefined) setEnableMultiAgent(parsed.enableMultiAgent);
+        if (parsed.subAgents) setSubAgents(parsed.subAgents);
+      }
+    } catch (e) {
+      console.warn('Không thể đọc cấu hình lưu trữ:', e);
+    }
+  }, []);
 
   // Multi-Agent states with individual sub-agent settings
   const [enableMultiAgent, setEnableMultiAgent] = useState(true);
@@ -114,6 +134,23 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
   ];
 
   const handleSave = () => {
+    try {
+      localStorage.setItem(
+        'st_support_admin_settings',
+        JSON.stringify({
+          systemPrompt,
+          confidenceThreshold,
+          temperature,
+          strictScope,
+          selectedModel,
+          embeddingModel,
+          enableMultiAgent,
+          subAgents,
+        })
+      );
+    } catch (e) {
+      console.warn('Không thể lưu cài đặt:', e);
+    }
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
@@ -269,6 +306,7 @@ Nếu câu hỏi không nằm trong tri thức hoặc độ tự tin dưới ng�
                   type={showApiKey ? 'text' : 'password'}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Để trống để dùng GEMINI_API_KEY từ .env máy chủ"
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">

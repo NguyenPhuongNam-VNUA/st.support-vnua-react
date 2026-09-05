@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -14,6 +14,7 @@ import {
   MenuItem,
   Select,
   FormControl,
+  CircularProgress,
 } from '@mui/material';
 import {
   CheckCircle,
@@ -23,60 +24,109 @@ import {
   X,
 } from 'lucide-react';
 import { TrainingBookingIcon } from '@/components/icons/SidebarIcons';
+import conversationApi from '@/api/chatbot/conversationApi';
+import questionApi from '@/api/admin/questionApi';
+
+function formatRelativeTime(dateStr: string) {
+  if (!dateStr) return 'Vừa xong';
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  if (diffMins < 1) return 'Vừa xong';
+  if (diffMins < 60) return `${diffMins} phút trước`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} giờ trước`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} ngày trước`;
+}
 
 export default function AgentTrainingPage() {
-  const [unansweredLogs, setUnansweredLogs] = useState([
-    {
-      id: 1,
-      question: 'Quy trình xin hoãn thi lại môn Cơ sở dữ liệu kỳ này thế nào?',
-      asked_count: 28,
-      last_asked: '10 phút trước',
-      suggested_topic: 'Học vụ',
-      agent_confidence: '0.42 (Fallback)',
-    },
-    {
-      id: 2,
-      question: 'Hạn nộp học phí bổ sung qua chuyển khoản Agribank đến ngày mấy?',
-      asked_count: 22,
-      last_asked: '45 phút trước',
-      suggested_topic: 'Học phí',
-      agent_confidence: '0.38 (Fallback)',
-    },
-    {
-      id: 3,
-      question: 'Hồ sơ xin miễn giảm học phí cho sinh viên hộ cận nghèo gồm giấy tờ gì?',
-      asked_count: 19,
-      last_asked: '2 giờ trước',
-      suggested_topic: 'Chính sách',
-      agent_confidence: '0.45 (Fallback)',
-    },
-  ]);
-
+  const [unansweredLogs, setUnansweredLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(true);
   const [selectedQuestion, setSelectedQuestion] = useState<any | null>(null);
   const [answerInput, setAnswerInput] = useState('');
   const [topicInput, setTopicInput] = useState('Học vụ');
   const [isPublishing, setIsPublishing] = useState(false);
   const [successMsg, setSuccessMsg] = useState(false);
 
+  useEffect(() => {
+    let isMounted = true;
+    const fetchFallbackQuestions = async () => {
+      try {
+        const res: any = await conversationApi.getAll();
+        const logs = res && Array.isArray(res.data) ? res.data : [];
+        const map = new Map<string, { id: number; question: string; asked_count: number; lastDate: string; suggested_topic: string }>();
+        for (const log of logs) {
+          const status = log.response_type || log.status;
+          if (status === 'not_found' && log.question?.trim()) {
+            const q = log.question.trim();
+            const existing = map.get(q);
+            if (existing) {
+              existing.asked_count += 1;
+              if (new Date(log.created_at).getTime() > new Date(existing.lastDate).getTime()) {
+                existing.lastDate = log.created_at;
+              }
+            } else {
+              map.set(q, {
+                id: log.id,
+                question: q,
+                asked_count: 1,
+                lastDate: log.created_at,
+                suggested_topic: 'Học vụ',
+              });
+            }
+          }
+        }
+        if (isMounted) {
+          setUnansweredLogs(
+            Array.from(map.values())
+              .sort((a, b) => b.asked_count - a.asked_count)
+              .map((item) => ({
+                id: item.id,
+                question: item.question,
+                asked_count: item.asked_count,
+                last_asked: formatRelativeTime(item.lastDate),
+                suggested_topic: item.suggested_topic,
+              }))
+          );
+        }
+      } catch (err) {
+        console.warn('Lỗi tải câu hỏi fallback:', err);
+      } finally {
+        if (isMounted) setLoadingLogs(false);
+      }
+    };
+    fetchFallbackQuestions();
+    return () => { isMounted = false; };
+  }, []);
+
   const handleSelectQuestion = (q: any) => {
     setSelectedQuestion(q);
-    setTopicInput(q.suggested_topic);
+    setTopicInput(q.suggested_topic || 'Học vụ');
     setAnswerInput('');
     setSuccessMsg(false);
   };
 
-  const handlePublishToKnowledgeBase = () => {
+  const handlePublishToKnowledgeBase = async () => {
     if (!answerInput.trim() || !selectedQuestion) return;
 
     setIsPublishing(true);
-    setTimeout(() => {
-      setIsPublishing(false);
+    try {
+      await questionApi.add({
+        question: selectedQuestion.question,
+        answer: answerInput.trim(),
+        topic: topicInput,
+        status: 'approved',
+      });
       setSuccessMsg(true);
       setUnansweredLogs((prev) => prev.filter((q) => q.id !== selectedQuestion.id));
       setSelectedQuestion(null);
       setAnswerInput('');
-      setSuccessMsg(false);
-    }, 1200);
+      setTimeout(() => setSuccessMsg(false), 4000);
+    } catch (err) {
+      console.error('Lỗi khi lưu tri thức vào ngân hàng câu hỏi:', err);
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   return (
@@ -122,73 +172,86 @@ export default function AgentTrainingPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {unansweredLogs.map((row) => {
-                  const isSelected = selectedQuestion?.id === row.id;
-                  return (
-                    <TableRow
-                      key={row.id}
-                      hover
-                      selected={isSelected}
-                      onClick={() => handleSelectQuestion(row)}
-                      sx={{
-                        cursor: 'pointer',
-                        transition: 'background-color 0.18s cubic-bezier(0.2, 0.8, 0.2, 1)',
-                        backgroundColor: isSelected ? '#f0f8f4 !important' : 'inherit',
-                        '&:last-child td': { borderBottom: 0 },
-                      }}
-                    >
-                      <TableCell sx={{ py: 1.5, px: { xs: 1, sm: 2 }, borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
-                        <Typography variant="body2" fontWeight={700} color={isSelected ? '#0d8a4f' : '#0f291e'} sx={{ fontSize: { xs: '0.8rem', sm: '0.85rem' } }}>
-                          {row.question}
-                        </Typography>
-                        <Box display="flex" alignItems="center" gap={0.8} mt={0.5} flexWrap="wrap">
-                          <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium">Lần gần nhất: {row.last_asked}</span>
-                          <span className="text-[10px] sm:text-[11px] text-[#0d8a4f] font-semibold bg-[#f0f8f4] px-1.5 py-0.2 rounded border border-[#a7f3d0]/60">• Chủ đề: {row.suggested_topic}</span>
-                        </Box>
-                      </TableCell>
-
-                      <TableCell align="center" sx={{ px: { xs: 0.5, sm: 1.5 }, borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
-                        <span className="inline-flex items-center justify-center px-2 py-0.5 text-[11px] sm:text-xs font-black text-rose-700 bg-rose-50 border border-rose-200/80 rounded-full">
-                          {row.asked_count}
-                        </span>
-                      </TableCell>
-
-                      <TableCell align="right" sx={{ px: { xs: 0.5, sm: 1.5 }, borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
-                        <Button
-                          size="small"
-                          variant={isSelected ? 'contained' : 'outlined'}
-                          sx={{
-                            borderRadius: '8px',
-                            textTransform: 'none',
-                            fontWeight: 700,
-                            fontSize: { xs: '0.675rem', sm: '0.725rem' },
-                            whiteSpace: 'nowrap',
-                            px: { xs: 1, sm: 1.8 },
-                            py: 0.4,
-                            backgroundColor: isSelected ? '#0d8a4f' : 'transparent',
-                            borderColor: isSelected ? '#0d8a4f' : 'rgba(13, 138, 79, 0.25)',
-                            color: isSelected ? '#ffffff' : '#0d8a4f',
-                            '&:hover': {
-                              backgroundColor: isSelected ? '#0a7543' : '#f0f8f4',
-                              borderColor: '#0d8a4f',
-                            },
-                          }}
-                        >
-                          Huấn luyện
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-
-                {unansweredLogs.length === 0 && (
+                {loadingLogs ? (
                   <TableRow>
                     <TableCell colSpan={3} align="center" sx={{ py: 6 }}>
-                      <Typography variant="body2" fontWeight={700} sx={{ color: '#0d8a4f' }}>
-                        🎉 Tất cả câu hỏi thực tế đều đã được Agent tự giải đáp chính xác!
+                      <CircularProgress size={32} sx={{ color: '#0d8a4f' }} />
+                      <Typography variant="body2" sx={{ mt: 1.5, color: '#64748b', fontWeight: 600 }}>
+                        Đang rà soát các câu hỏi fallback từ lịch sử hội thoại...
                       </Typography>
                     </TableCell>
                   </TableRow>
+                ) : (
+                  <>
+                    {unansweredLogs.map((row) => {
+                      const isSelected = selectedQuestion?.id === row.id;
+                      return (
+                        <TableRow
+                          key={row.id}
+                          hover
+                          selected={isSelected}
+                          onClick={() => handleSelectQuestion(row)}
+                          sx={{
+                            cursor: 'pointer',
+                            transition: 'background-color 0.18s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                            backgroundColor: isSelected ? '#f0f8f4 !important' : 'inherit',
+                            '&:last-child td': { borderBottom: 0 },
+                          }}
+                        >
+                          <TableCell sx={{ py: 1.5, px: { xs: 1, sm: 2 }, borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
+                            <Typography variant="body2" fontWeight={700} color={isSelected ? '#0d8a4f' : '#0f291e'} sx={{ fontSize: { xs: '0.8rem', sm: '0.85rem' } }}>
+                              {row.question}
+                            </Typography>
+                            <Box display="flex" alignItems="center" gap={0.8} mt={0.5} flexWrap="wrap">
+                              <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium">Lần gần nhất: {row.last_asked}</span>
+                              <span className="text-[10px] sm:text-[11px] text-[#0d8a4f] font-semibold bg-[#f0f8f4] px-1.5 py-0.2 rounded border border-[#a7f3d0]/60">• Chủ đề: {row.suggested_topic}</span>
+                            </Box>
+                          </TableCell>
+
+                          <TableCell align="center" sx={{ px: { xs: 0.5, sm: 1.5 }, borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 text-[11px] sm:text-xs font-black text-rose-700 bg-rose-50 border border-rose-200/80 rounded-full">
+                              {row.asked_count}
+                            </span>
+                          </TableCell>
+
+                          <TableCell align="right" sx={{ px: { xs: 0.5, sm: 1.5 }, borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
+                            <Button
+                              size="small"
+                              variant={isSelected ? 'contained' : 'outlined'}
+                              sx={{
+                                borderRadius: '8px',
+                                textTransform: 'none',
+                                fontWeight: 700,
+                                fontSize: { xs: '0.675rem', sm: '0.725rem' },
+                                whiteSpace: 'nowrap',
+                                px: { xs: 1, sm: 1.8 },
+                                py: 0.4,
+                                backgroundColor: isSelected ? '#0d8a4f' : 'transparent',
+                                borderColor: isSelected ? '#0d8a4f' : 'rgba(13, 138, 79, 0.25)',
+                                color: isSelected ? '#ffffff' : '#0d8a4f',
+                                '&:hover': {
+                                  backgroundColor: isSelected ? '#0a7543' : '#f0f8f4',
+                                  borderColor: '#0d8a4f',
+                                },
+                              }}
+                            >
+                              Huấn luyện
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+
+                    {unansweredLogs.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} align="center" sx={{ py: 6 }}>
+                          <Typography variant="body2" fontWeight={700} sx={{ color: '#0d8a4f' }}>
+                            🎉 Tất cả câu hỏi thực tế đều đã được Agent tự giải đáp chính xác!
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
                 )}
               </TableBody>
             </Table>

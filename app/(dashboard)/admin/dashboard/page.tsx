@@ -62,7 +62,12 @@ export default function AdminDashboardPage() {
 
       {/* Interactive Conversation Log Table */}
       <Box mb={4} id="conversation-logs-table">
-        <ConversationCard activeFilter={activeDrillDown} />
+        <ConversationCard
+          activeFilter={activeDrillDown}
+          timeRange={timeRange}
+          startDate={startDate}
+          endDate={endDate}
+        />
       </Box>
     </Box>
   );

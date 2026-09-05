@@ -1,18 +1,59 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { LineChart } from "@mui/x-charts";
 import { Card, CardHeader, CardContent, Typography, Box, CircularProgress } from "@mui/material";
 import { TrendingUp } from "lucide-react";
+import conversationApi from "@/api/chatbot/conversationApi";
 
 export default function LineCard() {
     const [mounted, setMounted] = useState(false);
-    const days = ["01/08", "02/08", "03/08", "04/08", "05/08", "06/08", "07/08"];
-    const convCounts = [15, 28, 42, 105, 89, 120, 145];
+    const [logs, setLogs] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         setMounted(true);
+        const fetchLogs = async () => {
+            try {
+                const res: any = await conversationApi.getAll();
+                const raw = res && Array.isArray(res.data) ? res.data : [];
+                setLogs(raw);
+            } catch (err) {
+                console.warn("Lỗi tải logs cho LineCard:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchLogs();
     }, []);
+
+    const { days, convCounts } = useMemo(() => {
+        const labels: string[] = [];
+        const map = new Map<string, number>();
+
+        // Generate last 7 days in DD/MM format
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const key = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+            labels.push(key);
+            map.set(key, 0);
+        }
+
+        // Tally conversations per day
+        logs.forEach((log) => {
+            if (log.created_at) {
+                const d = new Date(log.created_at);
+                const key = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+                if (map.has(key)) {
+                    map.set(key, (map.get(key) || 0) + 1);
+                }
+            }
+        });
+
+        const counts = labels.map((k) => map.get(k) || 0);
+        return { days: labels, convCounts: counts };
+    }, [logs]);
 
     return (
         <Card

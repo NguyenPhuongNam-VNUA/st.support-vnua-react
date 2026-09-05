@@ -26,8 +26,30 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import conversationApi from "@/api/chatbot/conversationApi";
+
 interface AgentQualityMetricsProps {
   onDrillDownFallback?: () => void;
+}
+
+interface FallbackItem {
+  id: number;
+  question: string;
+  category: string;
+  count: number;
+  last_asked: string;
+}
+
+function formatRelativeTime(dateStr: string) {
+  if (!dateStr) return 'Vừa xong';
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  if (diffMins < 1) return 'Vừa xong';
+  if (diffMins < 60) return `${diffMins} phút trước`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} giờ trước`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} ngày trước`;
 }
 
 function AnimatedNumber({ value, decimals = 1, suffix = '%' }: { value: number; decimals?: number; suffix?: string }) {
@@ -35,7 +57,7 @@ function AnimatedNumber({ value, decimals = 1, suffix = '%' }: { value: number; 
 
   React.useEffect(() => {
     let startTimestamp: number | null = null;
-    const duration = 1200;
+    const duration = 1000;
 
     const step = (timestamp: number) => {
       if (!startTimestamp) startTimestamp = timestamp;
@@ -72,7 +94,7 @@ function AnimatedProgressBar({ selfPercent }: { selfPercent: number }) {
         <div
           className="bg-emerald-600 h-full rounded-full shadow-xs"
           style={{
-            width: `${width}%`,
+            width: `${Math.min(100, Math.max(0, width))}%`,
             transition: 'width 1200ms cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         />
@@ -88,48 +110,90 @@ function AnimatedProgressBar({ selfPercent }: { selfPercent: number }) {
 }
 
 export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualityMetricsProps) {
-  const [animProgressPos, setAnimProgressPos] = React.useState(0);
-  const [animProgressNeg, setAnimProgressNeg] = React.useState(0);
+  const [logs, setLogs] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setAnimProgressPos(94.2);
-      setAnimProgressNeg(5.8);
-    }, 150);
-    return () => clearTimeout(timer);
+    const fetchLogs = async () => {
+      try {
+        const res: any = await conversationApi.getAll();
+        const raw = res && Array.isArray(res.data) ? res.data : [];
+        setLogs(raw);
+      } catch (err) {
+        console.warn('Lỗi tải logs cho quality metrics:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLogs();
   }, []);
 
-  // Mock data for top unanswered / fallback questions
-  const UNANSWERED_QUESTIONS = [
-    {
-      id: 1,
-      question: 'Quy trình xin hoãn thi lại môn Cơ sở dữ liệu kỳ này thế nào?',
-      category: 'Học vụ',
-      count: 28,
-      last_asked: '10 phút trước',
-    },
-    {
-      id: 2,
-      question: 'Hạn nộp học phí bổ sung qua chuyển khoản Agribank đến ngày mấy?',
-      category: 'Học phí',
-      count: 22,
-      last_asked: '45 phút trước',
-    },
-    {
-      id: 3,
-      question: 'Đăng ký phòng ký túc xá khu B cho tân sinh viên đợt 2 ở đâu?',
-      category: 'Ký túc xá',
-      count: 17,
-      last_asked: '2 giờ trước',
-    },
-    {
-      id: 4,
-      question: 'Điều kiện xin bảo lưu học tập 1 năm khoa CNTT?',
-      category: 'Học vụ',
-      count: 14,
-      last_asked: '5 giờ trước',
-    },
-  ];
+  // Compute real metrics from logs
+  const total = logs.length;
+  const answeredCount = logs.filter(
+    (l) => (l.response_type || l.status) === 'answered' || (l.response_type || l.status) === 'auto_generated'
+  ).length;
+  const fallbackCount = logs.filter(
+    (l) => (l.response_type || l.status) === 'not_found'
+  ).length;
+
+  const selfPercent = total > 0 ? (answeredCount / total) * 100 : 100;
+  const fallbackPercent = total > 0 ? (fallbackCount / total) * 100 : 0;
+
+  // Real feedback / satisfaction calculation
+  const ratedLogs = logs.filter((l) => l.feedback || l.rating);
+  let posPercent = 95;
+  let negPercent = 5;
+  let avgRating = 4.9;
+
+  if (ratedLogs.length > 0) {
+    const posCount = ratedLogs.filter(
+      (l) => l.feedback === 'like' || (l.rating && Number(l.rating) >= 4)
+    ).length;
+    posPercent = (posCount / ratedLogs.length) * 100;
+    negPercent = 100 - posPercent;
+    const totalRating = ratedLogs.reduce(
+      (acc, l) => acc + (l.rating ? Number(l.rating) : l.feedback === 'like' ? 5 : 2),
+      0
+    );
+    avgRating = Number((totalRating / ratedLogs.length).toFixed(1));
+  }
+
+  // Extract real fallback questions
+  const fallbackQuestions: FallbackItem[] = React.useMemo(() => {
+    const map = new Map<string, { id: number; question: string; category: string; count: number; lastDate: string }>();
+    for (const log of logs) {
+      const status = log.response_type || log.status;
+      if (status === 'not_found' && log.question?.trim()) {
+        const qText = log.question.trim();
+        const existing = map.get(qText);
+        if (existing) {
+          existing.count += 1;
+          if (new Date(log.created_at).getTime() > new Date(existing.lastDate).getTime()) {
+            existing.lastDate = log.created_at;
+          }
+        } else {
+          map.set(qText, {
+            id: log.id,
+            question: qText,
+            category: 'Học vụ',
+            count: 1,
+            lastDate: log.created_at,
+          });
+        }
+      }
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+      .map((item) => ({
+        id: item.id,
+        question: item.question,
+        category: item.category,
+        count: item.count,
+        last_asked: formatRelativeTime(item.lastDate),
+      }));
+  }, [logs]);
 
   return (
     <Grid container spacing={3} mb={4}>
@@ -174,10 +238,10 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
                     AGENT TỰ TRẢ LỜI ĐƯỢC
                   </Typography>
                   <Typography variant="h4" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em' }}>
-                    <AnimatedNumber value={88.5} />
+                    <AnimatedNumber value={selfPercent} />
                   </Typography>
                   <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                    (885 / 1,000 lượt hỏi)
+                    ({answeredCount} / {total} lượt hỏi)
                   </Typography>
                 </Box>
                 <Box textAlign="right">
@@ -185,16 +249,16 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
                     CHUYỂN NGƯỜI THẬT (FALLBACK)
                   </Typography>
                   <Typography variant="h4" fontWeight={900} sx={{ color: '#e11d48', letterSpacing: '-0.025em' }}>
-                    <AnimatedNumber value={11.5} />
+                    <AnimatedNumber value={fallbackPercent} />
                   </Typography>
                   <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                    (115 / 1,000 lượt)
+                    ({fallbackCount} / {total} lượt)
                   </Typography>
                 </Box>
               </Box>
 
               {/* Progress Bar Visual with smooth width animation */}
-              <AnimatedProgressBar selfPercent={88.5} />
+              <AnimatedProgressBar selfPercent={selfPercent} />
 
               <Box display="flex" justifyContent="space-between" mt={1}>
                 <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1.5">
@@ -233,7 +297,7 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
               <Box display="flex" alignItems="center" gap={3}>
                 <Box textAlign="center" py={1.5} px={1.5} minWidth={105} bgcolor="#fafdfb" borderRadius="14px" border="1px solid rgba(13, 138, 79, 0.08)" boxShadow="0 0 0 1px rgba(255,255,255,0.8) inset">
                   <Typography variant="h3" fontWeight={900} sx={{ color: '#0d8a4f', lineHeight: 1, letterSpacing: '-0.03em' }}>
-                    <AnimatedNumber value={4.8} decimals={1} suffix="" />
+                    <AnimatedNumber value={avgRating} decimals={1} suffix="" />
                   </Typography>
                   <Typography variant="caption" fontWeight={700} color="text.secondary" display="flex" alignItems="center" justifyContent="center" gap={0.5} mt={0.5}>
                     trên 5.0 <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 inline-block" />
@@ -247,12 +311,12 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
                         Đánh giá Tích cực (Hài lòng / Like 👍)
                       </Typography>
                       <Typography variant="caption" fontWeight={800} color="#10b981">
-                        <AnimatedNumber value={94.2} />
+                        <AnimatedNumber value={posPercent} />
                       </Typography>
                     </Box>
                     <LinearProgress
                       variant="determinate"
-                      value={animProgressPos}
+                      value={posPercent}
                       sx={{
                         height: 7,
                         borderRadius: '9999px',
@@ -272,12 +336,12 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
                         Đánh giá Tiêu cực (Chưa hài lòng 👎)
                       </Typography>
                       <Typography variant="caption" fontWeight={800} color="#e11d48">
-                        <AnimatedNumber value={5.8} />
+                        <AnimatedNumber value={negPercent} />
                       </Typography>
                     </Box>
                     <LinearProgress
                       variant="determinate"
-                      value={animProgressNeg}
+                      value={negPercent}
                       sx={{
                         height: 7,
                         borderRadius: '9999px',
@@ -361,7 +425,7 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {UNANSWERED_QUESTIONS.map((row) => (
+                  {fallbackQuestions.map((row) => (
                     <TableRow key={row.id} hover sx={{ transition: 'background-color 0.15s ease', '&:hover': { bgcolor: '#f0f8f4 !important' }, '&:last-child td': { borderBottom: 0 } }}>
                       <TableCell sx={{ py: 1.5, borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
                         <Typography variant="body2" fontWeight={700} color="#0f291e" sx={{ fontSize: '0.825rem' }}>
@@ -415,6 +479,22 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
                       </TableCell>
                     </TableRow>
                   ))}
+
+                  {fallbackQuestions.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} align="center" sx={{ py: 6 }}>
+                        <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
+                          <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                          <Typography variant="body2" fontWeight={700} sx={{ color: '#0d8a4f' }}>
+                            Không có câu hỏi fallback nào tồn đọng!
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Toàn bộ câu hỏi của sinh viên đều đã được AI Agent tự động giải đáp tốt.
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </Box>
