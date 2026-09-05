@@ -24,6 +24,9 @@ compose:
 health:
 	powershell -Command "Invoke-RestMethod http://127.0.0.1:5001/health/ready"
 
+health-mac:
+	curl http://127.0.0.1:5001/health/ready
+
 models:
 	uv run python scripts/download_local_models.py
 
