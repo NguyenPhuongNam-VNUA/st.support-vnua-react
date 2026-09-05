@@ -45,19 +45,37 @@ interface ChatMsgProps {
 
 function ClaudeThinkingIcon({ animate = false }: { animate?: boolean }) {
   return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={`h-4 w-4 flex-shrink-0 text-[#d96b43] ${animate ? 'animate-spin' : ''}`}
-      style={animate ? { animationDuration: '3.5s', animationTimingFunction: 'linear' } : undefined}
-    >
-      <path
-        d="M8 1.5V14.5M1.5 8H14.5M3.4 3.4L12.6 12.6M3.4 12.6L12.6 3.4"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-      />
+    <svg width="24" height="24" viewBox="0 0 60 60" fill="none" style={{ flexShrink: 0 }}>
+      <defs>
+        <linearGradient id="cl1" x1="0" y1="0" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#8b5cf6" />
+          <stop offset="100%" stopColor="#3b82f6" />
+        </linearGradient>
+      </defs>
+      <circle cx="14" cy="30" r="5" fill="url(#cl1)">
+        {animate && (
+          <>
+            <animate attributeName="cy" values="30;22;30" dur="1.2s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.4;1;0.4" dur="1.2s" repeatCount="indefinite" />
+          </>
+        )}
+      </circle>
+      <circle cx="30" cy="30" r="5" fill="url(#cl1)">
+        {animate && (
+          <>
+            <animate attributeName="cy" values="30;22;30" dur="1.2s" repeatCount="indefinite" begin="0.15s" />
+            <animate attributeName="opacity" values="0.4;1;0.4" dur="1.2s" repeatCount="indefinite" begin="0.15s" />
+          </>
+        )}
+      </circle>
+      <circle cx="46" cy="30" r="5" fill="url(#cl1)">
+        {animate && (
+          <>
+            <animate attributeName="cy" values="30;22;30" dur="1.2s" repeatCount="indefinite" begin="0.3s" />
+            <animate attributeName="opacity" values="0.4;1;0.4" dur="1.2s" repeatCount="indefinite" begin="0.3s" />
+          </>
+        )}
+      </circle>
     </svg>
   );
 }
@@ -140,7 +158,7 @@ export default function ChatMsg({ message, timestamp, citations = [], trace = []
             <button
               type="button"
               onClick={() => setShowTrace((prev) => !prev)}
-              className="group inline-flex items-center gap-1.5 py-0.5 text-xs font-medium text-slate-600 transition-colors hover:text-slate-900 cursor-pointer"
+              className="group inline-flex items-center gap-2 py-0.5 text-xs font-medium text-slate-600 transition-colors hover:text-slate-900 cursor-pointer"
             >
               <ClaudeThinkingIcon animate={isStreaming} />
               <span>
@@ -194,9 +212,6 @@ export default function ChatMsg({ message, timestamp, citations = [], trace = []
             {message ? (
               <Box className="prose prose-sm max-w-none prose-emerald">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{message}</ReactMarkdown>
-                {isStreaming && (
-                  <span className="inline-block h-3.5 w-1.5 ml-1 rounded-sm bg-emerald-600 animate-pulse align-middle" />
-                )}
               </Box>
             ) : (
               <Typography variant="body2" sx={{ color: '#64748b' }}>Không có nội dung phản hồi.</Typography>

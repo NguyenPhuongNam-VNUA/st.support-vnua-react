@@ -218,6 +218,9 @@ def get_component(name: str) -> Optional[Any]:
         return get_prompt_guard_model()
     if name == "context_builder":
         return get_context_builder()
+    if name == "message_repo":
+        from core_ai.data.repositories.message_repo import get_message_repository
+        return get_message_repository()
 
     return None
 

@@ -160,7 +160,7 @@ async def fallback_node(state: GraphState) -> GraphState:
                         content=query,
                     ),
                 ],
-                temperature=0.4 if getattr(getattr(llm_port, "_active_config", None), "provider", "") == "gemini" else 0.7,
+                temperature=getattr(get_settings(), "llm_temperature", 0.4),
                 max_tokens=600,
             )
             event_queue = state.get("event_queue")

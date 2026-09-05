@@ -170,9 +170,8 @@ QUY TẮC BẢO MẬT & ĐẦU RA:
             for item in history_source[-6:]
             if item.get("role") in ("user", "assistant") and item.get("content")
         ]
-        active_cfg = getattr(llm_port, "_active_config", None)
-        active_provider = getattr(active_cfg, "provider", "openai") if active_cfg else "openai"
-        sampling_temp = 0.4 if active_provider == "gemini" else 0.7
+        from core_ai.config import get_settings
+        sampling_temp = getattr(get_settings(), "llm_temperature", 0.4)
 
         gen_request = GenerationRequest(
             request_id=state.get("request_id", ""),
@@ -209,6 +208,7 @@ QUY TẮC BẢO MẬT & ĐẦU RA:
                 answer_text = "".join(collected_chunks)
                 state["streamed_deltas_count"] = idx
                 state["external_calls_count"] = min(max_calls, current_calls + 1)
+                active_cfg = await llm_port.get_active_model_config() if hasattr(llm_port, "get_active_model_config") else None
                 if active_cfg:
                     model_name = active_cfg.model
                     provider = active_cfg.provider

@@ -94,6 +94,13 @@ class GraphRunner:
         history_items = [item.model_dump() for item in request.history]
         if not history_items:
             history_items = mem_store.get_recent_history_messages(client_ip)
+        if not history_items:
+            msg_repo = get_component("message_repo")
+            if msg_repo is not None and hasattr(msg_repo, "get_recent_history_by_ip"):
+                try:
+                    history_items = await msg_repo.get_recent_history_by_ip(client_ip)
+                except Exception:
+                    pass
 
         initial_state = create_initial_state(
             request_id=req_id,
@@ -120,6 +127,23 @@ class GraphRunner:
         ans = final_state.get("answer", "")
         if ans:
             mem_store.record_turn(client_ip, request.message, ans)
+            try:
+                msg_repo = get_component("message_repo")
+                if msg_repo is not None:
+                    asyncio.create_task(
+                        msg_repo.record_chat_turn(
+                            conversation_id=request.conversation_id,
+                            client_ip=client_ip,
+                            user_message=request.message,
+                            bot_message=ans,
+                            status=final_state.get("status", RouteStatus.ANSWERED).value,
+                            confidence_score=float(final_state.get("confidence", 0.90)),
+                            account_id=request.user_id,
+                            session_id=str(request.conversation_id) if request.conversation_id else None,
+                        )
+                    )
+            except Exception:
+                pass
 
         # Build verified citations
         citations: List[Citation] = []
@@ -161,6 +185,13 @@ class GraphRunner:
         history_items = [item.model_dump() for item in request.history]
         if not history_items:
             history_items = mem_store.get_recent_history_messages(client_ip)
+        if not history_items:
+            msg_repo = get_component("message_repo")
+            if msg_repo is not None and hasattr(msg_repo, "get_recent_history_by_ip"):
+                try:
+                    history_items = await msg_repo.get_recent_history_by_ip(client_ip)
+                except Exception:
+                    pass
 
         # Initialize State
         initial_state = create_initial_state(
@@ -300,6 +331,29 @@ class GraphRunner:
                 )
                 if answer_text:
                     mem_store.record_turn(client_ip, request.message, answer_text)
+                    try:
+                        msg_repo = get_component("message_repo")
+                        if msg_repo is not None:
+                            chunk_ids = [
+                                int(c["chunk_id"])
+                                for c in current_state.get("retrieved_chunks", [])
+                                if isinstance(c, dict) and "chunk_id" in c and str(c["chunk_id"]).isdigit()
+                            ]
+                            asyncio.create_task(
+                                msg_repo.record_chat_turn(
+                                    conversation_id=conv_id,
+                                    client_ip=client_ip,
+                                    user_message=request.message,
+                                    bot_message=answer_text,
+                                    status=completed_payload.status.value,
+                                    confidence_score=float(completed_payload.confidence),
+                                    retrieved_chunk_ids=chunk_ids or None,
+                                    account_id=request.user_id,
+                                    session_id=str(conv_id) if conv_id else None,
+                                )
+                            )
+                    except Exception as err:
+                        logger.warning("Failed to queue streaming message persistence: %s", err)
 
                 await event_queue.put(
                     SSEEvent(event="answer.completed", data=completed_payload).to_dict()

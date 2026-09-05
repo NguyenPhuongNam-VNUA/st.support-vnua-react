@@ -83,6 +83,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         "output_guardrail",
         "ingestion_worker",
         "graph_runner",
+        "message_repo",
     ]
     for comp_name in eager_components:
         try:
@@ -101,6 +102,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 await asyncio.to_thread(model_component.load)
             except Exception as exc:
                 logger.warning("Local model '%s' warm-up failed safely: %s", model_name, type(exc).__name__)
+
+    # Initial 48-Hour TTL Message Cleanup
+    msg_repo = get_component("message_repo")
+    if msg_repo is not None and hasattr(msg_repo, "cleanup_expired_messages"):
+        try:
+            await msg_repo.cleanup_expired_messages()
+        except Exception as exc:
+            logger.warning("Initial 48-hour TTL message cleanup bypassed: %s", exc)
 
     try:
         yield

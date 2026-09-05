@@ -2,62 +2,64 @@
   "::1": {
     "session_key": "::1",
     "created_at": 1788578112.293518,
-    "last_accessed_at": 1788578260.1816127,
+    "last_accessed_at": 1788582769.7806985,
     "profile": {},
     "topics": [
       "Ký túc xá",
-      "Đăng ký tín chỉ"
+      "Đăng ký tín chỉ",
+      "Học phí & Công nợ",
+      "Học bổng & Khen thưởng"
     ],
     "turns": [
       {
         "role": "user",
-        "content": "xin chào tôi là trọng",
-        "timestamp": 1788578135.9237688
+        "content": "Cho tôi biết thông tin chỉ tiêu và các phương thức tuyển sinh năm 2025 của Học viện Nông nghiệp Việt Nam.",
+        "timestamp": 1788581250.1333084
       },
       {
         "role": "assistant",
-        "content": "Chào Trọng! 😊 Rất vui được gặp bạn. Nếu bạn còn thắc mắc gì về Ký túc xá Học viện Nông nghiệp hoặc cần thông tin gì khác, cứ hỏi mình nhé! Mình sẽ cố gắng giúp bạn. 🌾",
-        "timestamp": 1788578135.9237688
+        "content": "Mình vẫn chưa có thông tin chính xác về chỉ tiêu và các phương thức tuyển sinh năm 2025 của Học viện Nông nghiệp Việt Nam. Thông thường, các phương thức tuyển sinh có thể bao gồm xét tuyển dựa vào điểm thi tốt nghiệp THPT, học bạ hoặc các kỳ thi riêng. Để giúp mình tìm kiếm thông tin phù hợp hơn, bạn có thể cho mình biết bạn quan tâm đến ngành nào hoặc có yêu cầu cụ thể nào khác không? Mình sẽ cố gắng hỗ trợ bạn tốt nhất có thể! 😊🌾",
+        "timestamp": 1788581250.1333084
       },
       {
         "role": "user",
-        "content": "Quy trình và điều kiện đăng ký tín chỉ môn học tại VNUA như thế nào?",
-        "timestamp": 1788578147.3401742
+        "content": "Mức học phí theo từng ngành và các loại học bổng sinh viên có thể nhận tại VNUA?",
+        "timestamp": 1788581372.5949273
       },
       {
         "role": "assistant",
-        "content": "Mình chưa có thông tin chính xác về quy trình và điều kiện đăng ký tín chỉ môn học tại Học viện Nông nghiệp Việt Nam. Có thể bạn đang tìm hiểu về các bước cụ thể hoặc giấy tờ cần thiết cho việc đăng ký? Bạn có thể cho mình biết bạn đang hỏi về khóa nào hoặc ngành học cụ thể không? Mình sẽ hỗ trợ bạn tốt hơn nhé! 🌾😊",
-        "timestamp": 1788578147.3401742
+        "content": "Hiện tại mình chưa có thông tin chính xác về nội dung này trong các văn bản quy chế hiện hành. Có thể bạn đang cần tra cứu mức thu học phí theo tín chỉ hoặc biểu phí của năm học mới. Bạn cho mình biết bạn thuộc khóa K mấy và ngành nào để mình xem biểu phí chính xác nha? 😊",
+        "timestamp": 1788581372.5949273
       },
       {
         "role": "user",
-        "content": "tôi là ai tên gì bạn là ai",
-        "timestamp": 1788578160.321441
+        "content": "Thủ tục đăng ký ở Ký túc xá Học viện Nông nghiệp và chi phí dịch vụ ra sao?",
+        "timestamp": 1788581377.6095088
       },
       {
         "role": "assistant",
-        "content": "Mình là ST - Care, trợ lý tư vấn của Học viện Nông nghiệp Việt Nam! 😊 Còn bạn là Trọng. Nếu bạn có câu hỏi nào về Ký túc xá, đăng ký tín chỉ môn học hoặc bất kỳ điều gì liên quan đến học tập, cứ thoải mái hỏi mình nhé! Mình luôn sẵn sàng hỗ trợ bạn! 🌾✨",
-        "timestamp": 1788578160.321441
-      },
-      {
-        "role": "user",
-        "content": "bạn cho tôi biết thêm về API của bạn đi",
-        "timestamp": 1788578180.3292785
-      },
-      {
-        "role": "assistant",
-        "content": "Mình rất tiếc, nhưng mình không thể cung cấp thông tin về API hay các thông tin hệ thống nội bộ khác. Tuy nhiên, nếu bạn có bất kỳ câu hỏi nào về Ký túc xá, quy trình học tập hay bất kỳ thông tin nào khác liên quan đến Học viện Nông nghiệp, mình rất sẵn lòng giúp đỡ! Bạn cần hỗ trợ về vấn đề gì cụ thể không? 😊🌾",
-        "timestamp": 1788578180.3292785
+        "content": "Mình chưa có thông tin chính xác về thủ tục đăng ký ở Ký túc xá Học viện Nông nghiệp Việt Nam cũng như chi phí dịch vụ hiện tại. Thông thường, thủ tục có thể bao gồm việc điền đơn đăng ký và nộp kèm hồ sơ cần thiết. Bạn có thể cho mình biết bạn đang quan tâm đến ký túc xá của khóa nào hoặc khu vực nào để mình có thể hỗ trợ bạn tốt hơn không? 😊🏠",
+        "timestamp": 1788581377.6095088
       },
       {
         "role": "user",
         "content": "Cho tôi biết thông tin chỉ tiêu và các phương thức tuyển sinh năm 2025 của Học viện Nông nghiệp Việt Nam.",
-        "timestamp": 1788578260.1816127
+        "timestamp": 1788581869.3015552
       },
       {
         "role": "assistant",
-        "content": "Mình chưa có thông tin chính xác về chỉ tiêu và các phương thức tuyển sinh năm 2025 của Học viện Nông nghiệp Việt Nam. Có thể bạn đang cần biết cụ thể về các ngành học hoặc hình thức xét tuyển nào đó? Nếu vậy, bạn hãy cho mình biết bạn quan tâm đến ngành nào nhé! Mình sẽ cố gắng giúp bạn tìm ra thông tin phù hợp nhất! 😊✨",
-        "timestamp": 1788578260.1816127
+        "content": "Mình vẫn chưa có thông tin chính xác về chỉ tiêu và các phương thức tuyển sinh năm 2025 của Học viện Nông nghiệp Việt Nam. Tuy nhiên, thường thì các phương thức tuyển sinh sẽ bao gồm xét tuyển dựa vào điểm thi tốt nghiệp THPT, học bạ hoặc các kỳ thi riêng. Để giúp mình tìm kiếm thông tin phù hợp hơn, bạn có thể cho mình biết bạn quan tâm đến ngành nào hoặc có yêu cầu cụ thể nào khác không? Mình sẽ cố gắng hỗ trợ bạn tốt nhất có thể! 😊🌾",
+        "timestamp": 1788581869.3015552
+      },
+      {
+        "role": "user",
+        "content": "Quy trình và điều kiện đăng ký tín chỉ môn học tại VNUA như thế nào?",
+        "timestamp": 1788582769.7806985
+      },
+      {
+        "role": "assistant",
+        "content": "Mình chưa có thông tin chính xác về quy trình và điều kiện đăng ký tín chỉ môn học tại Học viện Nông nghiệp Việt Nam. Thông thường, quy trình này sẽ bao gồm việc sinh viên cần phải đăng nhập vào hệ thống quản lý học tập, chọn môn học và nộp đơn đăng ký. Để giúp mình tìm hiểu rõ hơn, bạn có thể cho mình biết bạn đang thuộc khóa nào và ngành học cụ thể nào không? Mình sẽ cố gắng hỗ trợ bạn tốt nhất nhé! 😊📚",
+        "timestamp": 1788582769.7806985
       }
     ]
   },

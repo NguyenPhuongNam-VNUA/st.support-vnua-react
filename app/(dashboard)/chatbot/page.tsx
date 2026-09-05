@@ -251,7 +251,7 @@ export default function ChatBotPage() {
     if (isAtBottom) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isThinking, isAtBottom]);
+  }, [messages, isThinking, liveAnswer, isAtBottom]);
 
   return (
     <main className="relative h-screen h-[100dvh] w-full flex items-center justify-center p-0 overflow-hidden font-sans">

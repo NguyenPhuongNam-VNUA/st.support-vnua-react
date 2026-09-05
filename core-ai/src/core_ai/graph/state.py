@@ -91,6 +91,8 @@ class GraphState(TypedDict, total=False):
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
+    event_queue: Optional[Any]
+    streamed_deltas_count: int
 
     # 7. Routing & Terminal Status
     status: RouteStatus

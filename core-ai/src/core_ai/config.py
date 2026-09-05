@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     # LLM Gateway
     llm_provider: str = Field(default="gemini", alias="LLM_PROVIDER")
     llm_model: str = Field(default="gemini-3.5-flash", alias="LLM_MODEL")
+    llm_temperature: float = Field(default=0.4, ge=0.0, le=2.0, alias="LLM_TEMPERATURE")
     llm_api_key: Optional[str] = Field(default=None, alias="LLM_API_KEY")
     llm_base_url: Optional[str] = Field(default=None, alias="LLM_BASE_URL")
     llm_timeout_seconds: float = Field(default=20.0, ge=1.0, le=60.0, alias="LLM_TIMEOUT_SECONDS")
