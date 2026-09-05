@@ -289,7 +289,16 @@ def get_local_reranker() -> Any:
     if reranker is None:
         from core_ai.retrieval.model_reranker import ModelReranker
         reranker = ModelReranker(settings=_runtime_settings())
+        try:
+            reranker.load()
+        except Exception:
+            pass
         register_component("local_reranker", reranker)
+    elif not getattr(reranker, "available", False):
+        try:
+            reranker.load()
+        except Exception:
+            pass
     return reranker
 
 
@@ -298,7 +307,16 @@ def get_prompt_guard_model() -> Any:
     if guard is None:
         from core_ai.guardrails.prompt_guard_model import PromptGuardModel
         guard = PromptGuardModel(settings=_runtime_settings())
+        try:
+            guard.load()
+        except Exception:
+            pass
         register_component("prompt_guard_model", guard)
+    elif not getattr(guard, "available", False):
+        try:
+            guard.load()
+        except Exception:
+            pass
     return guard
 
 

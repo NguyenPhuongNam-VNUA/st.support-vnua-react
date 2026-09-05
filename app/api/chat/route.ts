@@ -24,14 +24,21 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       if (!(error instanceof AuthorizationError)) throw error;
     }
+    const rawForwarded = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
+    const clientIp = rawForwarded ? rawForwarded.split(',')[0].trim() : '127.0.0.1';
+
     const upstream = await callAiAgent(
       '/v1/chat',
       {
         method: 'POST',
-        headers: { Accept: 'text/event-stream' },
+        headers: {
+          Accept: 'text/event-stream',
+          'X-Forwarded-For': clientIp,
+        },
         body: JSON.stringify({
           message: question,
           conversation_id: body?.conversation_id,
+          client_ip: clientIp,
           history: Array.isArray(body?.messages) ? body.messages.slice(-6) : [],
           locale: 'vi-VN',
           channel: 'web',

@@ -81,12 +81,12 @@ def build_orchestration_graph() -> Any:
     builder.add_conditional_edges(
         "query_prep",
         route_after_query_prep,
-        {"topic_scoring": "topic_scoring", "fallback": "fallback"},
+        {"topic_scoring": "topic_scoring", "generation": "generation"},
     )
     builder.add_conditional_edges(
         "topic_scoring",
         route_after_topic,
-        {"semantic_cache": "semantic_cache", "fallback": "fallback"},
+        {"semantic_cache": "semantic_cache", "generation": "generation"},
     )
     builder.add_conditional_edges(
         "semantic_cache",

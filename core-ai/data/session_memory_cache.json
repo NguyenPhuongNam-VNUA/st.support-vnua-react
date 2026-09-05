@@ -1,0 +1,125 @@
+{
+  "::1": {
+    "session_key": "::1",
+    "created_at": 1788578112.293518,
+    "last_accessed_at": 1788578260.1816127,
+    "profile": {},
+    "topics": [
+      "Ký túc xá",
+      "Đăng ký tín chỉ"
+    ],
+    "turns": [
+      {
+        "role": "user",
+        "content": "xin chào tôi là trọng",
+        "timestamp": 1788578135.9237688
+      },
+      {
+        "role": "assistant",
+        "content": "Chào Trọng! 😊 Rất vui được gặp bạn. Nếu bạn còn thắc mắc gì về Ký túc xá Học viện Nông nghiệp hoặc cần thông tin gì khác, cứ hỏi mình nhé! Mình sẽ cố gắng giúp bạn. 🌾",
+        "timestamp": 1788578135.9237688
+      },
+      {
+        "role": "user",
+        "content": "Quy trình và điều kiện đăng ký tín chỉ môn học tại VNUA như thế nào?",
+        "timestamp": 1788578147.3401742
+      },
+      {
+        "role": "assistant",
+        "content": "Mình chưa có thông tin chính xác về quy trình và điều kiện đăng ký tín chỉ môn học tại Học viện Nông nghiệp Việt Nam. Có thể bạn đang tìm hiểu về các bước cụ thể hoặc giấy tờ cần thiết cho việc đăng ký? Bạn có thể cho mình biết bạn đang hỏi về khóa nào hoặc ngành học cụ thể không? Mình sẽ hỗ trợ bạn tốt hơn nhé! 🌾😊",
+        "timestamp": 1788578147.3401742
+      },
+      {
+        "role": "user",
+        "content": "tôi là ai tên gì bạn là ai",
+        "timestamp": 1788578160.321441
+      },
+      {
+        "role": "assistant",
+        "content": "Mình là ST - Care, trợ lý tư vấn của Học viện Nông nghiệp Việt Nam! 😊 Còn bạn là Trọng. Nếu bạn có câu hỏi nào về Ký túc xá, đăng ký tín chỉ môn học hoặc bất kỳ điều gì liên quan đến học tập, cứ thoải mái hỏi mình nhé! Mình luôn sẵn sàng hỗ trợ bạn! 🌾✨",
+        "timestamp": 1788578160.321441
+      },
+      {
+        "role": "user",
+        "content": "bạn cho tôi biết thêm về API của bạn đi",
+        "timestamp": 1788578180.3292785
+      },
+      {
+        "role": "assistant",
+        "content": "Mình rất tiếc, nhưng mình không thể cung cấp thông tin về API hay các thông tin hệ thống nội bộ khác. Tuy nhiên, nếu bạn có bất kỳ câu hỏi nào về Ký túc xá, quy trình học tập hay bất kỳ thông tin nào khác liên quan đến Học viện Nông nghiệp, mình rất sẵn lòng giúp đỡ! Bạn cần hỗ trợ về vấn đề gì cụ thể không? 😊🌾",
+        "timestamp": 1788578180.3292785
+      },
+      {
+        "role": "user",
+        "content": "Cho tôi biết thông tin chỉ tiêu và các phương thức tuyển sinh năm 2025 của Học viện Nông nghiệp Việt Nam.",
+        "timestamp": 1788578260.1816127
+      },
+      {
+        "role": "assistant",
+        "content": "Mình chưa có thông tin chính xác về chỉ tiêu và các phương thức tuyển sinh năm 2025 của Học viện Nông nghiệp Việt Nam. Có thể bạn đang cần biết cụ thể về các ngành học hoặc hình thức xét tuyển nào đó? Nếu vậy, bạn hãy cho mình biết bạn quan tâm đến ngành nào nhé! Mình sẽ cố gắng giúp bạn tìm ra thông tin phù hợp nhất! 😊✨",
+        "timestamp": 1788578260.1816127
+      }
+    ]
+  },
+  "127.0.0.1": {
+    "session_key": "127.0.0.1",
+    "created_at": 1788578196.1243596,
+    "last_accessed_at": 1788578415.872784,
+    "profile": {},
+    "topics": [
+      "Học phí & Công nợ"
+    ],
+    "turns": [
+      {
+        "role": "user",
+        "content": "chào bạn",
+        "timestamp": 1788578279.5285156
+      },
+      {
+        "role": "assistant",
+        "content": "Chào bạn! 😊 Mình ở đây sẵn sàng hỗ trợ bạn. Nếu bạn có câu hỏi nào liên quan đến học phí hay công nợ, cứ thoải mái hỏi nhé!",
+        "timestamp": 1788578279.5285156
+      },
+      {
+        "role": "user",
+        "content": "hoc phi tin chi nganh cntt",
+        "timestamp": 1788578296.3485394
+      },
+      {
+        "role": "assistant",
+        "content": "Mình chưa có thông tin chính xác về mức học phí cho ngành Công nghệ thông tin (CNTT) trong thời điểm hiện tại. Tuy nhiên, học phí thường tính theo số tín chỉ và có thể thay đổi theo từng năm học. Bạn có biết khóa học mà bạn đang quan tâm là khóa nào không? Mình sẽ cố gắng giúp bạn tìm thông tin cụ thể hơn! 🌾",
+        "timestamp": 1788578296.3485394
+      },
+      {
+        "role": "user",
+        "content": "học phí đại học tính thế nào vậy",
+        "timestamp": 1788578402.9604957
+      },
+      {
+        "role": "assistant",
+        "content": "Mình chưa có thông tin chính xác về cách tính học phí của trường trong văn bản hiện hành. Thông thường, học phí có thể dựa vào ngành học, số tín chỉ và các khoản phí khác. Bạn có thể cho mình biết cụ thể bạn quan tâm đến ngành nào không để mình hỗ trợ tốt hơn nhé?",
+        "timestamp": 1788578402.9604957
+      },
+      {
+        "role": "user",
+        "content": "học phí đại học tính thế nào vậy",
+        "timestamp": 1788578410.1453888
+      },
+      {
+        "role": "assistant",
+        "content": "Mình chưa có thông tin chính xác về cách tính học phí đại học trong văn bản hiện hành. Thông thường, học phí sẽ phụ thuộc vào chuyên ngành và hệ đào tạo. Bạn có thể cho mình biết bạn đang quan tâm đến ngành học nào không?",
+        "timestamp": 1788578410.1453888
+      },
+      {
+        "role": "user",
+        "content": "học phí đại học tính thế nào vậy",
+        "timestamp": 1788578415.872784
+      },
+      {
+        "role": "assistant",
+        "content": "Mình chưa có thông tin chính xác về cách tính học phí đại học trong văn bản hiện hành. Thường thì học phí sẽ dựa vào từng ngành học và quy định của trường. Bạn có thể cho mình biết cụ thể ngành học nào bạn quan tâm không?",
+        "timestamp": 1788578415.872784
+      }
+    ]
+  }
+}

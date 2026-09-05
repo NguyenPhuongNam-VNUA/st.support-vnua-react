@@ -52,11 +52,19 @@ async def chat_streaming(request: Request, chat_request: ChatRequest) -> EventSo
         raise RateLimitExceededError()
     if not await controller.claim_request(context.tenant_id, context.request_id):
         raise DuplicateRequestError()
+    raw_ip = (
+        chat_request.client_ip
+        or request.headers.get("x-forwarded-for")
+        or request.headers.get("x-real-ip")
+        or (request.client.host if request.client else "127.0.0.1")
+    )
+    client_ip = raw_ip.split(",")[0].strip() if raw_ip else "127.0.0.1"
     trusted_request = chat_request.model_copy(
         update={
             "request_id": context.request_id,
             "tenant_id": context.tenant_id,
             "user_id": context.user_id,
+            "client_ip": client_ip,
         }
     )
     return EventSourceResponse(

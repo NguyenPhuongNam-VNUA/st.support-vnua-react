@@ -87,13 +87,22 @@ class GraphRunner:
         start_time = time.perf_counter()
         req_id = request.request_id or str(uuid.uuid4())
 
+        from core_ai.data.memory_store import get_session_memory_store
+
+        client_ip = request.client_ip or "127.0.0.1"
+        mem_store = get_session_memory_store()
+        history_items = [item.model_dump() for item in request.history]
+        if not history_items:
+            history_items = mem_store.get_recent_history_messages(client_ip)
+
         initial_state = create_initial_state(
             request_id=req_id,
             message=request.message,
             tenant_id=request.tenant_id,
             user_id=request.user_id,
             conversation_id=request.conversation_id,
-            history=[item.model_dump() for item in request.history],
+            client_ip=client_ip,
+            history=history_items,
             locale=request.locale,
             channel=request.channel,
             tool_name_requested=request.requested_tool,
@@ -107,6 +116,10 @@ class GraphRunner:
             timeout=self._deadline_seconds(),
         )
         total_latency_ms = int((time.perf_counter() - start_time) * 1000)
+
+        ans = final_state.get("answer", "")
+        if ans:
+            mem_store.record_turn(client_ip, request.message, ans)
 
         # Build verified citations
         citations: List[Citation] = []
@@ -141,6 +154,14 @@ class GraphRunner:
 
         event_queue: asyncio.Queue[Optional[Dict[str, Any]]] = asyncio.Queue()
 
+        from core_ai.data.memory_store import get_session_memory_store
+
+        client_ip = request.client_ip or "127.0.0.1"
+        mem_store = get_session_memory_store()
+        history_items = [item.model_dump() for item in request.history]
+        if not history_items:
+            history_items = mem_store.get_recent_history_messages(client_ip)
+
         # Initialize State
         initial_state = create_initial_state(
             request_id=req_id,
@@ -148,7 +169,8 @@ class GraphRunner:
             tenant_id=request.tenant_id,
             user_id=request.user_id,
             conversation_id=conv_id,
-            history=[item.model_dump() for item in request.history],
+            client_ip=client_ip,
+            history=history_items,
             locale=request.locale,
             channel=request.channel,
             tool_name_requested=request.requested_tool,
@@ -276,6 +298,9 @@ class GraphRunner:
                     str(current_state.get("topic") or "unknown"),
                     completed_payload.confidence,
                 )
+                if answer_text:
+                    mem_store.record_turn(client_ip, request.message, answer_text)
+
                 await event_queue.put(
                     SSEEvent(event="answer.completed", data=completed_payload).to_dict()
                 )

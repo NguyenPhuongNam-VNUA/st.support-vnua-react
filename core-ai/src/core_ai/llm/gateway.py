@@ -57,10 +57,21 @@ class LLMGateway(LLMPort):
         model_name = self._settings.llm_model
         capabilities = get_provider_capabilities(provider_name, model_name)
 
+        # Smart API key resolution based on provider
+        api_key = self._settings.llm_api_key
+        if not api_key:
+            import os
+            if provider_name == "openai":
+                api_key = os.environ.get("OPENAI_API_KEY")
+            elif provider_name == "gemini":
+                api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+            elif provider_name == "anthropic":
+                api_key = os.environ.get("ANTHROPIC_API_KEY")
+
         self._active_config = ModelConfig(
             provider=provider_name,  # type: ignore[arg-type]
             model=model_name,
-            api_key=self._settings.llm_api_key,
+            api_key=api_key,
             base_url=self._settings.llm_base_url,
             timeout_seconds=self._settings.llm_timeout_seconds,
             max_external_calls=self._settings.llm_max_external_calls,

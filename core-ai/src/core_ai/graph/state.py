@@ -33,8 +33,10 @@ class GraphState(TypedDict, total=False):
     query_terms: List[str]
     locale: str
     channel: str
+    client_ip: Optional[str]
 
-    # 2. Query understanding (deterministic; never chain-of-thought)
+    # 2. Query understanding & Intent classification
+    user_intent: Optional[Literal["social", "sensitive", "academic", "out_of_domain"]]
     topic: Optional[str]
     topic_score: float
     slot_coverage: float
@@ -118,6 +120,7 @@ def create_initial_state(
     tool_args_requested: Optional[Dict[str, Any]] = None,
     tool_approved: bool = False,
     pii_confirmed: bool = False,
+    client_ip: Optional[str] = None,
 ) -> GraphState:
     """Instantiate a clean GraphState dictionary with secure defaults."""
     return {
@@ -125,6 +128,7 @@ def create_initial_state(
         "tenant_id": tenant_id or "vnua",
         "user_id": user_id,
         "conversation_id": conversation_id,
+        "client_ip": client_ip,
         "history": history or [],
         "message": message.strip(),
         "normalized_query": message.strip(),
@@ -132,6 +136,7 @@ def create_initial_state(
         "query_terms": [],
         "locale": locale or "vi-VN",
         "channel": channel or "web",
+        "user_intent": None,
         "topic": None,
         "topic_score": 0.0,
         "slot_coverage": 0.0,

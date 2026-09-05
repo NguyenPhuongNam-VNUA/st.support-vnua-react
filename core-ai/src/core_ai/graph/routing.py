@@ -48,13 +48,13 @@ def route_after_cache(
     return "query_prep"
 
 
-def route_after_query_prep(state: GraphState) -> Literal["topic_scoring", "fallback"]:
-    return "fallback" if state.get("topic_precheck_out", False) else "topic_scoring"
+def route_after_query_prep(state: GraphState) -> Literal["topic_scoring", "generation"]:
+    return "generation" if state.get("topic_precheck_out", False) else "topic_scoring"
 
 
-def route_after_topic(state: GraphState) -> Literal["semantic_cache", "fallback"]:
-    if not state.get("is_in_domain", False) or state.get("clarification_question"):
-        return "fallback"
+def route_after_topic(state: GraphState) -> Literal["semantic_cache", "generation"]:
+    if not state.get("is_in_domain", False):
+        return "generation"
     return "semantic_cache"
 
 
@@ -106,9 +106,9 @@ def route_after_evidence(
         logger.info("Routing after evidence_eval: INSUFFICIENT -> tool_node (MCP lookup)")
         return "tool_node"
 
-    # 4. Clarify / HITL Fallback if neither retrieval nor tools yield sufficient evidence
-    logger.info("Routing after evidence_eval: INSUFFICIENT -> fallback (HITL clarify)")
-    return "fallback"
+    # 4. Route to generation for dynamic, helpful AI synthesis and friendly guidance
+    logger.info("Routing after evidence_eval: INSUFFICIENT -> generation (dynamic AI response)")
+    return "generation"
 
 
 def route_after_tool(

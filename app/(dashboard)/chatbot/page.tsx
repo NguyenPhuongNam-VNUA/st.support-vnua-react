@@ -114,7 +114,12 @@ export default function ChatBotPage() {
       let finalConfidence: number | undefined;
       const controller = new AbortController();
       abortRef.current = controller;
-      if (!conversationIdRef.current) conversationIdRef.current = crypto.randomUUID();
+      if (!conversationIdRef.current) {
+        conversationIdRef.current = crypto.randomUUID();
+        try {
+          localStorage.setItem(CONV_STORAGE_KEY, conversationIdRef.current);
+        } catch (e) {}
+      }
       await aiApi.streamAi(
         {
           question: originalQuestion,
@@ -194,11 +199,50 @@ export default function ChatBotPage() {
     }
   };
 
+  const STORAGE_KEY = 'vnua_chat_messages_v1';
+  const CONV_STORAGE_KEY = 'vnua_chat_conversation_id';
+
+  // Load chat history from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedMessages = localStorage.getItem(STORAGE_KEY);
+      if (savedMessages) {
+        const parsed = JSON.parse(savedMessages);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      }
+      const savedConvId = localStorage.getItem(CONV_STORAGE_KEY);
+      if (savedConvId) {
+        conversationIdRef.current = savedConvId;
+      }
+    } catch (e) {
+      console.warn('Failed to load chat history from localStorage', e);
+    }
+  }, []);
+
+  // Sync chat history to localStorage whenever messages change
+  useEffect(() => {
+    try {
+      if (messages.length > 0) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+      }
+    } catch (e) {
+      console.warn('Failed to save chat history to localStorage', e);
+    }
+  }, [messages]);
+
   const handleResetChat = () => {
     abortRef.current?.abort();
     setMessages([]);
     setMessage('');
     conversationIdRef.current = '';
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(CONV_STORAGE_KEY);
+    } catch (e) {
+      console.warn('Failed to clear chat history from localStorage', e);
+    }
   };
 
   useEffect(() => () => abortRef.current?.abort(), []);

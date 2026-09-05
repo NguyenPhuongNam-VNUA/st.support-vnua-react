@@ -192,6 +192,10 @@ class ChatRequest(BaseModel):
         default=False,
         description="True only when the user explicitly accepts processing of the masked query",
     )
+    client_ip: Optional[str] = Field(
+        default=None,
+        description="Client IP address for session tracking and RAM-based personalization",
+    )
 
     @model_validator(mode="before")
     @classmethod

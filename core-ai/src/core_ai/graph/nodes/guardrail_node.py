@@ -55,6 +55,16 @@ XSS_PATTERNS = [
     re.compile(r"on\w+\s*=", re.IGNORECASE),  # onload=, onerror=, etc.
 ]
 
+# Prompt instruction leak patterns to scrub from outputs
+PROMPT_LEAK_PATTERNS = [
+    re.compile(r"^\s*\*?\s*xưng\s*:\s*\*?.*?\n?", re.IGNORECASE),
+    re.compile(r"^\s*\*?\s*quy\s+tắc\s*:\s*.*?\n?", re.IGNORECASE),
+    re.compile(r"^\s*\*?\s*yêu\s+cầu\s*:\s*.*?\n?", re.IGNORECASE),
+    re.compile(r"\[NGỮ\s+CẢNH.*?\]:?", re.IGNORECASE),
+    re.compile(r"\[TRÍCH\s+DẪN.*?\]:?", re.IGNORECASE),
+    re.compile(r"\[HƯỚNG\s+DẪN.*?\]:?", re.IGNORECASE),
+]
+
 
 async def input_guardrail_node(state: GraphState) -> GraphState:
     """Validates input payload size, detects prompt injection, and checks PII."""
@@ -276,8 +286,9 @@ async def output_guardrail_node(state: GraphState) -> GraphState:
         if c_id:
             valid_citation_ids.add(str(c_id))
 
-    # Apply the full guardrail implementation for grounded answers. It checks
+    # Apply the full guardrail implementation for answers. It checks
     # document/chunk membership, sanitizes HTML and masks PII.
+    is_general_conv = state.get("topic_precheck_out", False) or not state.get("is_in_domain", True)
     ext_guardrail = get_component("output_guardrail")
     if (
         state.get("status") == RouteStatus.ANSWERED
@@ -289,7 +300,7 @@ async def output_guardrail_node(state: GraphState) -> GraphState:
             answer=answer,
             citations=verified_citations,
             retrieved_chunks=state.get("retrieved_chunks", []),
-            require_citations=True,
+            require_citations=not is_general_conv and bool(state.get("retrieved_chunks")),
         )
         answer = result.sanitized_answer
         verified_citations = result.validated_citations
@@ -305,6 +316,28 @@ async def output_guardrail_node(state: GraphState) -> GraphState:
             verified_citations = []
             valid_citation_ids = set()
             record_guardrail("output", "grounding", "blocked")
+
+    # Semantic Prompt Guard check on generated output
+    prompt_guard = get_component("prompt_guard_model")
+    if prompt_guard is not None and getattr(prompt_guard, "available", False) and answer:
+        try:
+            out_decision = await asyncio.wait_for(
+                asyncio.to_thread(prompt_guard.classify, answer),
+                timeout=get_settings().prompt_guard_timeout_seconds,
+            )
+            if not out_decision.is_safe:
+                state["status"] = RouteStatus.DEGRADED
+                state["fallback"] = FallbackInfo(
+                    reason="prompt_guard_output_blocked",
+                    original_route="output_guardrail",
+                    fallback_strategy="safe_template",
+                    contact_channel="Ban Quản lý Đào tạo VNUA: phongdaotao@vnua.edu.vn",
+                )
+                answer = "Nội dung phản hồi không đáp ứng tiêu chuẩn an toàn thông tin."
+                verified_citations = []
+                record_guardrail("output", "prompt_guard", "blocked")
+        except Exception:
+            pass
 
     # Verify inline citations in answer text (e.g., [src_1], [src_2])
     def replace_invalid_citation(match: re.Match[str]) -> str:
@@ -325,6 +358,10 @@ async def output_guardrail_node(state: GraphState) -> GraphState:
     # 4. PII Masking on generated output
     for pii_pat in PII_PATTERNS:
         answer = pii_pat.sub("[THÔNG TIN ĐÃ ĐƯỢC ẨN]", answer)
+
+    # 5. Scrub any accidental system prompt or directive leaks
+    for leak_pat in PROMPT_LEAK_PATTERNS:
+        answer = leak_pat.sub("", answer)
 
     pii_filter = PIIFilter()
     verified_citations = [

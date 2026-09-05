@@ -30,6 +30,18 @@ class ModelReranker:
         if not self.settings.local_models_enabled:
             record_local_model_ready("bge_reranker", False)
             return False
+        if not self.model_path.is_dir() and (
+            self.settings.bge_reranker_model_path.startswith(("./models", "models"))
+        ):
+            candidate_paths = [
+                Path(__file__).resolve().parents[3] / "models" / "bge-reranker-v2-m3",
+                Path("D:/Group ST/st.support-vnua-react/core-ai/models/bge-reranker-v2-m3"),
+                Path.cwd() / "core-ai" / "models" / "bge-reranker-v2-m3",
+            ]
+            for candidate in candidate_paths:
+                if candidate.is_dir():
+                    self.model_path = candidate
+                    break
         if not self.model_path.is_dir():
             logger.warning(
                 "BGE weights not found at %s; heuristic/RRF fallback is active", self.model_path

@@ -35,15 +35,26 @@ class PromptGuardModel:
         if not self.settings.local_models_enabled:
             record_local_model_ready("prompt_guard", False)
             return False
+        if not self.model_path.is_dir() and (
+            self.settings.prompt_guard_model_path.startswith(("./models", "models"))
+        ):
+            candidate_paths = [
+                Path(__file__).resolve().parents[3] / "models" / "Llama-Prompt-Guard-2-86M",
+                Path("D:/Group ST/st.support-vnua-react/core-ai/models/Llama-Prompt-Guard-2-86M"),
+                Path.cwd() / "core-ai" / "models" / "Llama-Prompt-Guard-2-86M",
+            ]
+            for candidate in candidate_paths:
+                if candidate.is_dir():
+                    self.model_path = candidate
+                    break
         if not self.model_path.is_dir():
             logger.warning("Prompt Guard weights not found at %s; regex fallback is active", self.model_path)
             record_local_model_ready("prompt_guard", False)
             return False
         try:
-            from transformers import AutoTokenizer, pipeline
+            from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 
             device = -1 if self.settings.local_models_device.lower() == "cpu" else 0
-            model: Any = str(self.model_path)
             backend = "transformers"
             if self.settings.local_models_backend in {"auto", "onnx"} and list(self.model_path.rglob("*.onnx")):
                 try:
@@ -57,12 +68,20 @@ class PromptGuardModel:
                 except Exception:
                     if self.settings.local_models_backend == "onnx":
                         raise
+                    model = AutoModelForSequenceClassification.from_pretrained(
+                        str(self.model_path), local_files_only=True
+                    )
+            else:
+                model = AutoModelForSequenceClassification.from_pretrained(
+                    str(self.model_path), local_files_only=True
+                )
+
+            tokenizer = AutoTokenizer.from_pretrained(str(self.model_path), local_files_only=True)
             self._pipeline = pipeline(
                 "text-classification",
                 model=model,
-                tokenizer=AutoTokenizer.from_pretrained(str(self.model_path), local_files_only=True),
+                tokenizer=tokenizer,
                 device=device,
-                local_files_only=True,
             )
             self.available = True
             self.backend = backend
