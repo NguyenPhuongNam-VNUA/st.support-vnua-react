@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 import UserMsg from '@/components/chatbot/UserMsg/UserMsg';
-import ChatMsg, { ChatCitation, ChatTraceStep } from '@/components/chatbot/ChatMsg/ChatMsg';
+import ChatMsg, { ChatCitation, ChatFallback, ChatTraceStep } from '@/components/chatbot/ChatMsg/ChatMsg';
 import aiApi from '@/api/chatbot/aiApi';
 
 interface Message {
@@ -30,6 +30,10 @@ interface Message {
   timestamp?: string;
   citations?: ChatCitation[];
   trace?: ChatTraceStep[];
+  fallback?: ChatFallback | null;
+  originalQuestion?: string;
+  status?: string;
+  confidence?: number;
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -57,11 +61,14 @@ export default function ChatBotPage() {
   const [isThinking, setIsThinking] = useState(false);
   const [liveAnswer, setLiveAnswer] = useState('');
   const [liveTrace, setLiveTrace] = useState<ChatTraceStep[]>([]);
+  const [liveStatus, setLiveStatus] = useState<string>();
+  const [liveConfidence, setLiveConfidence] = useState<number>();
   const [isAtBottom, setIsAtBottom] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const conversationIdRef = useRef('');
+  const abortRef = useRef<AbortController | null>(null);
 
   const getCurrentTime = () => {
     return new Date().toLocaleTimeString('vi-VN', {
@@ -77,10 +84,13 @@ export default function ChatBotPage() {
       .filter((line) => line !== '')
       .join('\n');
 
-  const handleSend = async (customQuery?: string) => {
+  const handleSend = async (customQuery?: string, escalation = false, piiConfirmed = false) => {
     const queryToSend = customQuery || message;
-    const userMessage = cleanText(queryToSend);
-    if (!userMessage || isThinking) return;
+    const originalQuestion = cleanText(queryToSend);
+    if (!originalQuestion || isThinking) return;
+    const userMessage = escalation
+      ? 'Vui lòng chuyển câu hỏi này tới cán bộ hỗ trợ.'
+      : originalQuestion;
 
     if (!customQuery) setMessage('');
     const timeNow = getCurrentTime();
@@ -94,16 +104,46 @@ export default function ChatBotPage() {
     setIsThinking(true);
     setLiveAnswer('');
     setLiveTrace([]);
+    setLiveStatus(undefined);
+    setLiveConfidence(undefined);
 
     try {
       let finalAnswer = '';
       let finalCitations: ChatCitation[] = [];
       let finalTrace: ChatTraceStep[] = [];
+      let finalFallback: ChatFallback | null = null;
+      let finalStatus = '';
+      let finalConfidence: number | undefined;
+      const controller = new AbortController();
+      abortRef.current = controller;
       if (!conversationIdRef.current) conversationIdRef.current = crypto.randomUUID();
       await aiApi.streamAi(
-        { question: userMessage, conversation_id: conversationIdRef.current },
+        {
+          question: originalQuestion,
+          conversation_id: conversationIdRef.current,
+          messages: newMessages.slice(0, -1).slice(-6).map((item) => ({
+            role: item.role,
+            content: item.text,
+          })),
+          ...(escalation
+            ? {
+                requested_tool: 'create_support_case',
+                tool_approved: true,
+                tool_arguments: {
+                  student_id: 'trusted-context',
+                  category: 'student_support',
+                  subject: `Hỗ trợ: ${originalQuestion}`.slice(0, 180),
+                  details: `Sinh viên cần hỗ trợ: ${originalQuestion}`,
+                  conversation_id: conversationIdRef.current,
+                },
+              }
+            : {}),
+          ...(piiConfirmed ? { pii_confirmed: true } : {}),
+        },
         ({ event, data }) => {
-          if (event === 'pipeline.status') {
+          if (event === 'request.accepted') {
+            setLiveTrace([{ step: 'accepted', status: 'completed', message: 'Đã tiếp nhận câu hỏi' }]);
+          } else if (event === 'pipeline.status') {
             setLiveTrace((previous) => [
               ...previous.filter((item) => item.step !== data.stage),
               {
@@ -111,6 +151,7 @@ export default function ChatBotPage() {
                 status: String(data.status),
                 latency_ms: data.latency_ms,
                 message: String(data.message || data.stage),
+                details: data.details,
               },
             ]);
           } else if (event === 'answer.delta') {
@@ -119,12 +160,18 @@ export default function ChatBotPage() {
             finalAnswer = String(data.answer || 'Không có phản hồi từ hệ thống.').trim();
             finalCitations = Array.isArray(data.citations) ? data.citations.slice(0, 3) : [];
             finalTrace = Array.isArray(data.execution_trace) ? data.execution_trace : [];
+            finalFallback = data.fallback || null;
+            finalStatus = String(data.status || 'answered');
+            finalConfidence = typeof data.confidence === 'number' ? data.confidence : undefined;
             setLiveAnswer(finalAnswer);
             setLiveTrace(finalTrace);
+            setLiveStatus(finalStatus);
+            setLiveConfidence(finalConfidence);
           } else if (event === 'answer.error') {
             throw new Error(String(data.message || 'AI Agent tạm thời không khả dụng'));
           }
-        }
+        },
+        controller.signal
       );
 
       setMessages((prev) => [
@@ -135,9 +182,14 @@ export default function ChatBotPage() {
           timestamp: getCurrentTime(),
           citations: finalCitations,
           trace: finalTrace,
+          fallback: finalFallback,
+          originalQuestion,
+          status: finalStatus,
+          confidence: finalConfidence,
         },
       ]);
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       setMessages((prev) => [
         ...prev,
         {
@@ -148,17 +200,23 @@ export default function ChatBotPage() {
       ]);
       console.error('Error fetching AI response:', err);
     } finally {
+      abortRef.current = null;
       setIsThinking(false);
       setLiveAnswer('');
       setLiveTrace([]);
+      setLiveStatus(undefined);
+      setLiveConfidence(undefined);
     }
   };
 
   const handleResetChat = () => {
+    abortRef.current?.abort();
     setMessages([]);
     setMessage('');
     conversationIdRef.current = '';
   };
+
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   useEffect(() => {
     if (isAtBottom) {
@@ -167,7 +225,7 @@ export default function ChatBotPage() {
   }, [messages, isThinking, isAtBottom]);
 
   return (
-    <main className="relative h-screen h-[100dvh] w-full flex items-center justify-center p-0 overflow-hidden select-none font-sans">
+    <main className="relative h-screen h-[100dvh] w-full flex items-center justify-center p-0 overflow-hidden font-sans">
       {/* Dynamic SEO Hidden Header */}
       <header className="sr-only">
         <h1>ST - Care | Hệ Thống Trợ Lý AI Chatbot Học Viện Nông Nghiệp Việt Nam (VNUA)</h1>
@@ -332,6 +390,23 @@ export default function ChatBotPage() {
                         timestamp={msg.timestamp}
                         citations={msg.citations}
                         trace={msg.trace}
+                        fallback={msg.fallback}
+                        status={msg.status}
+                        confidence={msg.confidence}
+                        onConfirmRedaction={
+                          msg.fallback?.redacted_query
+                            ? () => handleSend(msg.fallback?.redacted_query || '', false, true)
+                            : undefined
+                        }
+                        onRequestHuman={
+                          msg.fallback && !msg.fallback.ticket_id && msg.originalQuestion
+                            ? () => {
+                                if (window.confirm('Bạn đồng ý gửi nội dung câu hỏi này tới cán bộ hỗ trợ?')) {
+                                  handleSend(msg.originalQuestion, true);
+                                }
+                              }
+                            : undefined
+                        }
                       />
                     );
                   return null;
@@ -339,7 +414,7 @@ export default function ChatBotPage() {
 
                 {/* Immediate safe progress plus guarded answer stream */}
                 {isThinking && (
-                  <ChatMsg message={liveAnswer} trace={liveTrace} isStreaming />
+                  <ChatMsg message={liveAnswer} trace={liveTrace} status={liveStatus} confidence={liveConfidence} isStreaming />
                 )}
                 <div ref={bottomRef} />
               </div>

@@ -53,6 +53,11 @@ class PIIFilter:
         r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"
     )
 
+    # Student ID is only treated as PII with explicit Vietnamese/English context.
+    _MSSV_PATTERN = re.compile(
+        r"(?i)(?:mssv|mã\s+sinh\s+viên|student\s*id)\s*[:=#-]?\s*([A-Z]{0,3}\d{6,12})\b"
+    )
+
     # Raw Passwords and Credential exposures:
     _PASSWORD_PATTERN = re.compile(
         r"(?i)(?:mật\s*khẩu|mat\s*khau|password|passwd|pwd)\s*[:=]\s*([^\s,;]{3,})"
@@ -140,6 +145,20 @@ class PIIFilter:
                     end=match.end(),
                     masked_value=self._mask_email(val),
                     confidence=0.98,
+                )
+            )
+
+        # 4b. Detect contextual student identifiers
+        for match in self._MSSV_PATTERN.finditer(text):
+            val = match.group(1)
+            entities.append(
+                PIIEntity(
+                    entity_type="mssv",
+                    text=val,
+                    start=match.start(1),
+                    end=match.end(1),
+                    masked_value=f"{val[:2]}***{val[-2:]}",
+                    confidence=0.96,
                 )
             )
 

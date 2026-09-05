@@ -5,11 +5,14 @@ Key namespace structure:
 Provides distributed locking during generation and graceful degradation if Redis is down.
 """
 
-from datetime import datetime, timezone
 import hashlib
 import json
 import logging
-from typing import List, Optional
+import math
+import time
+from datetime import datetime, timezone
+from typing import Any, List, Optional
+
 from pydantic import BaseModel, Field
 
 from core_ai.config import Settings, get_settings
@@ -21,13 +24,12 @@ logger = logging.getLogger("core_ai.retrieval.semantic_cache")
 
 class CachedAnswer(BaseModel):
     """Clean, serialized cached response payload excluding any PII or internal prompts."""
+
     answer: str
     confidence: float = Field(default=0.95, ge=0.0, le=1.0)
     citations: List[Citation] = Field(default_factory=list)
     status: str = "answered"
-    created_at: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 def compute_query_hash(query: str) -> str:
@@ -46,11 +48,11 @@ class SemanticCache:
         self,
         settings: Optional[Settings] = None,
         default_ttl_seconds: int = 86400,  # 24 hours
-        knowledge_version: str = "v1",
+        knowledge_version: Optional[str] = None,
     ) -> None:
         self.settings = settings or get_settings()
         self.default_ttl = default_ttl_seconds
-        self.knowledge_version = knowledge_version
+        self.knowledge_version = knowledge_version or self.settings.knowledge_version
 
     def _build_key(self, tenant_id: str, query_hash: str) -> str:
         """Format key matching namespace: {env}:{tenant}:{purpose}:{version}:{key}."""
@@ -67,6 +69,64 @@ class SemanticCache:
         """Format distributed stampede lock key."""
         env = self.settings.app_env.lower()
         return f"{env}:{tenant_id}:lock:semantic_answer:{query_hash}"
+
+    def _semantic_index_key(self, tenant_id: str, locale: str, user_scope: str, topic: str) -> str:
+        scope_hash = hashlib.sha256(user_scope.encode("utf-8")).hexdigest()[:16]
+        return (
+            f"{self.settings.app_env.lower()}:{tenant_id}:semantic_index:"
+            f"{self.knowledge_version}:{self.settings.embedding_model}:"
+            f"{self.settings.embedding_dimension}:{locale}:{scope_hash}:{topic}"
+        )
+
+    @staticmethod
+    def _cosine(left: List[float], right: List[float]) -> float:
+        if not left or len(left) != len(right):
+            return 0.0
+        dot = sum(a * b for a, b in zip(left, right))
+        lnorm = math.sqrt(sum(a * a for a in left))
+        rnorm = math.sqrt(sum(b * b for b in right))
+        return dot / (lnorm * rnorm) if lnorm and rnorm else 0.0
+
+    async def get_semantic(
+        self,
+        query_embedding: List[float],
+        tenant_id: str = "vnua",
+        locale: str = "vi-VN",
+        user_scope: str = "anonymous",
+        topic: str = "general",
+    ) -> Optional[CachedAnswer]:
+        """Search a bounded Redis index and compare vectors locally."""
+        if is_redis_degraded() or len(query_embedding) != self.settings.embedding_dimension:
+            return None
+        client = get_redis_client()
+        if client is None:
+            return None
+        index_key = self._semantic_index_key(tenant_id, locale, user_scope, topic)
+        try:
+            keys = await client.zrevrange(
+                index_key, 0, self.settings.semantic_cache_max_candidates - 1
+            )
+            if not keys:
+                return None
+            cache_keys = [
+                key.decode("utf-8") if isinstance(key, bytes) else str(key) for key in keys
+            ]
+            payloads = await client.mget(cache_keys)
+            best: tuple[float, CachedAnswer] | None = None
+            for raw in payloads:
+                if not raw:
+                    continue
+                row: dict[str, Any] = json.loads(raw)
+                vector = row.pop("query_embedding", [])
+                score = self._cosine(query_embedding, vector)
+                if score >= self.settings.semantic_cache_similarity_threshold:
+                    candidate = CachedAnswer.model_validate(row)
+                    if best is None or score > best[0]:
+                        best = (score, candidate)
+            return best[1] if best else None
+        except Exception as exc:
+            logger.warning("Semantic cache similarity lookup failed safely: %s", type(exc).__name__)
+            return None
 
     async def get(
         self,
@@ -116,6 +176,8 @@ class SemanticCache:
         locale: str = "vi-VN",
         user_scope: str = "anonymous",
         ttl_seconds: Optional[int] = None,
+        query_embedding: Optional[List[float]] = None,
+        topic: str = "general",
     ) -> bool:
         """Store verified answer and citations in cache with TTL.
 
@@ -142,6 +204,17 @@ class SemanticCache:
         try:
             serialized = payload.model_dump_json()
             await client.set(cache_key, serialized, ex=ttl)
+            if query_embedding and len(query_embedding) == self.settings.embedding_dimension:
+                semantic_key = f"{cache_key}:vector"
+                semantic_payload = payload.model_dump(mode="json")
+                semantic_payload["query_embedding"] = query_embedding
+                await client.set(semantic_key, json.dumps(semantic_payload), ex=ttl)
+                index_key = self._semantic_index_key(tenant_id, locale, user_scope, topic)
+                await client.zadd(index_key, {semantic_key: time.time()})
+                await client.zremrangebyrank(
+                    index_key, 0, -(self.settings.semantic_cache_max_candidates + 1)
+                )
+                await client.expire(index_key, ttl)
             logger.debug("Stored answer in semantic cache: '%s' (TTL=%ds)", cache_key, ttl)
             return True
         except Exception as exc:

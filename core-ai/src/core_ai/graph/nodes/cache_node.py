@@ -13,20 +13,38 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from core_ai.contracts.chat import Citation, RouteStatus
 from core_ai.dependencies import get_component
 from core_ai.graph.state import GraphState, add_execution_trace
-from core_ai.observability.metrics import record_cache_access
+from core_ai.observability.metrics import record_cache_access, record_cache_level
 
 logger = logging.getLogger("core_ai.graph.nodes.cache_node")
 
 
-async def cache_node(state: GraphState) -> GraphState:
-    """Checks semantic cache for existing verified answer and citations."""
+def _apply_cached(state: GraphState, cached_result: Any, level: str) -> None:
+    if hasattr(cached_result, "model_dump"):
+        cached_result = cached_result.model_dump()
+    citations = [
+        item if isinstance(item, Citation) else Citation(**item)
+        for item in cached_result.get("citations", [])
+    ]
+    state["cache_hit"] = True
+    state["cache_level"] = level
+    state["cached_answer"] = cached_result.get("answer", "")
+    state["cached_citations"] = citations
+    state["cached_confidence"] = cached_result.get("confidence", 0.95)
+    state["answer"] = state["cached_answer"] or ""
+    state["citations"] = citations
+    state["confidence"] = state["cached_confidence"] or 0.95
+    state["status"] = RouteStatus.ANSWERED
+
+
+async def exact_cache_node(state: GraphState) -> GraphState:
+    """L1 exact cache; a hit consumes zero external AI calls."""
     t0 = time.perf_counter()
-    state["current_stage"] = "semantic_cache"
+    state["current_stage"] = "exact_cache"
     query = state.get("message", "")
     tenant_id = state.get("tenant_id", "vnua")
 
@@ -42,35 +60,16 @@ async def cache_node(state: GraphState) -> GraphState:
             )
             if cached_result is not None:
                 latency = int((time.perf_counter() - t0) * 1000)
-                if hasattr(cached_result, "model_dump"):
-                    cached_result = cached_result.model_dump()
-                cached_answer = cached_result.get("answer", "")
-                cached_citations_raw = cached_result.get("citations", [])
-                cached_citations: List[Citation] = []
-
-                for item in cached_citations_raw:
-                    if isinstance(item, Citation):
-                        cached_citations.append(item)
-                    elif isinstance(item, dict):
-                        cached_citations.append(Citation(**item))
-
-                state["cache_hit"] = True
-                state["cached_answer"] = cached_answer
-                state["cached_citations"] = cached_citations
-                state["cached_confidence"] = cached_result.get("confidence", 0.95)
-                state["answer"] = cached_answer
-                state["citations"] = cached_citations
-                state["confidence"] = state["cached_confidence"]
-                state["status"] = RouteStatus.ANSWERED
-                # Strictly enforce 0 external AI calls on cache hit
+                _apply_cached(state, cached_result, "exact")
                 state["external_calls_count"] = 0
+                record_cache_level("exact", True)
 
                 add_execution_trace(
                     state,
                     "semantic_cache",
                     "cached",
                     latency,
-                    {"hit": True, "source": "redis_semantic_cache"},
+                    {"hit": True, "cache_level": "exact"},
                 )
                 record_cache_access(hit=True, tenant_id=tenant_id)
                 logger.info(
@@ -81,40 +80,86 @@ async def cache_node(state: GraphState) -> GraphState:
         except Exception as exc:
             # Degraded-safe: Redis failure must NEVER crash the request pipeline
             logger.warning(
-                "Redis semantic cache lookup error for request_id=%s: %s (falling back to retrieval)",
+                "Redis cache lookup error for request_id=%s: %s; continuing to retrieval",
                 state.get("request_id"),
                 exc,
             )
 
+    state["cache_hit"] = False
+    record_cache_level("exact", False)
+    record_cache_access(hit=False, tenant_id=tenant_id)
+    add_execution_trace(
+        state, "exact_cache", "completed", int((time.perf_counter() - t0) * 1000), {"hit": False}
+    )
+    return state
+
+
+async def semantic_cache_node(state: GraphState) -> GraphState:
+    """L2 similarity cache using the single reusable query embedding."""
+    t0 = time.perf_counter()
+    state["current_stage"] = "semantic_cache"
+    query = state.get("normalized_query") or state.get("message", "")
+    tenant_id = state.get("tenant_id", "vnua")
+    semantic_cache = get_component("semantic_cache")
+    embedding = state.get("query_embedding", [])
+    cached_result: Any = None
+    if semantic_cache is not None and embedding and hasattr(semantic_cache, "get_semantic"):
+        try:
+            cached_result = await semantic_cache.get_semantic(
+                query_embedding=embedding,
+                tenant_id=tenant_id,
+                locale=state.get("locale", "vi-VN"),
+                user_scope=str(state.get("user_id") or "anonymous"),
+                topic=str(state.get("topic") or "general"),
+            )
+        except Exception as exc:
+            logger.warning("L2 cache unavailable; bypassing safely: %s", type(exc).__name__)
+            cached_result = None
+        if cached_result is not None:
+            _apply_cached(state, cached_result, "semantic")
+            record_cache_level("semantic", True)
+            record_cache_access(hit=True, tenant_id=tenant_id)
+            add_execution_trace(
+                state,
+                "semantic_cache",
+                "cached",
+                int((time.perf_counter() - t0) * 1000),
+                {"hit": True, "cache_level": "semantic"},
+            )
+            return state
+
     # Cache Miss: acquire a short distributed generation lock. A concurrent
-    # request gets a brief opportunity to consume the first request's result.
+    record_cache_level("semantic", False)
+    # request gets a brief opportunity to consume the first request's exact result.
     if semantic_cache is not None and hasattr(semantic_cache, "acquire_stampede_lock"):
         token = str(state.get("request_id", ""))
-        acquired = await semantic_cache.acquire_stampede_lock(
-            query=query,
-            token=token,
-            tenant_id=tenant_id,
-            locale=state.get("locale", "vi-VN"),
-            user_scope=str(state.get("user_id") or "anonymous"),
-        )
+        try:
+            acquired = await semantic_cache.acquire_stampede_lock(
+                query=query,
+                token=token,
+                tenant_id=tenant_id,
+                locale=state.get("locale", "vi-VN"),
+                user_scope=str(state.get("user_id") or "anonymous"),
+            )
+        except Exception as exc:
+            logger.warning("Cache lock unavailable; continuing safely: %s", type(exc).__name__)
+            acquired = False
         state["cache_lock_acquired"] = acquired
         state["cache_lock_token"] = token if acquired else None
         if not acquired:
-            for _ in range(20):
-                await asyncio.sleep(0.25)
-                cached_result = await semantic_cache.get(
-                    query=query,
-                    tenant_id=tenant_id,
-                    locale=state.get("locale", "vi-VN"),
-                    user_scope=str(state.get("user_id") or "anonymous"),
-                )
+            for _ in range(4):
+                await asyncio.sleep(0.1)
+                try:
+                    cached_result = await semantic_cache.get(
+                        query=query,
+                        tenant_id=tenant_id,
+                        locale=state.get("locale", "vi-VN"),
+                        user_scope=str(state.get("user_id") or "anonymous"),
+                    )
+                except Exception:
+                    break
                 if cached_result is not None:
-                    cached = cached_result.model_dump()
-                    state["cache_hit"] = True
-                    state["answer"] = cached["answer"]
-                    state["citations"] = cached["citations"]
-                    state["confidence"] = cached["confidence"]
-                    state["external_calls_count"] = 0
+                    _apply_cached(state, cached_result, "exact_after_wait")
                     record_cache_access(hit=True, tenant_id=tenant_id)
                     add_execution_trace(
                         state,
@@ -137,3 +182,7 @@ async def cache_node(state: GraphState) -> GraphState:
         {"hit": False},
     )
     return state
+
+
+# Backwards-compatible import name.
+cache_node = exact_cache_node

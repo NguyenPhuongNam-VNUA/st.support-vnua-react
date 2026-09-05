@@ -8,8 +8,8 @@ import re
 import time
 from typing import Any, List
 
-from core_ai.contracts.chat import Citation
 from core_ai.config import get_settings
+from core_ai.contracts.chat import Citation
 from core_ai.dependencies import get_component
 from core_ai.graph.state import GraphState, add_execution_trace
 from core_ai.retrieval.bm25 import RankedChunk
@@ -33,12 +33,6 @@ def reformulate_query_deterministic(original_query: str) -> str:
     return refined if len(refined) >= 3 else original_query
 
 
-def _uses_external_embedding(retriever: Any) -> bool:
-    vector_retriever = getattr(retriever, "vector_retriever", None)
-    embedding_service = getattr(vector_retriever, "embedding_service", None)
-    return bool(getattr(embedding_service, "is_external", False))
-
-
 def _to_evidence(chunk: RankedChunk, index: int) -> tuple[dict[str, Any], Citation]:
     score = chunk.rerank_score
     if score is None:
@@ -53,7 +47,16 @@ def _to_evidence(chunk: RankedChunk, index: int) -> tuple[dict[str, Any], Citati
         "snippet": chunk.content[:2000],
         "relevance_score": score,
     }
-    return evidence, Citation(**evidence)
+    citation = Citation(
+        citation_id=f"src_{index}",
+        document_id=chunk.document_id,
+        title=chunk.document_title,
+        page=chunk.page,
+        chunk_index=chunk.chunk_index,
+        snippet=chunk.content[:2000],
+        relevance_score=score,
+    )
+    return evidence, citation
 
 
 async def retrieval_node(state: GraphState) -> GraphState:
@@ -76,20 +79,16 @@ async def retrieval_node(state: GraphState) -> GraphState:
 
     candidates: List[RankedChunk] = []
     retrieval_status = "completed"
-    include_dense = attempts == 1
+    include_dense = attempts == 1 and bool(state.get("query_embedding"))
     if retriever is None:
         retrieval_status = "degraded"
         state["error_code"] = "retrieval_unavailable"
         logger.warning("Hybrid retriever unavailable for request_id=%s", state.get("request_id"))
     else:
-        if include_dense and _uses_external_embedding(retriever):
-            if state.get("external_calls_count", 0) >= state.get("max_external_calls", 2):
-                include_dense = False
-            else:
-                state["external_calls_count"] = state.get("external_calls_count", 0) + 1
         try:
             dense, sparse = await retriever.retrieve_parallel(
                 query=query,
+                query_embedding=state.get("query_embedding") or None,
                 top_k=10,
                 tenant_id=tenant_id,
                 include_dense=include_dense,

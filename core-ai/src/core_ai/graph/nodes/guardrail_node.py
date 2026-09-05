@@ -13,25 +13,29 @@ import asyncio
 import re
 import time
 import unicodedata
-from typing import Any, Dict, List, Set
+from typing import List, Set
 
+from core_ai.config import get_settings
 from core_ai.contracts.chat import Citation, FallbackInfo, RouteStatus
 from core_ai.dependencies import get_component
-from core_ai.config import get_settings
 from core_ai.graph.state import GraphState, add_execution_trace
 from core_ai.guardrails.pii_filter import PIIFilter
-from core_ai.observability.metrics import record_fallback
+from core_ai.observability.metrics import record_fallback, record_guardrail
 
 # Regular expressions for prompt injection heuristics
 INJECTION_PATTERNS = [
     re.compile(r"ignore\s+(previous|all|the)\s+(instructions|prompts|rules)", re.IGNORECASE),
     re.compile(r"(disregard|forget)\s+(prior|previous)\s+instructions", re.IGNORECASE),
     re.compile(r"system\s+prompt\s*(override|leak|reveal|show)", re.IGNORECASE),
-    re.compile(r"you\s+are\s+now\s+(DAN|unrestricted|jailbroken|an\s+ai\s+without\s+rules)", re.IGNORECASE),
+    re.compile(
+        r"you\s+are\s+now\s+(DAN|unrestricted|jailbroken|an\s+ai\s+without\s+rules)", re.IGNORECASE
+    ),
     re.compile(r"```\s*(system|admin|internal)", re.IGNORECASE),
     re.compile(r"<\|\s*(system|im_start|im_end)\s*\|>", re.IGNORECASE),
     re.compile(r"bỏ\s+qua\s+(toàn\s+bộ\s+)?(hướng\s+dẫn|quy\s+tắc|chỉ\s+thị)", re.IGNORECASE),
-    re.compile(r"(tiết\s+lộ|cho\s+biết|in\s+ra)\s+(prompt\s+hệ\s+thống|system\s+prompt)", re.IGNORECASE),
+    re.compile(
+        r"(tiết\s+lộ|cho\s+biết|in\s+ra)\s+(prompt\s+hệ\s+thống|system\s+prompt)", re.IGNORECASE
+    ),
 ]
 
 # Sensitive PII patterns (Credit card, Vietnamese CCCD 12 digits, password fields)
@@ -75,7 +79,10 @@ async def input_guardrail_node(state: GraphState) -> GraphState:
             fallback_strategy="safe_template",
             contact_channel="Ban Quản lý Đào tạo VNUA: phongdaotao@vnua.edu.vn",
         )
-        add_execution_trace(state, "input_guardrail", "failed", latency, {"reason": "empty_payload"})
+        add_execution_trace(
+            state, "input_guardrail", "failed", latency, {"reason": "empty_payload"}
+        )
+        record_guardrail("input", "payload", "empty")
         return state
 
     if len(normalized) > 4000:
@@ -90,7 +97,10 @@ async def input_guardrail_node(state: GraphState) -> GraphState:
             fallback_strategy="safe_template",
             contact_channel="Ban Quản lý Đào tạo VNUA: phongdaotao@vnua.edu.vn",
         )
-        add_execution_trace(state, "input_guardrail", "failed", latency, {"reason": "payload_too_large"})
+        add_execution_trace(
+            state, "input_guardrail", "failed", latency, {"reason": "payload_too_large"}
+        )
+        record_guardrail("input", "payload", "too_large")
         return state
 
     # 3. Check registered input guardrail component if available
@@ -114,7 +124,29 @@ async def input_guardrail_node(state: GraphState) -> GraphState:
                     fallback_strategy="safe_template",
                     contact_channel="Ban Quản lý Đào tạo VNUA: phongdaotao@vnua.edu.vn",
                 )
-                add_execution_trace(state, "input_guardrail", "failed", latency, {"reason": state["block_reason"]})
+                add_execution_trace(
+                    state, "input_guardrail", "failed", latency, {"reason": state["block_reason"]}
+                )
+                record_guardrail("input", "registered_guardrail", "blocked")
+                return state
+            detected_pii = getattr(result, "detected_pii", [])
+            if detected_pii and not state.get("pii_confirmed", False):
+                state["redaction_required"] = True
+                state["sanitized_preview"] = state["message"]
+                state["status"] = RouteStatus.CLARIFIED
+                state["fallback"] = FallbackInfo(
+                    reason="redaction_confirmation_required",
+                    original_route="input_guardrail",
+                    fallback_strategy="redact_confirm",
+                )
+                add_execution_trace(
+                    state,
+                    "input_guardrail",
+                    "completed",
+                    int((time.perf_counter() - t0) * 1000),
+                    {"pii_detected_count": len(detected_pii), "action": "redact_confirm"},
+                )
+                record_guardrail("input", "pii", "confirmation_required")
                 return state
         except Exception:
             pass  # Fall back to internal heuristics
@@ -146,8 +178,13 @@ async def input_guardrail_node(state: GraphState) -> GraphState:
                     "input_guardrail",
                     "failed",
                     latency,
-                    {"detector": guard_mode, "category": decision.category, "score": decision.score},
+                    {
+                        "detector": guard_mode,
+                        "category": decision.category,
+                        "score": decision.score,
+                    },
                 )
+                record_guardrail("input", guard_mode, "blocked")
                 return state
         except Exception:
             guard_mode = "regex_fallback"
@@ -157,7 +194,9 @@ async def input_guardrail_node(state: GraphState) -> GraphState:
         if pattern.search(normalized):
             latency = int((time.perf_counter() - t0) * 1000)
             state["is_blocked"] = True
-            state["block_reason"] = "Phát hiện chỉ thị không an toàn hoặc yêu cầu vượt quyền (Prompt Injection)"
+            state["block_reason"] = (
+                "Phát hiện chỉ thị không an toàn hoặc yêu cầu vượt quyền (Prompt Injection)"
+            )
             state["block_category"] = "prompt_injection"
             state["status"] = RouteStatus.BLOCKED
             state["fallback"] = FallbackInfo(
@@ -166,8 +205,11 @@ async def input_guardrail_node(state: GraphState) -> GraphState:
                 fallback_strategy="safe_template",
                 contact_channel="Ban Quản lý Đào tạo VNUA: phongdaotao@vnua.edu.vn",
             )
-            record_fallback("output_guardrail_blocked", "safe_template")
-            add_execution_trace(state, "input_guardrail", "failed", latency, {"reason": "prompt_injection"})
+            record_fallback("prompt_injection_detected", "safe_template")
+            add_execution_trace(
+                state, "input_guardrail", "failed", latency, {"reason": "prompt_injection"}
+            )
+            record_guardrail("input", "regex", "blocked")
             return state
 
     # 6. Raw PII check
@@ -184,13 +226,17 @@ async def input_guardrail_node(state: GraphState) -> GraphState:
                 fallback_strategy="safe_template",
                 contact_channel="Ban Quản lý Đào tạo VNUA: phongdaotao@vnua.edu.vn",
             )
-            add_execution_trace(state, "input_guardrail", "failed", latency, {"reason": "pii_detected"})
+            add_execution_trace(
+                state, "input_guardrail", "failed", latency, {"reason": "pii_detected"}
+            )
+            record_guardrail("input", "pii", "blocked")
             return state
 
     # Input guardrail passed successfully
     latency = int((time.perf_counter() - t0) * 1000)
     state["is_blocked"] = False
     add_execution_trace(state, "input_guardrail", "passed", latency, {"detector": guard_mode})
+    record_guardrail("input", guard_mode, "passed")
     return state
 
 
@@ -258,6 +304,7 @@ async def output_guardrail_node(state: GraphState) -> GraphState:
             )
             verified_citations = []
             valid_citation_ids = set()
+            record_guardrail("output", "grounding", "blocked")
 
     # Verify inline citations in answer text (e.g., [src_1], [src_2])
     def replace_invalid_citation(match: re.Match[str]) -> str:
@@ -299,9 +346,7 @@ async def output_guardrail_node(state: GraphState) -> GraphState:
         and state.get("status") == RouteStatus.ANSWERED
         and state.get("answer")
         and verified_citations
-        and not any(
-            str(citation.document_id).startswith("mcp_") for citation in verified_citations
-        )
+        and not any(str(citation.document_id).startswith("mcp_") for citation in verified_citations)
     ):
         semantic_cache = get_component("semantic_cache")
         if semantic_cache is not None:
@@ -314,6 +359,8 @@ async def output_guardrail_node(state: GraphState) -> GraphState:
                     tenant_id=state.get("tenant_id", "vnua"),
                     locale=state.get("locale", "vi-VN"),
                     user_scope=str(state.get("user_id") or "anonymous"),
+                    query_embedding=state.get("query_embedding") or None,
+                    topic=str(state.get("topic") or "general"),
                 )
             except Exception:
                 pass
@@ -341,4 +388,6 @@ async def output_guardrail_node(state: GraphState) -> GraphState:
         latency,
         {"citations_verified": len(verified_citations)},
     )
+    if state.get("status") == RouteStatus.ANSWERED:
+        record_guardrail("output", "grounding", "passed")
     return state

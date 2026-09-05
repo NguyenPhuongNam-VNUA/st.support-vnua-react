@@ -34,3 +34,13 @@ build/
 
 mocks/
 .agents/
+
+# Optional local model weights (download explicitly, never commit)
+core-ai/models/
+core-ai/data/bm25/*.json
+core-ai/data/topic_anchors.json
+
+# Python runtime/build caches
+__pycache__/
+*.py[cod]
+.venv/

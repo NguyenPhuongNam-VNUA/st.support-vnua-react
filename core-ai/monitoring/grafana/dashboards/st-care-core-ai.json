@@ -1,0 +1,33 @@
+{
+  "title": "ST-Care Core AI",
+  "uid": "st-care-core-ai",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Request rate",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [{"expr": "sum(rate(core_ai_requests_total[5m])) by (status)", "legendFormat": "{{status}}"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Safe answer p95",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(core_ai_time_to_safe_answer_seconds_bucket[5m])) by (le, outcome))", "legendFormat": "{{outcome}}"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Cache outcomes",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [{"expr": "sum(rate(core_ai_cache_level_total[5m])) by (level, result)", "legendFormat": "{{level}} {{result}}"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Fallbacks",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [{"expr": "sum(rate(core_ai_fallback_total[5m])) by (reason)", "legendFormat": "{{reason}}"}]
+    }
+  ]
+}

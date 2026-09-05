@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, cast
 
 from core_ai.contracts.chat import FallbackInfo, RouteStatus
-from core_ai.contracts.llm import ChatMessage, GenerationRequest, GenerationResult, LLMPort
+from core_ai.contracts.llm import ChatMessage, GenerationRequest, GenerationResult
 from core_ai.dependencies import get_component
 from core_ai.graph.state import GraphState, add_execution_trace
 
@@ -92,10 +92,19 @@ async def generation_node(state: GraphState) -> GraphState:
     c_tokens = 0
 
     if llm_port is not None and hasattr(llm_port, "generate"):
+        history_messages = [
+            ChatMessage(
+                role=cast(Literal["system", "user", "assistant", "tool"], item["role"]),
+                content=item["content"],
+            )
+            for item in state.get("history", [])[-6:]
+            if item.get("role") in ("user", "assistant") and item.get("content")
+        ]
         gen_request = GenerationRequest(
             request_id=state.get("request_id", ""),
             messages=[
                 ChatMessage(role="system", content=SYSTEM_PROMPT_TEMPLATE),
+                *history_messages,
                 ChatMessage(role="user", content=user_prompt),
             ],
             temperature=0.2,
@@ -156,7 +165,10 @@ async def generation_node(state: GraphState) -> GraphState:
         return state
 
     state["answer"] = answer_text
-    state["confidence"] = 0.92
+    # Confidence belongs to the evidence, not to the fluency of the generated text.
+    # Keeping the deterministic evidence score also makes UI badges and monitoring
+    # honest when the provider returns a polished but weakly grounded answer.
+    state["confidence"] = round(max(0.0, min(1.0, float(state.get("evidence_score", 0.0)))), 4)
     state["model_used"] = model_name
     state["provider_used"] = provider
     state["prompt_tokens"] = p_tokens

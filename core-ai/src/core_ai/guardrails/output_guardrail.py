@@ -4,19 +4,17 @@ Verifies generated answers before emission to students:
 1. 100% Citation Whitelist Verification: Strictly checks that all inline citations and
    citation metadata match retrieved document chunks. Blocks/strips fabricated citations.
 2. Hallucination Defense: Detects and rejects responses that cite non-existent evidence.
-3. PII Masking: Masks any inadvertently generated or leaked citizen IDs, phone numbers, or credentials.
+3. PII Masking: Masks generated or leaked citizen IDs, phone numbers, or credentials.
 4. HTML/XSS Sanitization: Cleans raw HTML tags, event handlers, and malicious script injections.
 """
 
-from dataclasses import dataclass, field
-import html
 import logging
 import re
 import time
-from typing import Any, Dict, List, Optional, Set, Union
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Set
 
 from core_ai.contracts.chat import Citation, ExecutionTraceStep
-from core_ai.contracts.errors import GuardrailBlockedError
 from core_ai.guardrails.pii_filter import PIIFilter
 
 logger = logging.getLogger("core_ai.guardrails.output_guardrail")
@@ -62,9 +60,7 @@ class OutputGuardrail:
         r"(?i)<\s*(?:script|iframe|object|embed|style|form|input|button|svg|link|meta|img)\b[^>]*>",
     )
     # Dangerous HTML attributes / event handlers (onerror, onload, onclick, javascript:)
-    _DANGEROUS_ATTRS = re.compile(
-        r'(?i)\b(?:on\w+|javascript:|data:\s*text/html)\s*=[^>\s]*'
-    )
+    _DANGEROUS_ATTRS = re.compile(r"(?i)\b(?:on\w+|javascript:|data:\s*text/html)\s*=[^>\s]*")
 
     # Inline citation pattern e.g. [src_1], [src_2], [1], [2]
     _INLINE_CITATION_PATTERN = re.compile(r"\[(?:src_)?(\d+)\]")
@@ -90,7 +86,19 @@ class OutputGuardrail:
         if not text:
             return ""
 
-        # 1. Strip paired unsafe tags and their inner content (e.g. <script>...</script>)
+        try:
+            import nh3
+
+            return nh3.clean(
+                text,
+                tags=set(),
+                attributes={},
+                strip_comments=True,
+            )
+        except ImportError:
+            pass
+
+        # Deterministic fallback when optional sanitizer is unavailable.
         cleaned = self._UNSAFE_HTML_TAGS.sub("", text)
         # 2. Strip single/self-closing unsafe tags
         cleaned = self._UNSAFE_SELF_CLOSING.sub("", cleaned)
@@ -98,6 +106,24 @@ class OutputGuardrail:
         cleaned = self._DANGEROUS_ATTRS.sub("", cleaned)
 
         return cleaned
+
+    @staticmethod
+    def unsupported_factual_claims(answer: str, citations: List[Citation]) -> List[str]:
+        """Find numeric/date claims whose values do not occur in verified evidence."""
+        evidence = " ".join(citation.snippet.lower() for citation in citations)
+        unsupported: List[str] = []
+        # Ignore Markdown list ordinals and isolated one-digit values. Ground
+        # dates, percentages, money and multi-digit quantities that can change
+        # the meaning of student guidance.
+        claim_pattern = re.compile(
+            r"(?<!\w)(?:\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?|"
+            r"\d+(?:[.,]\d+)?\s*%|\d{2,}(?:[.,]\d+)*)(?!\w)"
+        )
+        for sentence in re.split(r"(?<=[.!?])\s+|\n+", answer):
+            values = claim_pattern.findall(sentence)
+            if values and any(value.lower() not in evidence for value in values):
+                unsupported.append(sentence[:240])
+        return unsupported
 
     def verify_and_filter_citations(
         self,
@@ -143,11 +169,7 @@ class OutputGuardrail:
 
         for cit in citations:
             doc_id_str = str(cit.document_id)
-            chunk_key = (
-                f"{doc_id_str}:{cit.chunk_index}"
-                if cit.chunk_index is not None
-                else None
-            )
+            chunk_key = f"{doc_id_str}:{cit.chunk_index}" if cit.chunk_index is not None else None
 
             # Verification rule: document_id must exist in retrieved chunks
             is_valid_doc = doc_id_str in valid_doc_ids
@@ -180,10 +202,11 @@ class OutputGuardrail:
         valid_indices: Set[int],
     ) -> str:
         """Removes or scrubs inline citation markers [src_X] that point to non-existent sources."""
-        def replace_match(match: re.Match) -> str:
+
+        def replace_match(match: re.Match[str]) -> str:
             idx = int(match.group(1))
             if idx in valid_indices:
-                return match.group(0)  # Keep valid reference
+                return str(match.group(0))  # Keep valid reference
             # Remove hallucinated tag
             return ""
 
@@ -231,7 +254,8 @@ class OutputGuardrail:
 
         if has_hallucinations:
             violations.append(
-                f"Phát hiện {len(blocked_citations)} trích dẫn ảo (không có trong tài liệu đối chiếu)"
+                f"Phát hiện {len(blocked_citations)} trích dẫn ảo "
+                "(không có trong tài liệu đối chiếu)"
             )
 
         # 4. Clean Inline Citations in Text
@@ -248,13 +272,18 @@ class OutputGuardrail:
         invalid_inline = any(int(match.group(1)) not in valid_indices for match in inline_matches)
         sanitized = self.clean_inline_citations(sanitized, valid_indices)
 
+        unsupported_claims = self.unsupported_factual_claims(sanitized, validated_citations)
+
         # 5. Hallucination Blocking Policy
         # If citations were strictly required (e.g. tuition, regulations) but none valid remain
-        missing_required_inline = require_citations and bool(validated_citations) and not inline_matches
+        missing_required_inline = (
+            require_citations and bool(validated_citations) and not inline_matches
+        )
         if require_citations and (
             (raw_citations and not validated_citations)
             or invalid_inline
             or missing_required_inline
+            or unsupported_claims
         ):
             logger.warning("Citation grounding failed; triggering safe ungrounded fallback.")
             sanitized = self.SAFE_UNGROUNDED_FALLBACK
@@ -264,6 +293,11 @@ class OutputGuardrail:
                 has_hallucinations = True
             elif missing_required_inline:
                 violations.append("Câu trả lời thiếu thẻ trích dẫn bắt buộc.")
+            elif unsupported_claims:
+                violations.append(
+                    f"Có {len(unsupported_claims)} phát biểu chứa số/ngày "
+                    "không được nguồn xác nhận."
+                )
             else:
                 violations.append("Toàn bộ nguồn trích dẫn không hợp lệ.")
             violations.append("Đã áp dụng phản hồi an toàn.")

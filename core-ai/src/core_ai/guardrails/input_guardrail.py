@@ -3,16 +3,17 @@
 Verifies inbound student queries before pipeline ingestion:
 1. Unicode Normalization: Converts text to Unicode NFC and strips invisible control characters.
 2. Payload Size Validation: Enforces boundary of 1 to 4000 characters.
-3. Prompt Injection Defense: Detects adversarial attempts, jailbreaks, and system prompt exfiltration.
+3. Prompt Injection Defense: Detects adversarial attempts, jailbreaks, and prompt leaks.
 4. Raw PII & Credential Defense: Detects raw passwords, API keys, CCCD, and phone numbers.
 """
 
-from dataclasses import dataclass, field
+import base64
 import logging
 import re
 import time
-from typing import List, Optional
 import unicodedata
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 from core_ai.contracts.chat import ChatRequest, ExecutionTraceStep
 from core_ai.contracts.errors import (
@@ -90,6 +91,52 @@ class InputGuardrail:
         cleaned = re.sub(r"\r\n|\r", "\n", cleaned)
         return cleaned.strip()
 
+    @staticmethod
+    def _contains_encoded_attack(text: str) -> bool:
+        """Decode bounded base64 candidates and flag only instruction/execution payloads."""
+        attack_terms = (
+            "ignore previous",
+            "system prompt",
+            "bypass",
+            "jailbreak",
+            "os.system",
+            "subprocess",
+            "bỏ qua hướng dẫn",
+            "tiết lộ prompt",
+        )
+        for token in re.findall(
+            r"(?<![A-Za-z0-9+/=])[A-Za-z0-9+/]{32,}={0,2}(?![A-Za-z0-9+/=])", text
+        ):
+            if len(token) > 4096:
+                continue
+            try:
+                decoded = (
+                    base64.b64decode(token, validate=True).decode("utf-8", errors="ignore").lower()
+                )
+            except (ValueError, UnicodeError):
+                continue
+            if any(term in decoded for term in attack_terms):
+                return True
+        return False
+
+    @staticmethod
+    def _contains_fuzzy_attack(text: str) -> bool:
+        """Catch lightly obfuscated high-risk phrases without making RapidFuzz mandatory."""
+        try:
+            from rapidfuzz import fuzz
+        except ImportError:
+            return False
+
+        shadow = re.sub(r"[^\w\s]", " ", text.casefold())
+        shadow = re.sub(r"\s+", " ", shadow).strip()
+        high_risk_phrases = (
+            "ignore previous instructions",
+            "reveal system prompt",
+            "bỏ qua toàn bộ hướng dẫn",
+            "tiết lộ prompt hệ thống",
+        )
+        return any(fuzz.partial_ratio(phrase, shadow) >= 91 for phrase in high_risk_phrases)
+
     def validate(
         self,
         text: str,
@@ -129,7 +176,24 @@ class InputGuardrail:
                 raise PayloadTooLargeError(message=msg)
 
         # 3. Prompt Injection Check
-        injection_res = self.injection_detector.detect(normalized)
+        security_shadow = unicodedata.normalize("NFKC", normalized)
+        injection_res = self.injection_detector.detect(security_shadow)
+        if self._contains_encoded_attack(security_shadow):
+            injection_res = InjectionDetectionResult(
+                is_safe=False,
+                risk_score=0.95,
+                threat_category="encoded_instruction",
+                matched_patterns=["base64_instruction_payload"],
+                explanation="Phát hiện chỉ thị được mã hóa có dấu hiệu vượt quyền.",
+            )
+        elif injection_res.is_safe and self._contains_fuzzy_attack(security_shadow):
+            injection_res = InjectionDetectionResult(
+                is_safe=False,
+                risk_score=0.9,
+                threat_category="obfuscated_instruction",
+                matched_patterns=["fuzzy_high_risk_phrase"],
+                explanation="Phát hiện chỉ thị vượt quyền đã bị làm nhiễu.",
+            )
         if not injection_res.is_safe:
             msg = injection_res.explanation or "Phát hiện nguy cơ prompt injection"
             violations.append(msg)

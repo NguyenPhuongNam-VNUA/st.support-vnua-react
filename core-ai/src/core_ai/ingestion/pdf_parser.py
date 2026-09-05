@@ -24,6 +24,8 @@ class PDFPage:
     text: str
     char_count: int
     tables_found: int = 0
+    heading: Optional[str] = None
+    ocr_confidence: Optional[float] = None
 
 
 @dataclass
@@ -34,6 +36,7 @@ class ParsedPDF:
     total_pages: int = 0
     total_chars: int = 0
     parser_used: str = "unknown"
+    ocr_confidence: Optional[float] = None
 
     @property
     def full_text(self) -> str:
@@ -87,7 +90,15 @@ class PDFParser:
         else:
             raise ValueError(f"Unsupported PDF source type: {type(source)}")
 
-        # Attempt 1: Try pdfplumber
+        # Attempt 1: structure-aware Markdown extraction.
+        try:
+            parsed = self._parse_with_pymupdf4llm(file_path=file_path, pdf_bytes=pdf_bytes)
+            if parsed.total_chars > 0:
+                return parsed
+        except Exception as exc:
+            logger.warning("PyMuPDF4LLM parser unavailable/failed (%s); using pdfplumber", exc)
+
+        # Attempt 2: Try pdfplumber
         try:
             parsed = self._parse_with_pdfplumber(file_path=file_path, pdf_bytes=pdf_bytes)
             if parsed.total_chars > 0:
@@ -99,7 +110,7 @@ class PDFParser:
                 exc,
             )
 
-        # Attempt 2: Fallback to pypdf
+        # Attempt 3: Fallback to pypdf
         try:
             parsed = self._parse_with_pypdf(file_path=file_path, pdf_bytes=pdf_bytes)
             if parsed.total_chars > 0:
@@ -113,6 +124,46 @@ class PDFParser:
         except Exception as exc:
             logger.error("OCR fallback also failed: %s", exc, exc_info=True)
             raise RuntimeError(f"Failed to extract text from PDF: {exc}") from exc
+
+    def _parse_with_pymupdf4llm(
+        self,
+        file_path: Optional[str] = None,
+        pdf_bytes: Optional[bytes] = None,
+    ) -> ParsedPDF:
+        """Extract Markdown page chunks while preserving headings and tables."""
+        import fitz  # type: ignore
+        import pymupdf4llm  # type: ignore
+
+        document = fitz.open(file_path) if file_path else fitz.open(stream=pdf_bytes, filetype="pdf")
+        try:
+            if document.page_count > self.max_pages:
+                raise ValueError("PDF exceeds configured page limit")
+            rows = pymupdf4llm.to_markdown(document, page_chunks=True)
+            pages: List[PDFPage] = []
+            total_chars = 0
+            for index, row in enumerate(rows, start=1):
+                text = self.clean_text(str(row.get("text", "")))
+                metadata = row.get("metadata") or {}
+                page_number = int(metadata.get("page", index - 1)) + 1
+                heading_match = re.search(r"(?m)^#{1,6}\s+(.+)$", text)
+                total_chars += len(text)
+                pages.append(
+                    PDFPage(
+                        page_number=page_number,
+                        text=text,
+                        char_count=len(text),
+                        tables_found=text.count("|---"),
+                        heading=heading_match.group(1).strip() if heading_match else None,
+                    )
+                )
+            return ParsedPDF(
+                pages=pages,
+                total_pages=len(pages),
+                total_chars=total_chars,
+                parser_used="pymupdf4llm",
+            )
+        finally:
+            document.close()
 
     def _parse_with_pdfplumber(
         self,
@@ -245,17 +296,25 @@ class PDFParser:
                 raise ValueError("PDF exceeds configured page limit")
             pages: List[PDFPage] = []
             total_chars = 0
+            confidences: List[float] = []
             for index in range(document.page_count):
                 page = document.load_page(index)
                 pixmap = page.get_pixmap(matrix=fitz.Matrix(2.0, 2.0), alpha=False)
                 image = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
-                text = self.clean_text(pytesseract.image_to_string(image, lang="vie+eng"))
+                data = pytesseract.image_to_data(
+                    image, lang="vie+eng", output_type=pytesseract.Output.DICT
+                )
+                raw_conf = [float(value) for value in data.get("conf", []) if float(value) >= 0]
+                page_confidence = (sum(raw_conf) / len(raw_conf) / 100.0) if raw_conf else 0.0
+                confidences.append(page_confidence)
+                text = self.clean_text(" ".join(data.get("text", [])))
                 total_chars += len(text)
                 pages.append(
                     PDFPage(
                         page_number=index + 1,
                         text=text,
                         char_count=len(text),
+                        ocr_confidence=page_confidence,
                     )
                 )
             if total_chars == 0:
@@ -265,6 +324,7 @@ class PDFParser:
                 total_pages=len(pages),
                 total_chars=total_chars,
                 parser_used="tesseract-ocr",
+                ocr_confidence=sum(confidences) / len(confidences) if confidences else 0.0,
             )
         finally:
             document.close()

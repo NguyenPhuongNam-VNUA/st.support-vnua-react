@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AiAgentError, callAiAgent } from '@/lib/ai/agent-client';
+import { AuthorizationError, requireAuthenticatedUser } from '@/lib/auth/authorization';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -17,6 +18,12 @@ export async function POST(request: NextRequest) {
 
     const requestId = crypto.randomUUID();
     const tenantId = process.env.CORE_AI_TENANT_ID || 'vnua';
+    let userId: number | null = null;
+    try {
+      userId = (await requireAuthenticatedUser(request)).id;
+    } catch (error) {
+      if (!(error instanceof AuthorizationError)) throw error;
+    }
     const upstream = await callAiAgent(
       '/v1/chat',
       {
@@ -25,14 +32,16 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           message: question,
           conversation_id: body?.conversation_id,
+          history: Array.isArray(body?.messages) ? body.messages.slice(-6) : [],
           locale: 'vi-VN',
           channel: 'web',
           requested_tool: body?.requested_tool,
           tool_arguments: body?.tool_arguments || {},
           tool_approved: body?.tool_approved === true,
+          pii_confirmed: body?.pii_confirmed === true,
         }),
       },
-      { requestId, tenantId }
+      { requestId, tenantId, userId }
     );
 
     return new Response(upstream.body, {

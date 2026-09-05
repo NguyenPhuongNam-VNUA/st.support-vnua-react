@@ -90,6 +90,11 @@ async def ask_ai_legacy(request: Request, legacy_request: LegacyAskAiRequest) ->
         request_id=context.request_id,
         tenant_id=context.tenant_id,
         user_id=context.user_id,
+        history=[
+            {"role": item.role, "content": item.content or item.text or ""}
+            for item in (legacy_request.messages or [])[-6:]
+            if (item.content or item.text)
+        ],
     )
 
     completed: Optional[Dict[str, Any]] = None

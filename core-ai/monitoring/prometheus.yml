@@ -6,6 +6,9 @@ global:
   evaluation_interval: 10s
   scrape_timeout: 5s
 
+rule_files:
+  - /etc/prometheus/alerts.yml
+
 scrape_configs:
   # 1. ST-Care Core AI Microservice
   - job_name: "st-care-core-ai"

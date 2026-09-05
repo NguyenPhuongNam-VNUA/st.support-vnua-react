@@ -7,15 +7,24 @@ interface RouteContext { params: Promise<{ id: string }> }
 
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
-    await requireRole(request, ['admin']);
+    const user = await requireRole(request, ['admin']);
     const id = Number((await context.params).id);
     const document = await documentService.getById(id);
     const fileUrl = await documentService.getSignedFileUrl(id);
 
-    const upstream = await callAiAgent('/documents/embed', {
-      method: 'POST',
-      body: JSON.stringify({ document_id: document.id, file_url: fileUrl }),
-    });
+    const requestId = crypto.randomUUID();
+    const upstream = await callAiAgent(
+      '/documents/embed',
+      {
+        method: 'POST',
+        body: JSON.stringify({ document_id: document.id, file_url: fileUrl }),
+      },
+      {
+        requestId,
+        tenantId: process.env.CORE_AI_TENANT_ID || 'vnua',
+        userId: user.id,
+      }
+    );
     if (!upstream.ok) {
       throw new AiAgentError('AI Agent từ chối yêu cầu embedding', upstream.status);
     }

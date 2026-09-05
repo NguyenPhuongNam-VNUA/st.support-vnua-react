@@ -29,10 +29,9 @@ class Citation(BaseModel):
         description="Unique reference identifier matching inline citation tag (e.g. 'src_1')",
         examples=["src_1"],
     )
-    document_id: int = Field(
+    document_id: Union[int, str] = Field(
         ...,
-        gt=0,
-        description="ID of the source document in PostgreSQL documents table",
+        description="Database document ID or a scoped MCP source identifier",
         examples=[42, "doc_42"],
     )
     title: str = Field(
@@ -117,6 +116,17 @@ class FallbackInfo(BaseModel):
         description="Support ticket ID if an escalation case was generated",
         examples=["CASE-2026-0042"],
     )
+    redacted_query: Optional[str] = Field(
+        default=None,
+        max_length=4000,
+        description="Masked query that can be explicitly confirmed without exposing raw PII",
+    )
+
+
+class ConversationTurn(BaseModel):
+    """Bounded prior turn used for conversational continuity without another LLM call."""
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=2000)
 
 
 class ChatRequest(BaseModel):
@@ -161,6 +171,7 @@ class ChatRequest(BaseModel):
         description="Client channel origin",
         examples=["web", "mobile", "zalo"],
     )
+    history: List[ConversationTurn] = Field(default_factory=list, max_length=6)
     question: Optional[str] = Field(
         default=None,
         description="Legacy field alias for message supported during migration",
@@ -176,6 +187,10 @@ class ChatRequest(BaseModel):
     tool_approved: bool = Field(
         default=False,
         description="True only after explicit user confirmation in the trusted BFF flow",
+    )
+    pii_confirmed: bool = Field(
+        default=False,
+        description="True only when the user explicitly accepts processing of the masked query",
     )
 
     @model_validator(mode="before")

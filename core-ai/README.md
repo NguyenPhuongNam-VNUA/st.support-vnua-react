@@ -2,6 +2,87 @@
 
 > **Microservice Python độc lập** phụ trách toàn bộ pipeline RAG, LangGraph orchestration, LLM gateway đa provider, MCP tool gateway, semantic cache và ingestion tài liệu theo kiến trúc ST-Care VNUA.
 
+## Trạng thái triển khai Completion Plan
+
+Luồng production hiện tại là: input guardrail → L1 exact cache → query preparation
+(một Gemini Embedding 2 dùng lại toàn luồng) → topic gate → L2 semantic cache → dense +
+PostgreSQL FTS → RRF → BGE local → evidence gate → LLM/MCP/HITL → output guardrail.
+Một câu trả lời chỉ trả tối đa 3 nguồn. Frontend hiển thị safe execution trace, không hiển
+thị chain-of-thought.
+
+Lịch học và học phí chỉ được đọc từ các bảng nghiệp vụ có RLS thông qua Node internal API.
+Migration không tạo dữ liệu giả; trước khi bật hai tool này, chủ hệ thống phải nạp dữ liệu
+authoritative và xác nhận mapping tài khoản sinh viên. Khi chưa có dữ liệu, tool trả
+`not_found`/`unavailable` và chuyển fallback/HITL.
+
+### Cài đặt sạch trên Windows
+
+```powershell
+Set-Location "D:\Group ST\st.support-vnua-react\core-ai"
+Copy-Item .env.example .env
+
+# Runtime + công cụ phát triển, không cài model local
+uv sync --extra dev --frozen
+
+# Chỉ khi cần Prompt Guard/BGE/ONNX local
+uv sync --extra dev --extra local-models --extra onnx-models --frozen
+```
+
+Các tác vụ tương đương nằm trong `scripts/tasks.ps1`, ví dụ
+`./scripts/tasks.ps1 install-models`, `./scripts/tasks.ps1 lint` và
+`./scripts/tasks.ps1 compose`.
+
+### Migration và publish dữ liệu
+
+Áp dụng đúng thứ tự sau trên staging trước, rồi mới production:
+
+1. `202609050001_support_cases.sql` — HITL support cases.
+2. `202609050002_core_ai_completion.sql` — provenance, quality, knowledge version và topic anchors.
+3. `202609050003_student_business_data.sql` — lịch học/học phí authoritative, không có seed giả.
+
+Sau migration, chạy ingestion/re-embedding tài liệu đã duyệt, rồi tạo artifact local:
+
+```powershell
+uv run python scripts/seed_topic_anchors.py --tenant vnua
+uv run python scripts/build_bm25_index.py --tenant vnua
+```
+
+Rollback an toàn là dừng ingestion, chuyển traffic về phiên bản ứng dụng cũ và khôi phục
+snapshot DB tương ứng. Không drop cột/chunk/vector đang phục vụ khi chưa xác nhận phiên bản
+knowledge cũ đã hoạt động. Ba migration này cố ý không chứa destructive down migration.
+
+### Model local và ONNX INT8
+
+Runtime tuyệt đối không tự tải/export model. Người vận hành thực hiện rõ ràng:
+
+```powershell
+uv run hf auth login
+uv run python scripts/download_local_models.py prompt-guard reranker
+
+# Export vào thư mục mới; manifest chứa revision và SHA-256 từng artifact
+uv run python scripts/export_local_models.py `
+  models/Llama-Prompt-Guard-2-86M models/Llama-Prompt-Guard-2-86M-onnx
+uv run python scripts/export_local_models.py `
+  models/bge-reranker-v2-m3 models/bge-reranker-v2-m3-onnx
+```
+
+Đổi `PROMPT_GUARD_MODEL_PATH`/`BGE_RERANKER_MODEL_PATH` sang thư mục ONNX sau khi quality
+regression và benchmark đạt. Thứ tự fallback: ONNX INT8 → Transformers CPU → regex cho
+Prompt Guard; ONNX INT8 → Transformers CPU → heuristic/RRF cho reranker.
+
+### Monitoring
+
+```powershell
+docker compose config
+docker compose --profile monitoring up -d --build
+Invoke-RestMethod http://127.0.0.1:5001/health/ready
+Invoke-WebRequest http://127.0.0.1:5001/metrics
+```
+
+Grafana chạy tại `http://localhost:3001`, Prometheus tại `http://localhost:9090` và dashboard
+được provision tự động. `GRAFANA_ADMIN_PASSWORD`, `REDIS_PASSWORD`, service tokens và API key
+phải được thay trước khi khởi chạy.
+
 ---
 
 ## 1. Tổng quan Kiến trúc Hệ thống
@@ -119,6 +200,61 @@ Toàn bộ request/response schemas và typed events được đóng băng tại
 ---
 
 ## 3. Bảng Cấu hình Biến Môi trường (`.env`)
+
+### Local safety và reranking models (tùy chọn, có fallback)
+
+Runtime không tự tải model. Nếu weights hoặc thư viện chưa có, Prompt Guard tự dùng regex;
+reranker tự dùng heuristic và RRF. Để bật model local:
+
+```powershell
+Set-Location "D:\Group ST\st.support-vnua-react\core-ai"
+
+# Cài đúng nhóm thư viện model local vào .venv
+uv sync --extra local-models --extra dev --frozen
+
+# Prompt Guard của Meta có thể yêu cầu chấp nhận license trên Hugging Face trước
+uv run hf auth login
+
+# Tải cả hai model vào core-ai/models (runtime chỉ đọc local)
+uv run python scripts/download_local_models.py
+
+# Hoặc tải riêng từng model
+uv run python scripts/download_local_models.py prompt-guard
+uv run python scripts/download_local_models.py reranker
+```
+
+Các model mặc định:
+
+- `meta-llama/Llama-Prompt-Guard-2-86M`: classifier nhẹ cho prompt injection/jailbreak.
+- `BAAI/bge-reranker-v2-m3`: cross-encoder đa ngôn ngữ; chất lượng tốt cho tiếng Việt nhưng weights khoảng 2.3 GB.
+
+Sau khi tải xong, build lại container. Thư mục `models` được mount read-only:
+
+```powershell
+docker compose up -d --build
+docker compose ps
+Invoke-RestMethod http://127.0.0.1:5001/health/ready
+```
+
+`/health/ready` hiển thị model đang `ready` hay đang chạy fallback. Prometheus `/metrics`
+có `core_ai_local_model_ready` và `core_ai_local_model_inference_seconds`.
+
+### MCP minh bạch và HITL
+
+Mỗi lần chạy tool xuất hiện trong SSE `pipeline.status` và `execution_trace` với tên tool,
+trạng thái và latency; không hiển thị tham số nhạy cảm hoặc chain-of-thought.
+
+| Tool | Scope | Nguồn | Fallback |
+|---|---|---|---|
+| `search_knowledge` | Public | PostgreSQL documents | RAG/fallback an toàn |
+| `get_regulations` | Public | Kho tài liệu đã duyệt | Hỏi lại/chuyển cán bộ |
+| `lookup_schedule` | Authenticated | Node business API | Circuit breaker/HITL |
+| `check_tuition` | Authenticated | Node business API | Circuit breaker/HITL |
+| `create_support_case` | Explicit approval | Node `support_cases` | Kênh liên hệ thủ công |
+
+Áp dụng `supabase/migrations/202609050001_support_cases.sql` để tạo phiếu HITL thật.
+`BUSINESS_API_TOKEN` trong Node `.env` và `core-ai/.env` phải giống nhau. UI luôn hỏi xác
+nhận trước khi tạo phiếu; danh tính sinh viên chỉ lấy từ JWT do Node xác thực.
 
 | Biến môi trường | Kiểu dữ liệu | Giá trị mặc định | Mô tả |
 |---|---|---|---|

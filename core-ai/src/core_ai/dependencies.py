@@ -4,6 +4,7 @@ Provides request context, authentication verification, settings, and provider ho
 for route handlers and background pipelines.
 """
 
+import logging
 from typing import Any, Optional
 from fastapi import Depends, HTTPException, Request, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -13,6 +14,7 @@ from core_ai.api.middleware.request_context import RequestContext, request_id_ct
 from core_ai.config import Settings, get_settings
 from core_ai.contracts.errors import ErrorCode
 
+logger = logging.getLogger("core_ai.dependencies")
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
@@ -108,7 +110,8 @@ def get_component(name: str) -> Optional[Any]:
             if runner is not None:
                 _component_registry["graph_runner"] = runner
             return runner
-        except Exception:
+        except Exception as exc:
+            logger.exception("Failed to initialize or retrieve graph_runner: %s", exc)
             return _component_registry.get("graph_runner")
 
     if name == "llm_port":

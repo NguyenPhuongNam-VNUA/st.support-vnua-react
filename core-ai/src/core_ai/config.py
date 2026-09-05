@@ -76,10 +76,23 @@ class Settings(BaseSettings):
         default=1.5, ge=0.05, le=10.0, alias="RERANKER_TIMEOUT_SECONDS"
     )
     retrieval_top_k: int = Field(default=3, ge=1, le=5, alias="RETRIEVAL_TOP_K")
+    topic_in_domain_threshold: float = Field(
+        default=0.38, ge=0.0, le=1.0, alias="TOPIC_IN_DOMAIN_THRESHOLD"
+    )
+    topic_clarify_threshold: float = Field(
+        default=0.52, ge=0.0, le=1.0, alias="TOPIC_CLARIFY_THRESHOLD"
+    )
+    evidence_low_threshold: float = Field(
+        default=0.58, ge=0.0, le=1.0, alias="EVIDENCE_LOW_THRESHOLD"
+    )
+    evidence_high_threshold: float = Field(
+        default=0.78, ge=0.0, le=1.0, alias="EVIDENCE_HIGH_THRESHOLD"
+    )
 
     # Optional local safety/reranking models. Runtime never downloads weights.
     local_models_enabled: bool = Field(default=True, alias="LOCAL_MODELS_ENABLED")
     local_models_device: str = Field(default="cpu", alias="LOCAL_MODELS_DEVICE")
+    local_models_backend: str = Field(default="auto", alias="LOCAL_MODELS_BACKEND")
     prompt_guard_model_path: str = Field(
         default="./models/Llama-Prompt-Guard-2-86M", alias="PROMPT_GUARD_MODEL_PATH"
     )
@@ -112,6 +125,13 @@ class Settings(BaseSettings):
     redis_max_connections: int = Field(default=30, alias="REDIS_MAX_CONNECTIONS")
     rate_limit_per_minute: int = Field(default=60, ge=1, le=10000, alias="RATE_LIMIT_PER_MINUTE")
     idempotency_ttl_seconds: int = Field(default=600, ge=30, le=86400, alias="IDEMPOTENCY_TTL_SECONDS")
+    semantic_cache_similarity_threshold: float = Field(
+        default=0.93, ge=0.5, le=1.0, alias="SEMANTIC_CACHE_SIMILARITY_THRESHOLD"
+    )
+    semantic_cache_max_candidates: int = Field(
+        default=200, ge=10, le=1000, alias="SEMANTIC_CACHE_MAX_CANDIDATES"
+    )
+    knowledge_version: str = Field(default="v1", alias="KNOWLEDGE_VERSION")
 
     # MCP Gateway Configuration
     mcp_transport: str = Field(default="streamable-http", alias="MCP_TRANSPORT")
@@ -149,6 +169,15 @@ class Settings(BaseSettings):
     )
     ingestion_max_pdf_pages: int = Field(
         default=200, ge=1, le=1000, alias="INGESTION_MAX_PDF_PAGES"
+    )
+    ingestion_ocr_min_confidence: float = Field(
+        default=0.55, ge=0.0, le=1.0, alias="INGESTION_OCR_MIN_CONFIDENCE"
+    )
+    ingestion_chunk_min_tokens: int = Field(
+        default=300, ge=100, le=1000, alias="INGESTION_CHUNK_MIN_TOKENS"
+    )
+    ingestion_chunk_max_tokens: int = Field(
+        default=600, ge=200, le=1500, alias="INGESTION_CHUNK_MAX_TOKENS"
     )
 
     # Observability & Logging
@@ -198,6 +227,10 @@ class Settings(BaseSettings):
             raise ValueError("DB_STATEMENT_CACHE_SIZE must be 0 for Supavisor transaction mode")
         if self.db_pool_min_size > self.db_pool_max_size:
             raise ValueError("DB_POOL_MIN_SIZE must not exceed DB_POOL_MAX_SIZE")
+        if self.evidence_low_threshold >= self.evidence_high_threshold:
+            raise ValueError("EVIDENCE_LOW_THRESHOLD must be below EVIDENCE_HIGH_THRESHOLD")
+        if self.ingestion_chunk_min_tokens >= self.ingestion_chunk_max_tokens:
+            raise ValueError("INGESTION_CHUNK_MIN_TOKENS must be below INGESTION_CHUNK_MAX_TOKENS")
         allowed = self.allowed_tenants
         if isinstance(allowed, str):
             allowed = [item.strip() for item in allowed.split(",") if item.strip()]
@@ -205,6 +238,8 @@ class Settings(BaseSettings):
             raise ValueError("DEFAULT_TENANT must be included in ALLOWED_TENANTS")
         if self.app_env.lower() != "development" and not self.internal_service_token:
             raise ValueError("INTERNAL_SERVICE_TOKEN is required outside development")
+        if self.local_models_backend not in {"auto", "onnx", "transformers"}:
+            raise ValueError("LOCAL_MODELS_BACKEND must be auto, onnx, or transformers")
         return self
 
 

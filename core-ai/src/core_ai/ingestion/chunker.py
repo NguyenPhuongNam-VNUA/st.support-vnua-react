@@ -1,16 +1,12 @@
-"""Document chunker using sliding window with token overlap for ST-Care.
+"""Heading-aware Vietnamese document chunking with isolated table provenance."""
 
-Specifically designed for Vietnamese academic documents:
-- Target window: 500 to 800 tokens (default target: 650 tokens)
-- Overlap: 100 tokens
-- Preserves paragraph and sentence boundaries
-- Accurately tracks original PDF page numbers for citation linking
-"""
+from __future__ import annotations
 
-from dataclasses import dataclass
+import hashlib
 import logging
 import re
-from typing import List, Optional, Tuple
+from dataclasses import dataclass, field
+from typing import List
 
 from core_ai.ingestion.pdf_parser import ParsedPDF, PDFPage
 
@@ -19,152 +15,203 @@ logger = logging.getLogger("core_ai.ingestion.chunker")
 
 @dataclass
 class DocumentChunk:
-    """Represents a discrete text chunk ready for vector embedding and database insertion."""
+    chunk_index: int
+    page: int
+    tokens: int
+    content: str
+    heading_path: List[str] = field(default_factory=list)
+    content_hash: str = ""
+    kind: str = "text"
 
-    chunk_index: int  # 0-based sequential index
-    page: int  # 1-based source page in PDF
-    tokens: int  # Estimated token count
-    content: str  # Chunk text content
+    def __post_init__(self) -> None:
+        if not self.content_hash:
+            normalized = " ".join(self.content.lower().split())
+            self.content_hash = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
 def estimate_tokens(text: str) -> int:
-    """Estimates token count for Vietnamese/multilingual text.
-
-    Vietnamese words are conservatively estimated at roughly 1.3 subword tokens;
-    this is a local sizing heuristic and does not call the embedding provider.
-    """
     if not text or not text.strip():
         return 0
-    words = text.split()
-    word_count = len(words)
-    # Estimate ~1.3 tokens per word, with a floor based on character length (~4 chars/token)
-    token_est_from_words = int(word_count * 1.3)
-    token_est_from_chars = int(len(text) / 3.8)
-    return max(1, max(token_est_from_words, token_est_from_chars))
+    return max(1, int(len(text.split()) * 1.3), int(len(text) / 3.8))
+
+
+@dataclass
+class _Segment:
+    text: str
+    page: int
+    heading_path: List[str]
+    kind: str = "text"
 
 
 class DocumentChunker:
-    """Splits structured text into semantic chunks with sliding token overlap."""
+    """Split Markdown/PDF text at headings, sentences and table boundaries."""
 
-    # Sentence boundaries regex: periods, question marks, exclamation marks, or double newlines
-    _SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?\n])\s+")
+    _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+    _SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+|\n{2,}")
 
     def __init__(
         self,
-        min_tokens: int = 500,
-        max_tokens: int = 800,
-        target_tokens: int = 650,
-        overlap_tokens: int = 100,
+        min_tokens: int = 300,
+        max_tokens: int = 600,
+        target_tokens: int = 450,
+        overlap_tokens: int = 80,
     ) -> None:
         self.min_tokens = min_tokens
         self.max_tokens = max_tokens
         self.target_tokens = target_tokens
         self.overlap_tokens = overlap_tokens
 
-    def _split_into_sentences(self, text: str) -> List[str]:
-        """Splits a body of text into clean sentence segments."""
-        if not text:
-            return []
-        raw_sentences = self._SENTENCE_BOUNDARY.split(text)
-        sentences: List[str] = []
-        for s in raw_sentences:
-            s_clean = s.strip()
-            if s_clean:
-                sentences.append(s_clean)
-        return sentences
+    def _page_segments(self, page: PDFPage, heading_stack: List[str]) -> List[_Segment]:
+        segments: List[_Segment] = []
+        paragraph: List[str] = []
+        table: List[str] = []
+
+        def flush_paragraph() -> None:
+            if not paragraph:
+                return
+            body = "\n".join(paragraph).strip()
+            paragraph.clear()
+            for sentence in self._SENTENCE_BOUNDARY.split(body):
+                if sentence.strip():
+                    segments.append(
+                        _Segment(sentence.strip(), page.page_number, list(heading_stack))
+                    )
+
+        def flush_table() -> None:
+            if not table:
+                return
+            body = "\n".join(table).strip()
+            table.clear()
+            context = " > ".join(heading_stack)
+            content = f"{context}\n\n{body}" if context else body
+            segments.append(_Segment(content, page.page_number, list(heading_stack), "table"))
+
+        for raw_line in page.text.splitlines():
+            line = raw_line.strip()
+            if not line:
+                flush_paragraph()
+                flush_table()
+                continue
+            heading = self._HEADING.match(line)
+            if heading:
+                flush_paragraph()
+                flush_table()
+                level = len(heading.group(1))
+                title = heading.group(2).strip()
+                del heading_stack[level - 1 :]
+                heading_stack.append(title)
+                continue
+            is_table_line = line.count("|") >= 2 or line.startswith("[Bảng dữ liệu")
+            if is_table_line:
+                flush_paragraph()
+                table.append(line)
+            else:
+                flush_table()
+                paragraph.append(line)
+        flush_paragraph()
+        flush_table()
+        return segments
+
+    def _split_oversized(self, segment: _Segment) -> List[_Segment]:
+        if estimate_tokens(segment.text) <= self.max_tokens:
+            return [segment]
+        words = segment.text.split()
+        approx_words = max(30, int(self.max_tokens / 1.3))
+        overlap_words = max(0, int(self.overlap_tokens / 1.3))
+        step = max(1, approx_words - overlap_words)
+        return [
+            _Segment(
+                " ".join(words[start : start + approx_words]),
+                segment.page,
+                segment.heading_path,
+                segment.kind,
+            )
+            for start in range(0, len(words), step)
+            if words[start : start + approx_words]
+        ]
 
     def chunk_pdf(self, parsed_pdf: ParsedPDF) -> List[DocumentChunk]:
-        """Chunks a ParsedPDF document into page-correlated sliding window chunks."""
-        # Build list of (sentence_text, page_number)
-        annotated_sentences: List[Tuple[str, int]] = []
-
+        heading_stack: List[str] = []
+        raw_segments: List[_Segment] = []
         for page in parsed_pdf.pages:
-            if not page.text.strip():
-                continue
-            sentences = self._split_into_sentences(page.text)
-            for s in sentences:
-                annotated_sentences.append((s, page.page_number))
-
-        if not annotated_sentences:
-            logger.warning("No text sentences extracted from PDF to chunk.")
+            raw_segments.extend(self._page_segments(page, heading_stack))
+        segments = [part for segment in raw_segments for part in self._split_oversized(segment)]
+        if not segments:
             return []
 
         chunks: List[DocumentChunk] = []
-        chunk_index = 0
-        i = 0
-        total_sentences = len(annotated_sentences)
+        current: List[_Segment] = []
+        current_tokens = 0
 
-        while i < total_sentences:
-            current_sentences: List[str] = []
-            current_tokens = 0
-            start_page = annotated_sentences[i][1]
-            start_index = i
-
-            # Accumulate sentences until target or max tokens reached
-            while i < total_sentences:
-                sent_text, sent_page = annotated_sentences[i]
-                sent_tokens = estimate_tokens(sent_text)
-
-                # If adding this sentence exceeds max_tokens and we already have enough tokens
-                if current_tokens + sent_tokens > self.max_tokens and current_tokens >= self.min_tokens:
-                    break
-
-                current_sentences.append(sent_text)
-                current_tokens += sent_tokens
-                i += 1
-
-                # If we've reached our ideal target tokens, stop at this natural sentence boundary
-                if current_tokens >= self.target_tokens:
-                    break
-
-            if not current_sentences:
-                # Fallback: single sentence was longer than max_tokens, include it anyway
-                sent_text, sent_page = annotated_sentences[i]
-                current_sentences.append(sent_text)
-                current_tokens = estimate_tokens(sent_text)
-                i += 1
-
-            chunk_content = " ".join(current_sentences).strip()
+        def flush() -> None:
+            nonlocal current, current_tokens
+            if not current:
+                return
+            content = " ".join(item.text for item in current).strip()
             chunks.append(
                 DocumentChunk(
-                    chunk_index=chunk_index,
-                    page=start_page,
-                    tokens=current_tokens,
-                    content=chunk_content,
+                    chunk_index=len(chunks),
+                    page=current[0].page,
+                    tokens=estimate_tokens(content),
+                    content=content,
+                    heading_path=list(current[0].heading_path),
+                    kind=current[0].kind
+                    if all(x.kind == current[0].kind for x in current)
+                    else "text",
                 )
             )
-            chunk_index += 1
+            previous = current
+            current = []
+            current_tokens = 0
+            if previous[-1].kind == "text":
+                overlap: List[_Segment] = []
+                overlap_size = 0
+                for item in reversed(previous):
+                    if item.heading_path != previous[-1].heading_path:
+                        break
+                    overlap.insert(0, item)
+                    overlap_size += estimate_tokens(item.text)
+                    if overlap_size >= self.overlap_tokens:
+                        break
+                current = overlap
+                current_tokens = overlap_size
 
-            # If we reached the end of all sentences, exit loop
-            if i >= total_sentences:
-                break
+        for segment in segments:
+            tokens = estimate_tokens(segment.text)
+            boundary_changed = bool(
+                current
+                and (
+                    segment.heading_path != current[0].heading_path
+                    or segment.kind != current[0].kind
+                )
+            )
+            if boundary_changed or (current and current_tokens + tokens > self.max_tokens):
+                flush()
+                if current and (
+                    segment.heading_path != current[0].heading_path
+                    or segment.kind != current[0].kind
+                ):
+                    current, current_tokens = [], 0
+            current.append(segment)
+            current_tokens += tokens
+            if segment.kind == "table" or current_tokens >= self.target_tokens:
+                flush()
+        flush()
 
-            # Calculate overlap: slide index backwards by overlap_tokens
-            overlap_accum = 0
-            rewind_steps = 0
-            for j in range(i - 1, start_index, -1):
-                overlap_accum += estimate_tokens(annotated_sentences[j][0])
-                rewind_steps += 1
-                if overlap_accum >= self.overlap_tokens:
-                    break
-
-            # Avoid infinite loop: guarantee that i advances forward by at least 1 sentence
-            if rewind_steps > 0 and (i - rewind_steps) > start_index:
-                i = i - rewind_steps
-
-        logger.info(
-            "Chunked document into %d chunks (avg tokens: %d).",
-            len(chunks),
-            sum(c.tokens for c in chunks) // max(1, len(chunks)),
-        )
+        # Remove an overlap-only duplicate tail.
+        if len(chunks) > 1 and chunks[-1].content_hash == chunks[-2].content_hash:
+            chunks.pop()
+        for index, chunk in enumerate(chunks):
+            chunk.chunk_index = index
+        logger.info("Created %d heading-aware chunks", len(chunks))
         return chunks
 
     def chunk_text(self, text: str, page_number: int = 1) -> List[DocumentChunk]:
-        """Convenience method to chunk raw text with a given page number."""
-        dummy_pdf = ParsedPDF(
-            pages=[PDFPage(page_number=page_number, text=text, char_count=len(text))],
-            total_pages=1,
-            total_chars=len(text),
-            parser_used="direct_text",
+        return self.chunk_pdf(
+            ParsedPDF(
+                pages=[PDFPage(page_number=page_number, text=text, char_count=len(text))],
+                total_pages=1,
+                total_chars=len(text),
+                parser_used="direct_text",
+            )
         )
-        return self.chunk_pdf(dummy_pdf)

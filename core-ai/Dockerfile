@@ -35,7 +35,8 @@ COPY src/ ./src/
 
 # Install pip and wheel tools, then install project dependencies
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install .
+    pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.4,<3.0" && \
+    pip install ".[local-models,onnx-models]"
 
 # ------------------------------------------------------------------------------
 # Stage 2: Minimal Production Runtime
@@ -55,6 +56,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     APP_ENV="production" \
     CORE_AI_HOST="0.0.0.0" \
     CORE_AI_PORT="5001"
+
+ENV TOKENIZERS_PARALLELISM=false \
+    OMP_NUM_THREADS=2
 
 # Install runtime libraries (libpq for asyncpg/PostgreSQL, curl for health check probe)
 RUN apt-get update && apt-get install -y --no-install-recommends \

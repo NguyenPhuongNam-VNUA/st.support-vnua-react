@@ -74,6 +74,10 @@ class PipelineStatusPayload(BaseModel):
         ge=0,
         description="Latency of the finished stage in ms",
     )
+    details: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Safe stage metadata such as rerank strategy or MCP tool name",
+    )
     timestamp: str = Field(default_factory=get_current_iso_timestamp)
 
     @model_validator(mode="after")

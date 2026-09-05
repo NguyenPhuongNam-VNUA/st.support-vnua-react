@@ -10,6 +10,8 @@ Processes PDF documents asynchronously in the background:
 """
 
 import asyncio
+import hashlib
+import json
 import logging
 import time
 from typing import Any, Dict, List, Optional, Union
@@ -22,6 +24,7 @@ from core_ai.data.postgres import get_db_connection, init_db_pool
 from core_ai.data.repositories.document_repo import DocumentRepository
 from core_ai.ingestion.chunker import DocumentChunk, DocumentChunker
 from core_ai.ingestion.pdf_parser import PDFParser
+from core_ai.observability.metrics import record_ingestion
 from core_ai.retrieval.embeddings import GeminiEmbedding2Embeddings
 
 logger = logging.getLogger("core_ai.ingestion.worker")
@@ -41,10 +44,13 @@ class IngestionWorker:
         self.settings = settings or get_settings()
         self.pdf_parser = pdf_parser or PDFParser(max_pages=self.settings.ingestion_max_pdf_pages)
         self.chunker = chunker or DocumentChunker(
-            min_tokens=500,
-            max_tokens=800,
-            target_tokens=650,
-            overlap_tokens=100,
+            min_tokens=self.settings.ingestion_chunk_min_tokens,
+            max_tokens=self.settings.ingestion_chunk_max_tokens,
+            target_tokens=(
+                self.settings.ingestion_chunk_min_tokens + self.settings.ingestion_chunk_max_tokens
+            )
+            // 2,
+            overlap_tokens=80,
         )
         self.embedding_service = embedding_service or GeminiEmbedding2Embeddings(
             settings=self.settings
@@ -86,6 +92,8 @@ class IngestionWorker:
                         raise ValueError("PDF exceeds configured ingestion size limit")
                     chunks.append(chunk)
                 content = b"".join(chunks)
+                if not content.startswith(b"%PDF-"):
+                    raise ValueError("Downloaded content failed PDF magic-byte validation")
             logger.info("Downloaded %d bytes successfully.", len(content))
             return content
 
@@ -122,7 +130,54 @@ class IngestionWorker:
             """
             async with get_db_connection(tenant_id) as conn:
                 result = await conn.execute(query, document_id, stage, progress, tenant_id)
-        return result.endswith(" 1")
+        return str(result).endswith(" 1")
+
+    async def _get_document_state(
+        self, document_id: int, tenant_id: str
+    ) -> Optional[Dict[str, Any]]:
+        await self._ensure_db()
+        async with get_db_connection(tenant_id) as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT id, pipeline_stage, content_sha256, embedding_model, embedding_dimension
+                FROM public.documents
+                WHERE id = $1 AND tenant_id = $2
+                """,
+                document_id,
+                tenant_id,
+            )
+        return dict(row) if row else None
+
+    async def _cached_embeddings(
+        self, content_hashes: List[str], tenant_id: str
+    ) -> Dict[str, List[float]]:
+        """Reuse vectors only from the exact model, dimension, tenant and content hash."""
+        if not content_hashes:
+            return {}
+        async with get_db_connection(tenant_id) as conn:
+            rows = await conn.fetch(
+                """
+                SELECT DISTINCT ON (content_hash) content_hash, embedding::text AS embedding
+                FROM public.document_chunks
+                WHERE tenant_id = $1
+                  AND content_hash = ANY($2::text[])
+                  AND embedding_model = $3
+                  AND embedding_dimension = $4
+                  AND embedding IS NOT NULL
+                ORDER BY content_hash, created_at DESC
+                """,
+                tenant_id,
+                content_hashes,
+                self.settings.embedding_model,
+                self.settings.embedding_dimension,
+            )
+        result: Dict[str, List[float]] = {}
+        for row in rows:
+            raw = str(row["embedding"]).strip("[]")
+            vector = [float(value) for value in raw.split(",") if value]
+            if len(vector) == self.settings.embedding_dimension:
+                result[str(row["content_hash"])] = vector
+        return result
 
     async def upsert_chunks_to_db(
         self,
@@ -136,8 +191,10 @@ class IngestionWorker:
         upsert_query = """
             INSERT INTO public.document_chunks
                 (document_id, tenant_id, chunk_index, page, tokens, content, embedding,
-                 embedding_model, embedding_dimension)
-            SELECT $1, $9, $2, $3, $4, $5, $6::vector, $7, $8
+                 embedding_model, embedding_dimension, content_hash, heading_path,
+                 parser_used, ocr_confidence, knowledge_version)
+            SELECT $1, $9, $2, $3, $4, $5, $6::vector, $7, $8, $10, $11::jsonb,
+                   $12, $13, $14
             WHERE EXISTS (
                 SELECT 1 FROM public.documents WHERE id = $1 AND tenant_id = $9
             )
@@ -148,13 +205,28 @@ class IngestionWorker:
                 content = EXCLUDED.content,
                 embedding = EXCLUDED.embedding,
                 embedding_model = EXCLUDED.embedding_model,
-                embedding_dimension = EXCLUDED.embedding_dimension;
+                embedding_dimension = EXCLUDED.embedding_dimension,
+                content_hash = EXCLUDED.content_hash,
+                heading_path = EXCLUDED.heading_path,
+                parser_used = EXCLUDED.parser_used,
+                ocr_confidence = EXCLUDED.ocr_confidence,
+                knowledge_version = EXCLUDED.knowledge_version;
         """
 
         inserted_count = 0
         async with get_db_connection(tenant_id) as conn:
             # Execute in transaction block
             async with conn.transaction():
+                version = await conn.fetchval(
+                    """
+                    INSERT INTO public.ai_knowledge_versions (tenant_id, version)
+                    VALUES ($1, 1)
+                    ON CONFLICT (tenant_id) DO UPDATE
+                    SET version = public.ai_knowledge_versions.version + 1, updated_at = now()
+                    RETURNING version
+                    """,
+                    tenant_id,
+                )
                 for chunk, emb in zip(chunks, embeddings):
                     emb_str = f"[{','.join(str(round(x, 6)) for x in emb)}]"
                     result = await conn.execute(
@@ -168,9 +240,42 @@ class IngestionWorker:
                         self.settings.embedding_model,
                         self.settings.embedding_dimension,
                         tenant_id,
+                        chunk.content_hash,
+                        json.dumps(chunk.heading_path, ensure_ascii=False),
+                        getattr(self, "_active_parser", "unknown"),
+                        getattr(self, "_active_ocr_confidence", None),
+                        int(version),
                     )
                     if result.endswith(" 1"):
                         inserted_count += 1
+                await conn.execute(
+                    """
+                    DELETE FROM public.document_chunks
+                    WHERE document_id = $1 AND tenant_id = $2
+                      AND NOT (chunk_index = ANY($3::integer[]))
+                    """,
+                    document_id,
+                    tenant_id,
+                    [chunk.chunk_index for chunk in chunks],
+                )
+                await conn.execute(
+                    """
+                    UPDATE public.documents
+                    SET pipeline_stage = 'ready', progress = 100, is_active = true,
+                        content_sha256 = $3, knowledge_version = $4,
+                        ingestion_quality = $5, embedding_model = $6,
+                        embedding_dimension = $7, updated_at = now()
+                    WHERE id = $1 AND tenant_id = $2
+                    """,
+                    document_id,
+                    tenant_id,
+                    getattr(self, "_active_document_hash", None),
+                    int(version),
+                    getattr(self, "_active_quality", 1.0),
+                    self.settings.embedding_model,
+                    self.settings.embedding_dimension,
+                )
+                self._last_knowledge_version = int(version)
 
         if inserted_count != len(chunks):
             raise ValueError("One or more chunks were rejected by tenant isolation")
@@ -211,42 +316,86 @@ class IngestionWorker:
         )
 
         try:
-            # 1. Update status to chunking (10%)
+            previous = await self._get_document_state(doc_id, tenant_id)
+            if previous is None:
+                raise ValueError("Document does not exist in the authenticated tenant")
+
+            # 1. Download and content-address the source.
+            file_bytes = await self.download_file(file_url)
+            document_hash = hashlib.sha256(file_bytes).hexdigest()
+            if (
+                previous.get("pipeline_stage") == "ready"
+                and previous.get("content_sha256") == document_hash
+                and previous.get("embedding_model") == self.settings.embedding_model
+                and previous.get("embedding_dimension") == self.settings.embedding_dimension
+            ):
+                record_ingestion("skipped", "content_hash", time.perf_counter() - start_time)
+                return {
+                    "status": "ready",
+                    "document_id": doc_id,
+                    "job_id": job_id,
+                    "skipped": True,
+                    "reason": "content_hash_unchanged",
+                }
             claimed = await self.update_status(
                 doc_id, stage="chunking", progress=10, tenant_id=tenant_id
             )
             if not claimed:
-                raise ValueError("Document does not exist in the authenticated tenant")
-
-            # 2. Download file via httpx (25%)
-            file_bytes = await self.download_file(file_url)
+                raise ValueError("Document could not be claimed for ingestion")
             await self.update_status(doc_id, stage="chunking", progress=25, tenant_id=tenant_id)
 
             # 3. Parse PDF into pages (40%)
             parsed_pdf = await asyncio.to_thread(self.pdf_parser.parse, file_bytes)
             if not parsed_pdf.pages or parsed_pdf.total_chars == 0:
-                raise ValueError(
-                    f"PDF document {doc_id} contains no extractable text or is empty."
+                raise ValueError(f"PDF document {doc_id} contains no extractable text or is empty.")
+            quality = parsed_pdf.ocr_confidence if parsed_pdf.ocr_confidence is not None else 1.0
+            if (
+                parsed_pdf.parser_used == "tesseract-ocr"
+                and quality < self.settings.ingestion_ocr_min_confidence
+            ):
+                await self.update_status(
+                    doc_id, stage="needs_review", progress=50, tenant_id=tenant_id
                 )
+                record_ingestion(
+                    "needs_review",
+                    parsed_pdf.parser_used,
+                    time.perf_counter() - start_time,
+                )
+                return {
+                    "status": "needs_review",
+                    "document_id": doc_id,
+                    "job_id": job_id,
+                    "ocr_confidence": round(quality, 4),
+                }
             await self.update_status(doc_id, stage="chunking", progress=40, tenant_id=tenant_id)
 
             # 4. Chunk with sliding window (60%)
             chunks = self.chunker.chunk_pdf(parsed_pdf)
             if not chunks:
-                raise ValueError(
-                    f"Chunker produced 0 chunks for document {doc_id}."
-                )
+                raise ValueError(f"Chunker produced 0 chunks for document {doc_id}.")
             await self.update_status(doc_id, stage="embedding", progress=60, tenant_id=tenant_id)
 
             # 5. Generate embeddings with Gemini Embedding 2 (85%)
-            chunk_texts = [c.content for c in chunks]
+            cached = await self._cached_embeddings(
+                [chunk.content_hash for chunk in chunks], tenant_id
+            )
+            missing_by_hash = {
+                chunk.content_hash: chunk.content
+                for chunk in chunks
+                if chunk.content_hash not in cached
+            }
             expected_dimension = self.embedding_service.dimension
             logger.info(
                 "Generating %dd Gemini embeddings for %d chunks...",
                 expected_dimension,
-                len(chunk_texts),
+                len(missing_by_hash),
             )
-            embeddings = await self.embedding_service.embed_documents(chunk_texts)
+            if missing_by_hash:
+                generated = await self.embedding_service.embed_documents(
+                    list(missing_by_hash.values())
+                )
+                cached.update(dict(zip(missing_by_hash.keys(), generated)))
+            embeddings = [cached[chunk.content_hash] for chunk in chunks]
 
             # Validate dimensions
             for idx, emb in enumerate(embeddings):
@@ -258,18 +407,14 @@ class IngestionWorker:
             await self.update_status(doc_id, stage="embedding", progress=85, tenant_id=tenant_id)
 
             # 6. Upsert chunks into PostgreSQL table
+            self._active_document_hash = document_hash
+            self._active_parser = parsed_pdf.parser_used
+            self._active_ocr_confidence = parsed_pdf.ocr_confidence
+            self._active_quality = quality
             await self.upsert_chunks_to_db(doc_id, chunks, embeddings, tenant_id=tenant_id)
 
-            # 7. Final status update: ready, progress 100, is_active = true
-            await self.update_status(
-                doc_id,
-                stage="ready",
-                progress=100,
-                is_active=True,
-                tenant_id=tenant_id,
-            )
-
             duration_s = time.perf_counter() - start_time
+            record_ingestion("ready", parsed_pdf.parser_used, duration_s)
             logger.info(
                 "Ingestion job [%s] completed successfully in %.2fs! Chunks: %d, Pages: %d.",
                 job_id,
@@ -287,9 +432,16 @@ class IngestionWorker:
                 "total_characters": parsed_pdf.total_chars,
                 "parser_used": parsed_pdf.parser_used,
                 "duration_seconds": round(duration_s, 2),
+                "knowledge_version": getattr(self, "_last_knowledge_version", None),
+                "reused_embeddings": len(chunks) - len(missing_by_hash),
             }
 
         except Exception as exc:
+            record_ingestion(
+                "error",
+                getattr(self, "_active_parser", "unknown"),
+                time.perf_counter() - start_time,
+            )
             logger.error(
                 "Ingestion job [%s] failed for document_id=%d: %s",
                 job_id,

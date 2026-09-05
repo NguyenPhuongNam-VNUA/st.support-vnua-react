@@ -38,15 +38,17 @@ from core_ai.config import get_settings
 from core_ai.dependencies import get_component, register_component
 from core_ai.graph.builder import build_orchestration_graph
 from core_ai.graph.state import GraphState, create_initial_state
-from core_ai.observability.metrics import record_time_to_safe_answer, record_time_to_status
+from core_ai.observability.metrics import record_confidence, record_time_to_safe_answer, record_time_to_status
 
 logger = logging.getLogger("core_ai.graph.runner")
 
 STAGE_LABELS_VI = {
     "input_guardrail": ("Đang kiểm tra câu hỏi", 15),
     "cache_check": ("Đang tra cứu bộ nhớ đệm", 30),
-    "semantic_cache": ("Đang tra cứu bộ nhớ đệm", 30),
-    "retrieval": ("Đang tìm kiếm tài liệu", 50),
+    "query_prep": ("Đang chuẩn bị truy vấn", 38),
+    "topic_scoring": ("Đang xác định chủ đề", 44),
+    "semantic_cache": ("Đang tìm câu trả lời tương tự", 48),
+    "retrieval": ("Đang tìm kiếm tài liệu", 58),
     "evidence_eval": ("Đang đánh giá nguồn tri thức", 65),
     "tool_node": ("Đang tra cứu công cụ hệ thống", 75),
     "generation": ("Đang tổng hợp câu trả lời", 85),
@@ -87,11 +89,13 @@ class GraphRunner:
             tenant_id=request.tenant_id,
             user_id=request.user_id,
             conversation_id=request.conversation_id,
+            history=[item.model_dump() for item in request.history],
             locale=request.locale,
             channel=request.channel,
             tool_name_requested=request.requested_tool,
             tool_args_requested=request.tool_arguments,
             tool_approved=request.tool_approved,
+            pii_confirmed=request.pii_confirmed,
         )
 
         final_state: GraphState = await asyncio.wait_for(
@@ -140,6 +144,8 @@ class GraphRunner:
                 status="accepted",
             )
             yield SSEEvent(event="request.accepted", data=accepted).to_dict()
+            record_time_to_status(tenant_id, time.perf_counter() - start_time)
+            first_status_recorded = True
 
             # Initialize State
             initial_state = create_initial_state(
@@ -148,11 +154,13 @@ class GraphRunner:
                 tenant_id=request.tenant_id,
                 user_id=request.user_id,
                 conversation_id=conv_id,
+                history=[item.model_dump() for item in request.history],
                 locale=request.locale,
                 channel=request.channel,
                 tool_name_requested=request.requested_tool,
                 tool_args_requested=request.tool_arguments,
                 tool_approved=request.tool_approved,
+                pii_confirmed=request.pii_confirmed,
             )
 
             current_state = initial_state
@@ -173,6 +181,17 @@ class GraphRunner:
                     label_info = STAGE_LABELS_VI.get(node_name)
                     if label_info:
                         label, progress = label_info
+                        safe_details: Dict[str, Any] = {}
+                        traces = current_state.get("execution_trace", [])
+                        if traces:
+                            latest = traces[-1]
+                            raw_details = latest.details if hasattr(latest, "details") else latest.get("details", {})
+                            if isinstance(raw_details, dict):
+                                for key in ("tool_name", "success", "rerank_strategy", "snippets_count", "detector"):
+                                    if key in raw_details:
+                                        safe_details[key] = raw_details[key]
+                        if node_name in ("tool_node", "tool_execution") and safe_details.get("tool_name"):
+                            label = f"Đã tra cứu công cụ {safe_details['tool_name']}"
                         status_event = PipelineStatusPayload(
                             request_id=req_id,
                             stage=node_name,  # type: ignore[arg-type]
@@ -180,6 +199,7 @@ class GraphRunner:
                             message=label,
                             message_vi=label,
                             progress_percent=progress,
+                            details=safe_details or None,
                         )
                         if not first_status_recorded:
                             record_time_to_status(tenant_id, time.perf_counter() - start_time)
@@ -234,6 +254,11 @@ class GraphRunner:
                 tenant_id,
                 completed_payload.status.value,
                 time.perf_counter() - start_time,
+            )
+            record_confidence(
+                completed_payload.status.value,
+                str(current_state.get("topic") or "unknown"),
+                completed_payload.confidence,
             )
             yield SSEEvent(event="answer.completed", data=completed_payload).to_dict()
 

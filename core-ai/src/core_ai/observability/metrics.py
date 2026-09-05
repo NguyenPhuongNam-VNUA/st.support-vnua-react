@@ -10,6 +10,7 @@ Collects real-time operational telemetry across all pipeline stages:
 
 import logging
 from typing import Dict, Optional
+
 from fastapi import APIRouter, Response
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
@@ -149,9 +150,93 @@ RETRIEVAL_NO_EVIDENCE_RATIO = Gauge(
     registry=metrics_registry,
 )
 
+LOCAL_MODEL_READY = Gauge(
+    "core_ai_local_model_ready",
+    "Whether an optional local model is loaded and ready (1/0)",
+    ["model"],
+    registry=metrics_registry,
+)
+
+LOCAL_MODEL_INFERENCE_SECONDS = Histogram(
+    "core_ai_local_model_inference_seconds",
+    "Local model inference latency and fallback outcome",
+    ["model", "outcome"],
+    buckets=[0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0],
+    registry=metrics_registry,
+)
+
+CONFIDENCE_DISTRIBUTION = Histogram(
+    "core_ai_confidence_score",
+    "Distribution of final grounded confidence scores",
+    ["status", "topic"],
+    buckets=[0.0, 0.25, 0.4, 0.58, 0.7, 0.78, 0.9, 1.0],
+    registry=metrics_registry,
+)
+
+TOPIC_ROUTES_TOTAL = Counter(
+    "core_ai_topic_routes_total",
+    "Deterministic topic routing outcomes",
+    ["topic", "route"],
+    registry=metrics_registry,
+)
+
+CACHE_LEVEL_TOTAL = Counter(
+    "core_ai_cache_level_total",
+    "Cache outcomes split by exact and semantic levels",
+    ["level", "result"],
+    registry=metrics_registry,
+)
+
+GUARDRAIL_OUTCOMES_TOTAL = Counter(
+    "core_ai_guardrail_outcomes_total",
+    "Input/output guardrail outcomes without payload content",
+    ["stage", "detector", "outcome"],
+    registry=metrics_registry,
+)
+
+INGESTION_DURATION_SECONDS = Histogram(
+    "core_ai_ingestion_duration_seconds",
+    "Document ingestion duration by terminal outcome",
+    ["outcome", "parser"],
+    buckets=[1, 5, 15, 30, 60, 120, 300, 600],
+    registry=metrics_registry,
+)
+
 # Internal tracking for cache ratio computation
 _cache_stats: Dict[str, Dict[str, int]] = {}
 _retrieval_stats: Dict[str, Dict[str, int]] = {}
+
+
+def record_local_model_ready(model: str, ready: bool) -> None:
+    LOCAL_MODEL_READY.labels(model=model).set(1 if ready else 0)
+
+
+def record_local_model_inference(model: str, outcome: str, duration_seconds: float) -> None:
+    LOCAL_MODEL_INFERENCE_SECONDS.labels(model=model, outcome=outcome).observe(duration_seconds)
+
+
+def record_confidence(status: str, topic: str, score: float) -> None:
+    CONFIDENCE_DISTRIBUTION.labels(status=status, topic=topic or "unknown").observe(
+        max(0.0, min(1.0, score))
+    )
+
+
+def record_topic_route(topic: str, route: str) -> None:
+    TOPIC_ROUTES_TOTAL.labels(topic=topic or "out_of_domain", route=route).inc()
+
+
+def record_cache_level(level: str, hit: bool) -> None:
+    CACHE_LEVEL_TOTAL.labels(level=level, result="hit" if hit else "miss").inc()
+
+
+def record_guardrail(stage: str, detector: str, outcome: str) -> None:
+    GUARDRAIL_OUTCOMES_TOTAL.labels(stage=stage, detector=detector, outcome=outcome).inc()
+
+
+def record_ingestion(outcome: str, parser: str, duration_seconds: float) -> None:
+    INGESTION_DURATION_SECONDS.labels(outcome=outcome, parser=parser or "unknown").observe(
+        max(0.0, duration_seconds)
+    )
 
 
 def record_request_duration(
@@ -276,9 +361,7 @@ def record_time_to_status(tenant_id: str, duration_seconds: float) -> None:
     TIME_TO_STATUS_SECONDS.labels(tenant_id=tenant_id).observe(max(0.0, duration_seconds))
 
 
-def record_time_to_safe_answer(
-    tenant_id: str, outcome: str, duration_seconds: float
-) -> None:
+def record_time_to_safe_answer(tenant_id: str, outcome: str, duration_seconds: float) -> None:
     TIME_TO_SAFE_ANSWER_SECONDS.labels(
         tenant_id=tenant_id,
         outcome=outcome,

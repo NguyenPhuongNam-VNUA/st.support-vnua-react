@@ -26,20 +26,38 @@ class GraphState(TypedDict, total=False):
     tenant_id: str
     user_id: Optional[Union[int, str]]
     conversation_id: Optional[Union[int, str]]
+    history: List[Dict[str, str]]
     message: str  # Original normalized student query
+    normalized_query: str
+    query_embedding: List[float]
+    query_terms: List[str]
     locale: str
     channel: str
+
+    # 2. Query understanding (deterministic; never chain-of-thought)
+    topic: Optional[str]
+    topic_score: float
+    slot_coverage: float
+    clarity_score: float
+    context_fit: float
+    is_in_domain: bool
+    clarification_question: Optional[str]
+    topic_precheck_out: bool
 
     # 2. Input Guardrail State
     is_blocked: bool
     block_reason: Optional[str]
     block_category: Optional[str]
+    redaction_required: bool
+    pii_confirmed: bool
+    sanitized_preview: Optional[str]
 
     # 3. Semantic Cache State
     cache_hit: bool
     cached_answer: Optional[str]
     cached_citations: List[Citation]
     cached_confidence: Optional[float]
+    cache_level: Optional[str]
     cache_lock_acquired: bool
     cache_lock_token: Optional[str]
 
@@ -50,7 +68,9 @@ class GraphState(TypedDict, total=False):
     citations: List[Citation]
     evidence_score: float
     evidence_threshold: float
+    evidence_band: str
     is_sufficient_evidence: bool
+    rerank_strategy: str
 
     # 5. MCP Tool Execution State
     tool_calls_made: int
@@ -89,6 +109,7 @@ def create_initial_state(
     tenant_id: str = "vnua",
     user_id: Optional[Union[int, str]] = None,
     conversation_id: Optional[Union[int, str]] = None,
+    history: Optional[List[Dict[str, str]]] = None,
     locale: str = "vi-VN",
     channel: str = "web",
     evidence_threshold: float = 0.60,
@@ -96,6 +117,7 @@ def create_initial_state(
     tool_name_requested: Optional[str] = None,
     tool_args_requested: Optional[Dict[str, Any]] = None,
     tool_approved: bool = False,
+    pii_confirmed: bool = False,
 ) -> GraphState:
     """Instantiate a clean GraphState dictionary with secure defaults."""
     return {
@@ -103,16 +125,32 @@ def create_initial_state(
         "tenant_id": tenant_id or "vnua",
         "user_id": user_id,
         "conversation_id": conversation_id,
+        "history": history or [],
         "message": message.strip(),
+        "normalized_query": message.strip(),
+        "query_embedding": [],
+        "query_terms": [],
         "locale": locale or "vi-VN",
         "channel": channel or "web",
+        "topic": None,
+        "topic_score": 0.0,
+        "slot_coverage": 0.0,
+        "clarity_score": 0.0,
+        "context_fit": 0.0,
+        "is_in_domain": True,
+        "clarification_question": None,
+        "topic_precheck_out": False,
         "is_blocked": False,
         "block_reason": None,
         "block_category": None,
+        "redaction_required": False,
+        "pii_confirmed": pii_confirmed,
+        "sanitized_preview": None,
         "cache_hit": False,
         "cached_answer": None,
         "cached_citations": [],
         "cached_confidence": None,
+        "cache_level": None,
         "cache_lock_acquired": False,
         "cache_lock_token": None,
         "query_variants": [message.strip()],
@@ -121,7 +159,9 @@ def create_initial_state(
         "citations": [],
         "evidence_score": 0.0,
         "evidence_threshold": evidence_threshold,
+        "evidence_band": "low",
         "is_sufficient_evidence": False,
+        "rerank_strategy": "none",
         "tool_calls_made": 0,
         "tool_results": [],
         "tool_name_requested": tool_name_requested,
@@ -181,9 +221,7 @@ def add_execution_trace(
             "phone",
             "cccd",
         }
-        safe_details = {
-            k: v for k, v in details.items() if k.lower() not in forbidden_keys
-        }
+        safe_details = {k: v for k, v in details.items() if k.lower() not in forbidden_keys}
 
     trace_step = ExecutionTraceStep(
         step=step,

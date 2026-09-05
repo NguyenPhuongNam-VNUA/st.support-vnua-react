@@ -51,6 +51,8 @@ services:
     restart: unless-stopped
     ports:
       - "5001:5001"  # Accessible to Node.js backend / BFF
+    volumes:
+      - ./models:/app/models:ro
     environment:
       # Application Environment
       APP_ENV: ${APP_ENV:-production}
@@ -80,10 +82,25 @@ services:
       EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
       EMBEDDING_TIMEOUT_SECONDS: ${EMBEDDING_TIMEOUT_SECONDS:-20.0}
       EMBEDDING_MAX_CONCURRENCY: ${EMBEDDING_MAX_CONCURRENCY:-5}
-      RERANKER_TIMEOUT_SECONDS: ${RERANKER_TIMEOUT_SECONDS:-0.25}
+      RERANKER_TIMEOUT_SECONDS: ${RERANKER_TIMEOUT_SECONDS:-1.5}
+      RETRIEVAL_TOP_K: ${RETRIEVAL_TOP_K:-3}
+      TOPIC_IN_DOMAIN_THRESHOLD: ${TOPIC_IN_DOMAIN_THRESHOLD:-0.38}
+      TOPIC_CLARIFY_THRESHOLD: ${TOPIC_CLARIFY_THRESHOLD:-0.52}
+      EVIDENCE_LOW_THRESHOLD: ${EVIDENCE_LOW_THRESHOLD:-0.58}
+      EVIDENCE_HIGH_THRESHOLD: ${EVIDENCE_HIGH_THRESHOLD:-0.78}
+      LOCAL_MODELS_ENABLED: ${LOCAL_MODELS_ENABLED:-true}
+      LOCAL_MODELS_DEVICE: ${LOCAL_MODELS_DEVICE:-cpu}
+      LOCAL_MODELS_BACKEND: ${LOCAL_MODELS_BACKEND:-auto}
+      PROMPT_GUARD_MODEL_PATH: ${PROMPT_GUARD_MODEL_PATH:-./models/Llama-Prompt-Guard-2-86M}
+      PROMPT_GUARD_THRESHOLD: ${PROMPT_GUARD_THRESHOLD:-0.80}
+      PROMPT_GUARD_TIMEOUT_SECONDS: ${PROMPT_GUARD_TIMEOUT_SECONDS:-0.8}
+      BGE_RERANKER_MODEL_PATH: ${BGE_RERANKER_MODEL_PATH:-./models/bge-reranker-v2-m3}
       INGESTION_ALLOWED_HOSTS: ${INGESTION_ALLOWED_HOSTS:?INGESTION_ALLOWED_HOSTS must be set}
       INGESTION_MAX_FILE_BYTES: ${INGESTION_MAX_FILE_BYTES:-26214400}
       INGESTION_MAX_PDF_PAGES: ${INGESTION_MAX_PDF_PAGES:-200}
+      INGESTION_OCR_MIN_CONFIDENCE: ${INGESTION_OCR_MIN_CONFIDENCE:-0.55}
+      INGESTION_CHUNK_MIN_TOKENS: ${INGESTION_CHUNK_MIN_TOKENS:-300}
+      INGESTION_CHUNK_MAX_TOKENS: ${INGESTION_CHUNK_MAX_TOKENS:-600}
 
       # Database & Supavisor Connection Pooler
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@host.docker.internal:6543/postgres}
@@ -97,23 +114,28 @@ services:
       REDIS_MAX_CONNECTIONS: 30
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
       IDEMPOTENCY_TTL_SECONDS: ${IDEMPOTENCY_TTL_SECONDS:-600}
+      SEMANTIC_CACHE_SIMILARITY_THRESHOLD: ${SEMANTIC_CACHE_SIMILARITY_THRESHOLD:-0.93}
+      SEMANTIC_CACHE_MAX_CANDIDATES: ${SEMANTIC_CACHE_MAX_CANDIDATES:-200}
+      KNOWLEDGE_VERSION: ${KNOWLEDGE_VERSION:-v1}
 
       # MCP Gateway
       MCP_TRANSPORT: ${MCP_TRANSPORT:-streamable-http}
       MCP_TOOL_TIMEOUT_SECONDS: ${MCP_TOOL_TIMEOUT_SECONDS:-3.0}
       MCP_MAX_RESULT_BYTES: ${MCP_MAX_RESULT_BYTES:-65536}
       MCP_ALLOWED_TOOLS: "search_knowledge,lookup_schedule,check_tuition,get_regulations,create_support_case"
-      BUSINESS_API_BASE_URL: ${BUSINESS_API_BASE_URL:-}
+      BUSINESS_API_BASE_URL: ${BUSINESS_API_BASE_URL:-http://host.docker.internal:3000/api}
       BUSINESS_API_TOKEN: ${BUSINESS_API_TOKEN:-}
       BUSINESS_API_TIMEOUT_SECONDS: ${BUSINESS_API_TIMEOUT_SECONDS:-2.5}
 
       # Observability
       OTEL_SERVICE_NAME: "st-care-core-ai"
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
       LOG_RAW_PROMPTS: "false"
     depends_on:
       redis:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     networks:
       - core_ai_internal_net
     healthcheck:
@@ -137,11 +159,48 @@ services:
       - "9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     networks:
       - core_ai_internal_net
     depends_on:
       - core-ai
+      - otel-collector
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.108.0
+    container_name: stcare-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./monitoring/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    expose:
+      - "4317"
+      - "4318"
+      - "8889"
+    networks:
+      - core_ai_internal_net
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: stcare-grafana
+    profiles:
+      - monitoring
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - core_ai_internal_net
+    depends_on:
+      - prometheus
 
 # ------------------------------------------------------------------------------
 # Networks & Storage Volumes
@@ -154,4 +213,6 @@ volumes:
   redis_data:
     driver: local
   prometheus_data:
+    driver: local
+  grafana_data:
     driver: local

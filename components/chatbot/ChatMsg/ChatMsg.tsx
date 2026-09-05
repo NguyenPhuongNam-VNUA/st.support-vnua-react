@@ -27,15 +27,29 @@ export interface ChatTraceStep {
   details?: Record<string, unknown> | null;
 }
 
+export interface ChatFallback {
+  reason: string;
+  fallback_strategy: string;
+  contact_channel?: string | null;
+  ticket_id?: string | null;
+  redacted_query?: string | null;
+}
+
 interface ChatMsgProps {
   message: string;
   timestamp?: string;
   citations?: ChatCitation[];
   trace?: ChatTraceStep[];
   isStreaming?: boolean;
+  fallback?: ChatFallback | null;
+  onRequestHuman?: () => void;
+  onConfirmRedaction?: () => void;
+  status?: string;
+  confidence?: number;
 }
 
 const STEP_LABELS: Record<string, string> = {
+  accepted: 'Đã tiếp nhận câu hỏi',
   input_guardrail: 'Kiểm tra an toàn',
   cache_check: 'Tra bộ nhớ',
   semantic_cache: 'Tra bộ nhớ',
@@ -48,7 +62,7 @@ const STEP_LABELS: Record<string, string> = {
   output_guardrail: 'Kiểm chứng câu trả lời',
 };
 
-export default function ChatMsg({ message, timestamp, citations = [], trace = [], isStreaming }: ChatMsgProps) {
+export default function ChatMsg({ message, timestamp, citations = [], trace = [], isStreaming, fallback, onRequestHuman, onConfirmRedaction, status, confidence }: ChatMsgProps) {
   const [copied, setCopied] = useState(false);
   const [showTrace, setShowTrace] = useState(Boolean(isStreaming));
   const handleCopy = async () => {
@@ -68,6 +82,16 @@ export default function ChatMsg({ message, timestamp, citations = [], trace = []
           <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>
             {timestamp || (isStreaming ? 'Đang xử lý' : 'Vừa xong')}
           </Typography>
+          {status && (
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${status === 'answered' ? 'bg-emerald-100 text-emerald-800' : status === 'escalated' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}`}>
+              {status === 'answered' ? 'Đã kiểm chứng' : status === 'escalated' ? 'Đã chuyển cán bộ' : status === 'clarified' ? 'Cần bổ sung' : status === 'redirected' ? 'Ngoài phạm vi' : 'Cần kiểm tra thêm'}
+            </span>
+          )}
+          {confidence != null && (
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+              {confidence >= 0.78 ? 'Tin cậy cao' : confidence >= 0.58 ? 'Tin cậy vừa' : 'Tin cậy thấp'}
+            </span>
+          )}
         </Box>
 
         <Box sx={{ position: 'relative', px: 2.2, py: 1.6, borderRadius: '4px 20px 20px 20px', background: 'rgba(255,255,255,.94)', border: '1px solid rgba(226,232,240,.8)', boxShadow: '0 4px 20px -4px rgba(0,0,0,.06)', color: '#1e293b', fontSize: '.925rem', lineHeight: 1.65 }}>
@@ -130,6 +154,25 @@ export default function ChatMsg({ message, timestamp, citations = [], trace = []
                 ))}
               </div>
             </Box>
+          )}
+
+          {fallback && (fallback.contact_channel || fallback.ticket_id) && (
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              <strong>Hỗ trợ từ cán bộ</strong>
+              {fallback.ticket_id && <span> · Mã phiếu: {fallback.ticket_id}</span>}
+              {fallback.contact_channel && <p className="mt-1">{fallback.contact_channel}</p>}
+              {onRequestHuman && !fallback.ticket_id && (
+                <button onClick={onRequestHuman} className="mt-2 rounded-lg bg-amber-900 px-2.5 py-1.5 font-semibold text-white hover:bg-amber-800">
+                  Chuyển câu hỏi tới cán bộ
+                </button>
+              )}
+            </div>
+          )}
+
+          {fallback?.redacted_query && onConfirmRedaction && (
+            <button onClick={onConfirmRedaction} className="mt-3 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800">
+              Xác nhận dùng câu hỏi đã ẩn thông tin
+            </button>
           )}
         </Box>
       </Box>

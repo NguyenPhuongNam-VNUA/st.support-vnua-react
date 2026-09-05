@@ -12,8 +12,8 @@ from core_ai.mcp.tools.business_api import call_business_api
 class LookupScheduleInput(BaseModel):
     student_id: str = Field(..., min_length=1)
     semester: Optional[str] = None
-    week: Optional[int] = Field(default=None, ge=1, le=25)
-    day_of_week: Optional[str] = None
+    week: Optional[int] = Field(default=None, ge=1, le=53)
+    day_of_week: Optional[int] = Field(default=None, ge=1, le=7)
 
 
 TOOL_DEFINITION = ToolDefinition(
@@ -25,8 +25,8 @@ TOOL_DEFINITION = ToolDefinition(
         "properties": {
             "student_id": {"type": "string"},
             "semester": {"type": "string"},
-            "week": {"type": "integer", "minimum": 1, "maximum": 25},
-            "day_of_week": {"type": "string"},
+            "week": {"type": "integer", "minimum": 1, "maximum": 53},
+            "day_of_week": {"type": "integer", "minimum": 1, "maximum": 7},
         },
         "required": ["student_id"],
         "additionalProperties": False,

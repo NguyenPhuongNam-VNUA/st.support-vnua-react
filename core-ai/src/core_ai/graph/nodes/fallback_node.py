@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
 from core_ai.contracts.chat import FallbackInfo, RouteStatus
 from core_ai.graph.state import GraphState, add_execution_trace
@@ -34,12 +33,20 @@ async def fallback_node(state: GraphState) -> GraphState:
     query = state.get("message", "")
 
     # 1. Guardrail Blocked (Prompt injection, PII, oversize)
-    if state.get("is_blocked") or reason in ("guardrail_blocked", "prompt_injection_detected", "pii_detected"):
+    if state.get("is_blocked") or reason in (
+        "guardrail_blocked",
+        "prompt_injection_detected",
+        "pii_detected",
+    ):
         state["status"] = RouteStatus.BLOCKED
-        block_msg = state.get("block_reason") or "Yêu cầu không thể xử lý do vi phạm chính sách an toàn thông tin."
+        block_msg = (
+            state.get("block_reason")
+            or "Yêu cầu không thể xử lý do vi phạm chính sách an toàn thông tin."
+        )
         answer = (
             f"Thông báo từ hệ thống trợ lý ST-Care VNUA:\n{block_msg}\n\n"
-            "Vui lòng đặt câu hỏi liên quan đến chương trình học tập, học phí hoặc quy chế của Học viện."
+            "Vui lòng đặt câu hỏi liên quan đến chương trình học tập, học phí "
+            "hoặc quy chế của Học viện."
         )
         if not fb_info:
             state["fallback"] = FallbackInfo(
@@ -49,12 +56,29 @@ async def fallback_node(state: GraphState) -> GraphState:
                 contact_channel=VNUA_STAFF_CONTACT,
             )
 
+    elif reason == "redaction_confirmation_required":
+        state["status"] = RouteStatus.CLARIFIED
+        preview = state.get("sanitized_preview") or "[NỘI DUNG ĐÃ ĐƯỢC ẨN]"
+        answer = (
+            "Mình đã phát hiện và che thông tin cá nhân trong câu hỏi. "
+            "Nếu nội dung dưới đây vẫn đúng ý bạn, hãy xác nhận để tiếp tục:\n\n"
+            f"> {preview}"
+        )
+        state["fallback"] = FallbackInfo(
+            reason="redaction_confirmation_required",
+            original_route="input_guardrail",
+            fallback_strategy="redact_confirm",
+            redacted_query=preview,
+        )
+
     # 2. Call Budget Ceiling Exceeded
     elif reason == "budget_exceeded":
         state["status"] = RouteStatus.DEGRADED
         answer = (
-            "Hệ thống trợ lý ST-Care VNUA hiện đang tiếp nhận lượng lớn yêu cầu và đã đạt ngưỡng xử lý cho phiên này. "
-            "Để được hỗ trợ nhanh nhất, sinh viên vui lòng tra cứu trực tiếp tại cổng đào tạo hoặc liên hệ bộ phận hỗ trợ:\n\n"
+            "Hệ thống trợ lý ST-Care VNUA hiện đang tiếp nhận lượng lớn yêu cầu "
+            "và đã đạt ngưỡng xử lý cho phiên này. "
+            "Để được hỗ trợ nhanh nhất, sinh viên vui lòng tra cứu trực tiếp tại "
+            "cổng đào tạo hoặc liên hệ bộ phận hỗ trợ:\n\n"
             f"{VNUA_STAFF_CONTACT}"
         )
         if not fb_info:
@@ -74,8 +98,25 @@ async def fallback_node(state: GraphState) -> GraphState:
             f"{VNUA_STAFF_CONTACT}"
         )
 
+    elif reason == "out_of_domain" or state.get("topic_precheck_out", False):
+        state["status"] = RouteStatus.REDIRECTED
+        answer = (
+            "Mình phù hợp nhất với các câu hỏi về học tập, học phí, lịch học, tuyển sinh "
+            "và quy chế của Học viện. Bạn thử đặt lại câu hỏi theo một trong các chủ đề đó nhé."
+        )
+
+    elif reason == "clarification_required":
+        state["status"] = RouteStatus.CLARIFIED
+        answer = (
+            state.get("clarification_question")
+            or "Bạn vui lòng bổ sung thêm thông tin để mình tra cứu chính xác."
+        )
+
     # 4. Weak / Insufficient Grounding Evidence (Clarify / HITL)
-    elif not state.get("is_sufficient_evidence", True) or reason in ("low_evidence_confidence", "insufficient_evidence"):
+    elif not state.get("is_sufficient_evidence", True) or reason in (
+        "low_evidence_confidence",
+        "insufficient_evidence",
+    ):
         state["status"] = RouteStatus.CLARIFIED
         answer = (
             f"Trợ lý ST-Care chưa tìm thấy tài liệu quy chế cụ thể về yêu cầu: '{query}'.\n\n"
@@ -108,7 +149,11 @@ async def fallback_node(state: GraphState) -> GraphState:
             )
 
     state["answer"] = answer
-    state["confidence"] = 0.50
+    state["confidence"] = (
+        0.0
+        if state["status"] in (RouteStatus.BLOCKED, RouteStatus.REDIRECTED)
+        else min(0.5, float(state.get("evidence_score", 0.5)))
+    )
     fallback = state.get("fallback")
     record_fallback(
         reason=fallback.reason if fallback else reason,
