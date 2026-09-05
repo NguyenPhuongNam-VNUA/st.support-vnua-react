@@ -2,7 +2,7 @@
   "::1": {
     "session_key": "::1",
     "created_at": 1788578112.293518,
-    "last_accessed_at": 1788588835.5894861,
+    "last_accessed_at": 1788591405.1798244,
     "profile": {
       "cohort_k": "K68"
     },
@@ -15,53 +15,53 @@
     "turns": [
       {
         "role": "user",
-        "content": "hi",
-        "timestamp": 1788588793.8932388
+        "content": "Cho tôi biết thông tin chỉ tiêu và các phương thức tuyển sinh năm 2025 của Học viện Nông nghiệp Việt Nam.",
+        "timestamp": 1788589782.092898
       },
       {
         "role": "assistant",
-        "content": "Chào bạn! 😊 Có điều gì mình có thể giúp bạn hôm nay không? Nếu bạn có câu hỏi nào về ký túc xá, học phí, học bổng hay bất kỳ vấn đề gì liên quan đến học tập, cứ thoải mái hỏi nhé! 🌾✨",
-        "timestamp": 1788588793.8932388
+        "content": "Mình chưa có thông tin chính xác về chỉ tiêu và các phương thức tuyển sinh năm 2025 của Học viện Nông nghiệp Việt Nam. Tuy nhiên, có thể bạn đang quan tâm đến các hình thức như xét tuyển, thi tuyển hoặc kết hợp. Bạn có muốn biết thêm về một phương thức cụ thể nào không, hoặc có câu hỏi khác liên quan đến tuyển sinh không? Mình sẽ cố gắng hỗ trợ bạn tốt nhất có thể! 😊🌾✨",
+        "timestamp": 1788589782.092898
       },
       {
         "role": "user",
-        "content": "mình là trọng yêu",
-        "timestamp": 1788588801.9386663
+        "content": "s",
+        "timestamp": 1788589804.1235926
       },
       {
         "role": "assistant",
-        "content": "Chào Trọng yêu! 😊 Rất vui được trò chuyện với bạn! Có điều gì bạn muốn hỏi hoặc chia sẻ không? Nếu bạn cần thông tin về ký túc xá, đăng ký tín chỉ, học phí hay học bổng, mình sẵn sàng hỗ trợ nhé! 🌾✨",
-        "timestamp": 1788588801.9386663
+        "content": "Yêu cầu chưa phù hợp do phát hiện chỉ thị vượt quyền đã bị làm nhiễu.. Bạn đặt lại câu hỏi liên quan đến học tập nhé!",
+        "timestamp": 1788589804.1235926
       },
       {
         "role": "user",
-        "content": "mình tên là gì ý",
-        "timestamp": 1788588812.5011797
+        "content": "ss",
+        "timestamp": 1788589807.089183
       },
       {
         "role": "assistant",
-        "content": "Mình biết bạn là Trọng yêu! 😊 Bạn có muốn hỏi thêm gì về ký túc xá, học phí, học bổng hay những vấn đề khác không? Mình luôn sẵn sàng giúp đỡ bạn! 🌾✨",
-        "timestamp": 1788588812.5011797
+        "content": "Có vẻ như bạn đang muốn tìm hiểu thêm thông tin gì đó liên quan đến sinh viên khóa K68. Nếu bạn có câu hỏi cụ thể về ký túc xá, đăng ký tín chỉ, học phí, công nợ, học bổng hay khen thưởng, hãy cho mình biết nhé! Mình sẽ giúp bạn tìm kiếm thông tin phù hợp nhất. 😊🌾",
+        "timestamp": 1788589807.089183
       },
       {
         "role": "user",
-        "content": "học phí",
-        "timestamp": 1788588825.5693126
+        "content": "Quy trình và điều kiện đăng ký tín chỉ môn học tại VNUA như thế nào?",
+        "timestamp": 1788590058.3347483
       },
       {
         "role": "assistant",
-        "content": "Hiện tại mình chưa có thông tin chính xác về nội dung này trong các văn bản quy chế hiện hành. Có thể bạn đang cần tra cứu mức thu học phí theo tín chỉ hoặc biểu phí của năm học mới. Bạn cho mình biết bạn thuộc khóa K mấy và ngành nào để mình xem biểu phí chính xác nha? 😊",
-        "timestamp": 1788588825.5693126
+        "content": "Mình chưa có thông tin chính xác về quy trình và điều kiện đăng ký tín chỉ môn học tại Học viện Nông nghiệp Việt Nam. Tuy nhiên, mình đoán bạn có thể đang tìm hiểu về các bước cần thực hiện hoặc các yêu cầu cụ thể để đăng ký tín chỉ. Bạn có thể cho mình biết thêm về môn học nào bạn đang quan tâm, hoặc có câu hỏi cụ thể nào khác liên quan đến đăng ký tín chỉ không? Mình sẽ cố gắng hỗ trợ bạn! 😊🌾✨",
+        "timestamp": 1788590058.3347483
       },
       {
         "role": "user",
-        "content": "K68",
-        "timestamp": 1788588835.5894861
+        "content": "s",
+        "timestamp": 1788591405.1798244
       },
       {
         "role": "assistant",
-        "content": "Cảm ơn bạn đã cung cấp thông tin! 😊 Đối với khóa K68, mức học phí có thể sẽ khác nhau tùy theo ngành học và hệ đào tạo. Mình chưa có thông tin cụ thể cho từng ngành, nhưng bạn có thể tham khảo mức học phí trung bình cho các ngành trong trường. Nếu bạn cần thông tin chi tiết hơn về ngành cụ thể nào, hãy cho mình biết nhé! Mình sẽ cố gắng hỗ trợ bạn tốt nhất có thể! 🌾✨",
-        "timestamp": 1788588835.5894861
+        "content": "Yêu cầu chưa phù hợp do phát hiện chỉ thị vượt quyền đã bị làm nhiễu.. Bạn đặt lại câu hỏi liên quan đến học tập nhé!",
+        "timestamp": 1788591405.1798244
       }
     ]
   },
