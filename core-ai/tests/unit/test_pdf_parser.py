@@ -12,19 +12,16 @@ def test_pdf_text_cleanup_normalizes_whitespace_and_hyphenation() -> None:
     assert cleaned == "Quy chế đào tạoliên thông\n\nMục 2"
 
 
-def test_parser_uses_pypdf_when_primary_has_no_text() -> None:
+def test_parser_uses_pdfplumber() -> None:
     parser = PDFParser()
-    primary = ParsedPDF(pages=[], total_pages=1, total_chars=0, parser_used="pdfplumber")
-    fallback = ParsedPDF(
+    primary = ParsedPDF(
         pages=[PDFPage(page_number=1, text="Quy chế", char_count=7)],
         total_pages=1,
         total_chars=7,
-        parser_used="pypdf",
+        parser_used="pdfplumber",
     )
 
-    with patch.object(parser, "_parse_with_pdfplumber", return_value=primary), patch.object(
-        parser, "_parse_with_pypdf", return_value=fallback
-    ):
+    with patch.object(parser, "_parse_with_pdfplumber", return_value=primary):
         result = parser.parse(b"not-read-because-engines-are-mocked")
 
-    assert result is fallback
+    assert result is primary

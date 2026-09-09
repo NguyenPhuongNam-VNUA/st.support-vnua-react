@@ -270,19 +270,11 @@ class SessionMemoryStore:
 
     def delete_session(self, session_key: str) -> bool:
         """Removes a session from RAM and updates disk cache."""
-        if not session_key:
+        if not session_key or session_key not in self._sessions:
             return False
-        found = False
-        if session_key in self._sessions:
-            del self._sessions[session_key]
-            found = True
-        alt_key = f"conv_{session_key}" if not session_key.startswith("conv_") else session_key.replace("conv_", "")
-        if alt_key in self._sessions:
-            del self._sessions[alt_key]
-            found = True
-        if found:
-            self._save_to_disk()
-        return found
+        del self._sessions[session_key]
+        self._save_to_disk()
+        return True
 
 
 # Global singleton instance in RAM

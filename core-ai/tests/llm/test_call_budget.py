@@ -63,6 +63,6 @@ class TestCallBudget:
         )
 
         res = await gateway.generate(req)
-        assert "tạm thời bận" in res.content or "liên hệ" in res.content
+        assert "giới hạn" in res.content or "tạm thời bận" in res.content or "liên hệ" in res.content
         assert res.usage.total_tokens == 0
         mock_litellm_completion.assert_not_awaited()

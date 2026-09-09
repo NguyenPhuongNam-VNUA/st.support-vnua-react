@@ -143,21 +143,3 @@ async def embed_document_v1(
     return await handle_document_embed(
         request, background_tasks, http_request.state.context.tenant_id
     )
-
-
-@router.post(
-    "/documents/embed",
-    response_model=DocumentEmbedResponse,
-    status_code=status.HTTP_202_ACCEPTED,
-    summary="Enqueue document embedding (legacy)",
-    dependencies=[Depends(verify_internal_token)],
-)
-async def embed_document_legacy(
-    http_request: Request,
-    request: DocumentEmbedRequest,
-    background_tasks: BackgroundTasks,
-) -> DocumentEmbedResponse:
-    """Legacy alias endpoint for Next.js BFF compatibility."""
-    return await handle_document_embed(
-        request, background_tasks, http_request.state.context.tenant_id
-    )

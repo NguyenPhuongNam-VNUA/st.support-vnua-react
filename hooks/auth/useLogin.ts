@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import apiClient from '@/lib/http/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoginFormValues } from '@/lib/validations/auth.validation';
 
@@ -35,8 +35,7 @@ export function useLogin() {
 
     try {
       // Gọi RESTful API Backend
-      const response = await axios.post('/api/auth/login', credentials);
-      const resData = response.data;
+      const resData: any = await apiClient.post('/api/auth/login', credentials);
 
       if (resData.success && resData.data) {
         const { user } = resData.data;

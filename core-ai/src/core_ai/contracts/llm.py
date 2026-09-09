@@ -148,7 +148,10 @@ class GenerationResult(BaseModel):
 
 class ProviderCapability(BaseModel):
     """Declarative configuration of model provider capabilities."""
-    provider_name: Literal["gemini", "openai", "openai_compatible"]
+    provider_name: str = Field(
+        default="openai",
+        description="Provider vendor identifier (e.g. 'gemini', 'openai', 'openai_compatible')",
+    )
     supports_native_json: bool = Field(
         default=True,
         description="True if model guarantees RFC 8259 JSON output via API",

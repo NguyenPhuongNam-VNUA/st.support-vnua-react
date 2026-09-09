@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import apiClient from '@/lib/http/api-client';
 import { CreateAccountDTO, UpdateAccountDTO } from '@/lib/validations/account.validation';
 import { AccountModel } from '@/repositories/auth/auth.repository';
 
@@ -44,8 +44,7 @@ export function useAccounts() {
         };
 
         // Hook trực tiếp gọi Backend RESTful API
-        const response = await axios.get('/api/admin/accounts', { params: queryParams });
-        const res = response.data;
+        const res: any = await apiClient.get('/api/admin/accounts', { params: queryParams });
 
         if (res.success && res.data) {
           setAccounts(res.data.accounts || []);
@@ -78,8 +77,7 @@ export function useAccounts() {
     setSuccessAlert(null);
 
     try {
-      const response = await axios.post('/api/admin/accounts', data);
-      const res = response.data;
+      const res: any = await apiClient.post('/api/admin/accounts', data);
 
       if (res.success) {
         setSuccessAlert('Tạo tài khoản mới thành công!');
@@ -113,8 +111,7 @@ export function useAccounts() {
     setSuccessAlert(null);
 
     try {
-      const response = await axios.put(`/api/admin/accounts/${id}`, data);
-      const res = response.data;
+      const res: any = await apiClient.put(`/api/admin/accounts/${id}`, data);
 
       if (res.success) {
         setSuccessAlert('Cập nhật tài khoản thành công!');
@@ -144,8 +141,7 @@ export function useAccounts() {
     setSuccessAlert(null);
 
     try {
-      const response = await axios.delete(`/api/admin/accounts/${id}`);
-      const res = response.data;
+      const res: any = await apiClient.delete(`/api/admin/accounts/${id}`);
 
       if (res.success) {
         setSuccessAlert('Đã xóa tài khoản thành công!');

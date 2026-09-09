@@ -18,7 +18,6 @@
     "@mui/x-charts": "^8.10.2",
     "@supabase/supabase-js": "^2.112.3",
     "@tailwindcss/postcss": "^4.3.3",
-    "axios": "^1.10.0",
     "bcryptjs": "^3.0.3",
     "exceljs": "^4.4.0",
     "jose": "^6.2.8",

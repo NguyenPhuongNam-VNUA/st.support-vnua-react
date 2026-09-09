@@ -4,7 +4,7 @@ import json
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
-import httpx2
+import httpx
 from mcp import Client, StdioServerParameters
 from mcp.client.streamable_http import streamable_http_client
 
@@ -63,7 +63,7 @@ class MCPClientManager:
             raise ToolExecutionError(f"Máy chủ MCP '{server_id}' chưa được cấu hình")
         if config["transport"] in ("streamable-http", "http"):
             headers = {**config["headers"], **(context_headers or {})}
-            async with httpx2.AsyncClient(headers=headers) as http_client:
+            async with httpx.AsyncClient(headers=headers) as http_client:
                 transport = streamable_http_client(config["target"], http_client=http_client)
                 async with Client(
                     transport,

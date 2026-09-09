@@ -4,6 +4,7 @@ Exchanged between the Next.js BFF / frontend and the core-ai microservice.
 Supports both modern typed streaming payloads and legacy backwards compatibility.
 """
 
+import re
 import unicodedata
 import uuid
 from enum import Enum
@@ -204,10 +205,7 @@ class ChatRequest(BaseModel):
             # Resolve message from 'question' if message is empty
             msg = data.get("message") or data.get("question") or ""
             if isinstance(msg, str):
-                msg = unicodedata.normalize("NFC", msg)
-                for zw in ("\u200b", "\u200c", "\u200d", "\ufeff", "\u200B", "\u200C", "\u200D", "\uFEFF"):
-                    msg = msg.replace(zw, "")
-                msg = msg.strip()
+                msg = re.sub(r"[\u200b-\u200d\ufeff]", "", unicodedata.normalize("NFC", msg), flags=re.I).strip()
             data["message"] = msg
             if not data.get("request_id"):
                 data["request_id"] = str(uuid.uuid4())
@@ -354,17 +352,7 @@ class DocumentEmbedResponse(BaseModel):
         ...,
         description="Background job tracking UUID",
     )
-    task_id: Optional[str] = Field(
-        default=None,
-        description="Alias for job_id matching legacy clients",
-    )
     message: str = Field(
         default="Tiến trình embedding tài liệu đã được khởi chạy",
         description="Status message in Vietnamese",
     )
-
-    @model_validator(mode="after")
-    def sync_task_id(self) -> "DocumentEmbedResponse":
-        if self.task_id is None:
-            self.task_id = self.job_id
-        return self

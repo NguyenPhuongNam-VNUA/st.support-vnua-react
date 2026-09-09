@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
+import apiClient from '@/lib/http/api-client';
 
 export interface AuthUser {
   id: number;
@@ -28,8 +28,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const refreshUser = useCallback(async () => {
     try {
-      const response = await axios.get('/api/auth/me');
-      const currentUser = response.data?.data?.user as AuthUser | undefined;
+      const response: any = await apiClient.get('/api/auth/me');
+      const currentUser = response?.data?.user as AuthUser | undefined;
       setUser(currentUser || null);
       return currentUser || null;
     } catch {
@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = useCallback(async () => {
     try {
-      await axios.post('/api/auth/logout');
+      await apiClient.post('/api/auth/logout');
     } finally {
       setUser(null);
     }

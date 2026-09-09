@@ -74,7 +74,7 @@ def get_provider_capabilities(provider: str, model: str) -> ProviderCapability:
             provider_name="openai_compatible",
             supports_native_json=True,
             supports_json_schema=False,
-            supports_tool_calling=False,
+            supports_tool_calling=True,
             supports_system_prompt=True,
             max_context_tokens=32768,
             max_output_tokens=4096,

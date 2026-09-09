@@ -39,14 +39,13 @@ class MessageRepository:
         an active conversation for this client_ip / session within the 48-hour window.
         """
         valid_conv_id: Optional[int] = None
-        str_conv_id = str(conversation_id) if conversation_id else None
         if conversation_id:
             try:
-                valid_conv_id = int(str(conversation_id).replace("conv_", ""))
-            except ValueError:
+                valid_conv_id = int(conversation_id)
+            except (ValueError, TypeError):
                 valid_conv_id = None
 
-        raw_session_id = session_id or (str_conv_id if str_conv_id and str_conv_id.startswith("conv_") else None)
+        raw_session_id = session_id or (str(conversation_id) if valid_conv_id is None and conversation_id else None)
 
         # Map status to allowed enum in check constraint: answered, not_found, auto_generated, out_of_topic
         db_status = "answered"

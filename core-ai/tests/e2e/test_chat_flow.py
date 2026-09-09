@@ -118,26 +118,28 @@ class TestChatFlowE2E:
         assert "secret" not in final_str
         assert "test-secret-token" not in final_str
 
-    def test_legacy_ask_ai_json_endpoint(
+    def test_conversations_json_endpoint(
         self, client: TestClient, mock_litellm_completion: AsyncMock
     ) -> None:
-        """POST /ask-ai returns backward-compatible JSON response for existing Next.js BFF."""
+        """POST /api/v1/conversations/{id}/messages returns JSON response with Accept: application/json."""
         payload = {
-            "question": "Học phí một tín chỉ là bao nhiêu?",
-            "conversation_id": "legacy-conv-1",
+            "message": "Học phí một tín chỉ là bao nhiêu?",
             "tenant_id": "vnua",
         }
-        headers = {"Authorization": "Bearer test-secret-token-123"}
+        headers = {
+            "Authorization": "Bearer test-secret-token-123",
+            "Accept": "application/json",
+        }
 
-        response = client.post("/ask-ai", json=payload, headers=headers)
-        assert response.status_code == 200
+        response = client.post("/api/v1/conversations/legacy-conv-1/messages", json=payload, headers=headers)
+        assert response.status_code == 201
         data = response.json()
 
         assert "answer" in data
         assert "status" in data
         assert data["conversation_id"] == "legacy-conv-1"
-        assert "sources" in data
-        assert isinstance(data["sources"], list)
+        assert "citations" in data
+        assert isinstance(data["citations"], list)
 
     def test_explicit_approved_support_request_is_escalated(self, client: TestClient) -> None:
         """An escalation is a trusted explicit action and never inferred from chat text."""
