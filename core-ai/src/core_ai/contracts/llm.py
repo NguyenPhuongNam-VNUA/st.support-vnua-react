@@ -108,20 +108,8 @@ class GenerationResult(BaseModel):
         default=None,
         description="Locally validated or repaired JSON object if response_format was JSON",
     )
-    structured_output: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Alias for parsed_json",
-    )
     usage: TokenUsage = Field(default_factory=TokenUsage)
-    tokens: Optional[TokenUsage] = Field(
-        default=None,
-        description="Alias for usage",
-    )
-    model_name: str = Field(..., description="Model identifier used (e.g. 'gemini-3.5-flash')")
-    model: Optional[str] = Field(
-        default=None,
-        description="Alias for model_name",
-    )
+    model: str = Field(..., description="Model identifier used (e.g. 'gemini-3.5-flash')")
     provider: str = Field(
         ...,
         description="Active provider identifier ('gemini', 'openai', 'openai_compatible')",
@@ -133,17 +121,29 @@ class GenerationResult(BaseModel):
         description="Reason generation terminated",
     )
 
-    @model_validator(mode="after")
-    def sync_aliases(self) -> "GenerationResult":
-        if self.structured_output is None:
-            self.structured_output = self.parsed_json
-        if self.parsed_json is None:
-            self.parsed_json = self.structured_output
-        if self.tokens is None:
-            self.tokens = self.usage
-        if self.model is None:
-            self.model = self.model_name
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_aliases(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "model" not in data and "model_name" in data:
+                data["model"] = data["model_name"]
+            if "parsed_json" not in data and "structured_output" in data:
+                data["parsed_json"] = data["structured_output"]
+            if "usage" not in data and "tokens" in data:
+                data["usage"] = data["tokens"]
+        return data
+
+    @property
+    def model_name(self) -> str:
+        return self.model
+
+    @property
+    def tokens(self) -> TokenUsage:
+        return self.usage
+
+    @property
+    def structured_output(self) -> Optional[Dict[str, Any]]:
+        return self.parsed_json
 
 
 class ProviderCapability(BaseModel):

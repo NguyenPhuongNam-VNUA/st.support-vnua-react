@@ -220,57 +220,6 @@ class ChatRequest(BaseModel):
         return self
 
 
-class LegacyChatMessage(BaseModel):
-    """Message item for legacy /ask-ai endpoint conversation history."""
-    role: Literal["user", "assistant", "system"] = Field(..., description="Message author role")
-    text: Optional[str] = Field(default=None, description="Message content in legacy format")
-    content: Optional[str] = Field(default=None, description="Message content in standard format")
-
-    @model_validator(mode="before")
-    @classmethod
-    def resolve_text_or_content(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            txt = data.get("text") or data.get("content") or ""
-            data["text"] = txt
-            data["content"] = txt
-        return data
-
-
-class LegacyAskAiRequest(BaseModel):
-    """Backwards-compatible request payload for existing Next.js POST /ask-ai."""
-    question: str = Field(
-        ...,
-        min_length=1,
-        max_length=4000,
-        description="User query string",
-    )
-    messages: Optional[List[LegacyChatMessage]] = Field(
-        default_factory=list,
-        description="Conversation turns for context",
-    )
-    conversation_id: Optional[Union[int, str]] = Field(
-        default=None,
-        description="Conversation session identifier",
-    )
-    tenant_id: str = Field(
-        default="vnua",
-        description="Tenant identifier, defaulting to vnua",
-    )
-    user_id: Optional[Union[int, str]] = Field(
-        default=None,
-        description="Optional student or user ID",
-    )
-
-    @model_validator(mode="before")
-    @classmethod
-    def normalize_question(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            q = data.get("question") or data.get("message") or ""
-            if isinstance(q, str):
-                data["question"] = unicodedata.normalize("NFC", q).strip()
-        return data
-
-
 class ChatResponse(BaseModel):
     """Complete final non-streaming response object."""
     request_id: str = Field(..., description="Correlated request UUID")

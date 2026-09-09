@@ -7,6 +7,7 @@ Enforces strict compliance with ST-Care security guidelines:
   model identifier, and sanitized tenant IDs.
 """
 
+import inspect
 import logging
 import time
 from contextlib import asynccontextmanager
@@ -107,76 +108,37 @@ def get_tracer() -> Tracer:
 
 
 class SafeSpan:
-    """Wrapper around OpenTelemetry Span enforcing attribute safety.
+    """Enforces that sensitive prompt data, credentials, and PII are omitted from trace attributes."""
 
-    Guarantees that sensitive prompt data, credentials, and PII are
-    never recorded into span attributes.
-    """
-
-    # Attribute keys that are strictly prohibited from tracing
     FORBIDDEN_ATTRIBUTES = {
-        "prompt",
-        "raw_prompt",
-        "user_message",
-        "message",
-        "system_prompt",
-        "chain_of_thought",
-        "thought",
-        "internal_token",
-        "api_key",
-        "authorization",
-        "cookie",
-        "password",
-        "secret",
-        "student_phone",
-        "cccd",
+        "prompt", "raw_prompt", "user_message", "message", "system_prompt",
+        "chain_of_thought", "thought", "internal_token", "api_key",
+        "authorization", "cookie", "password", "secret", "student_phone", "cccd",
     }
 
     def __init__(self, span: Span) -> None:
-        self._span = span
-
-    @property
-    def span(self) -> Span:
-        return self._span
+        self.span = span
 
     def set_safe_attribute(self, key: str, value: Any) -> None:
-        """Sets a span attribute only if the key is not in the forbidden list."""
-        if not key or not self._span.is_recording():
+        if not key or not self.span.is_recording() or key.lower().replace("-", "_") in self.FORBIDDEN_ATTRIBUTES:
             return
-
-        normalized_key = key.lower().replace("-", "_")
-        if normalized_key in self.FORBIDDEN_ATTRIBUTES:
-            logger.debug("Omitted forbidden trace attribute key: %s", key)
+        if not get_settings().log_raw_prompts and "prompt" in key.lower():
             return
-
-        # Check if caller wants to log raw prompt explicitly and override
-        settings = get_settings()
-        if not settings.log_raw_prompts and "prompt" in normalized_key:
-            return
-
-        # Sanitize string values (scalars or lists of scalars)
-        if isinstance(value, (str, int, float, bool)):
-            self._span.set_attribute(key, value)
-        elif isinstance(value, list) and all(isinstance(x, (str, int, float, bool)) for x in value):
-            self._span.set_attribute(key, value)
-        elif value is None:
-            pass
-        else:
-            self._span.set_attribute(key, str(value)[:200])
+        if isinstance(value, (str, int, float, bool)) or (isinstance(value, list) and all(isinstance(x, (str, int, float, bool)) for x in value)):
+            self.span.set_attribute(key, value)
+        elif value is not None:
+            self.span.set_attribute(key, str(value)[:200])
 
     def set_safe_attributes(self, attributes: Dict[str, Any]) -> None:
-        """Sets multiple safe attributes in batch."""
         for k, v in attributes.items():
             self.set_safe_attribute(k, v)
 
     def record_exception(self, exc: BaseException, escaped: bool = False) -> None:
-        """Records an exception on the span and sets error status."""
-        self._span.record_exception(exc, escaped=escaped)
-        self._span.set_status(Status(StatusCode.ERROR, description=str(exc)))
+        self.span.record_exception(exc, escaped=escaped)
+        self.span.set_status(Status(StatusCode.ERROR, description=str(exc)))
 
     def end(self) -> None:
-        """Terminates span lifecycle."""
-        self._span.end()
+        self.span.end()
 
 
 def create_safe_span(
@@ -185,26 +147,14 @@ def create_safe_span(
     tenant_id: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
 ) -> SafeSpan:
-    """Factory creating an active SafeSpan with correlated trace attributes.
-
-    Args:
-        name: Name of operation/stage (e.g. 'input_guardrail', 'retrieval').
-        request_id: Optional UUID of incoming request.
-        tenant_id: Tenant namespace identifier.
-        attributes: Additional safe metadata attributes.
-    """
-    tracer = get_tracer()
-    raw_span = tracer.start_span(name)
-    safe = SafeSpan(raw_span)
-
+    """Factory creating an active SafeSpan with correlated trace attributes."""
+    safe = SafeSpan(get_tracer().start_span(name))
     if request_id:
         safe.set_safe_attribute("stcare.request_id", request_id)
     if tenant_id:
         safe.set_safe_attribute("stcare.tenant_id", tenant_id)
-
     if attributes:
         safe.set_safe_attributes(attributes)
-
     return safe
 
 
@@ -215,28 +165,15 @@ async def trace_stage(
     tenant_id: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
 ) -> AsyncGenerator[SafeSpan, None]:
-    """Asynchronous context manager wrapping a pipeline execution stage in a safe span.
-
-    Example:
-        async with trace_stage("retrieval", request_id="uuid", tenant_id="vnua") as span:
-            results = await do_retrieval()
-            span.set_safe_attribute("retrieval.results_count", len(results))
-    """
-    safe_span = create_safe_span(
-        name=stage_name,
-        request_id=request_id,
-        tenant_id=tenant_id,
-        attributes=attributes,
-    )
+    """Asynchronous context manager wrapping a pipeline execution stage in a safe span."""
+    safe_span = create_safe_span(stage_name, request_id, tenant_id, attributes)
     t0 = time.perf_counter()
     try:
         yield safe_span
-        latency_ms = int((time.perf_counter() - t0) * 1000)
-        safe_span.set_safe_attribute("stage.latency_ms", latency_ms)
+        safe_span.set_safe_attribute("stage.latency_ms", int((time.perf_counter() - t0) * 1000))
         safe_span.span.set_status(Status(StatusCode.OK))
     except Exception as exc:
-        latency_ms = int((time.perf_counter() - t0) * 1000)
-        safe_span.set_safe_attribute("stage.latency_ms", latency_ms)
+        safe_span.set_safe_attribute("stage.latency_ms", int((time.perf_counter() - t0) * 1000))
         safe_span.record_exception(exc)
         raise
     finally:
@@ -266,9 +203,6 @@ def traced(stage_name: Optional[str] = None) -> Callable[..., Any]:
             finally:
                 safe.end()
 
-        import asyncio
-        if asyncio.iscoroutinefunction(func):
-            return async_wrapper
-        return sync_wrapper
+        return async_wrapper if inspect.iscoroutinefunction(func) else sync_wrapper
 
     return decorator

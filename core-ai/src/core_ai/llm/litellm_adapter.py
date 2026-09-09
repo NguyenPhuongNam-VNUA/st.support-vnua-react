@@ -250,10 +250,7 @@ class LiteLLMAdapter:
         return GenerationResult(
             content=raw_content,
             parsed_json=parsed_json,
-            structured_output=parsed_json,
             usage=token_usage,
-            tokens=token_usage,
-            model_name=config.model,
             model=config.model,
             provider=config.provider,
             latency_ms=latency_ms,

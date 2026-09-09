@@ -11,8 +11,6 @@ from core_ai.contracts.chat import (
     DocumentEmbedResponse,
     ExecutionTraceStep,
     FallbackInfo,
-    LegacyAskAiRequest,
-    LegacyChatMessage,
     RouteStatus,
 )
 from core_ai.contracts.errors import (
@@ -71,8 +69,6 @@ __all__ = [
     "ExecutionTraceStep",
     "FallbackInfo",
     "ChatRequest",
-    "LegacyChatMessage",
-    "LegacyAskAiRequest",
     "ChatResponse",
     "DocumentEmbedRequest",
     "DocumentEmbedResponse",

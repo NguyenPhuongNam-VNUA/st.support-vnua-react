@@ -16,7 +16,6 @@ from core_ai.contracts.chat import (
     ChatResponse,
     Citation,
     ExecutionTraceStep,
-    LegacyAskAiRequest,
     RouteStatus,
 )
 
@@ -109,13 +108,3 @@ class TestChatContracts:
         assert resp.confidence == 0.94
         assert len(resp.citations) == 1
         assert len(resp.execution_trace) == 2
-
-    def test_legacy_ask_ai_request(self) -> None:
-        """LegacyAskAiRequest correctly parses question field from old BFF."""
-        legacy = LegacyAskAiRequest(
-            question="Lịch đăng ký môn học?",
-            conversation_id="legacy-conv-1",
-            tenant_id="vnua",
-        )
-        assert legacy.question == "Lịch đăng ký môn học?"
-        assert legacy.conversation_id == "legacy-conv-1"

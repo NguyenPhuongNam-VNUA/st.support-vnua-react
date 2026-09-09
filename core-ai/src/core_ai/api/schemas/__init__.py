@@ -11,7 +11,6 @@ from core_ai.contracts.chat import (
     DocumentEmbedResponse,
     ExecutionTraceStep,
     FallbackInfo,
-    LegacyAskAiRequest,
     RouteStatus,
 )
 from core_ai.contracts.events import (
@@ -29,7 +28,6 @@ __all__ = [
     "Citation",
     "ExecutionTraceStep",
     "FallbackInfo",
-    "LegacyAskAiRequest",
     "RouteStatus",
     "DocumentEmbedRequest",
     "DocumentEmbedResponse",

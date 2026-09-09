@@ -51,41 +51,22 @@ export const questionRepository = {
     if (options.answer === 'unanswered') query = query.or('answer.is.null,answer.eq.');
     if (options.answer === 'answered') query = query.not('answer', 'is', null).neq('answer', '');
 
-    const buildCountQuery = (status?: QuestionStatus, answer?: QuestionAnswerFilter) => {
-      let countQuery = getSupabaseAdmin()
-        .from('questions')
-        .select('id', { count: 'exact', head: true });
+    let metaQuery = getSupabaseAdmin().from('questions').select('status, answer');
+    if (keyword) metaQuery = metaQuery.or(`question.ilike.%${keyword}%,answer.ilike.%${keyword}%`);
+    if (options.topic) metaQuery = metaQuery.eq('topic', options.topic);
 
-      if (keyword) countQuery = countQuery.or(`question.ilike.%${keyword}%,answer.ilike.%${keyword}%`);
-      if (options.topic) countQuery = countQuery.eq('topic', options.topic);
-      if (status) countQuery = countQuery.eq('status', status);
-      if (answer === 'unanswered') countQuery = countQuery.or('answer.is.null,answer.eq.');
-      if (answer === 'answered') countQuery = countQuery.not('answer', 'is', null).neq('answer', '');
-      return countQuery;
-    };
-
-    const statusKeys = ['all', 'pending', 'approved', 'needs_edit', 'rejected'] as const;
-    const results = await Promise.all([
-      query,
-      ...statusKeys.map((status) =>
-        buildCountQuery(status === 'all' ? undefined : status, options.answer)
-      ),
-      buildCountQuery(options.status as QuestionStatus | undefined, 'answered'),
-      buildCountQuery(options.status as QuestionStatus | undefined, 'unanswered'),
-    ]);
-    const [listResult, ...countResults] = results;
+    const [listResult, metaResult] = await Promise.all([query, metaQuery]);
     if (listResult.error) throw new Error(`Không thể tải câu hỏi: ${listResult.error.message}`);
+    if (metaResult.error) throw new Error(`Không thể đếm câu hỏi: ${metaResult.error.message}`);
 
-    const countError = countResults.find((result) => result.error)?.error;
-    if (countError) throw new Error(`Không thể đếm câu hỏi: ${countError.message}`);
-
-    const statusCounts = Object.fromEntries(
-      statusKeys.map((status, index) => [status, countResults[index].count || 0])
-    ) as Record<(typeof statusKeys)[number], number>;
-    const answerCounts = {
-      answered: countResults[statusKeys.length].count || 0,
-      unanswered: countResults[statusKeys.length + 1].count || 0,
-    };
+    const statusCounts = { all: 0, pending: 0, approved: 0, needs_edit: 0, rejected: 0 };
+    const answerCounts = { answered: 0, unanswered: 0 };
+    for (const r of (metaResult.data || [])) {
+      statusCounts.all++;
+      if (r.status in statusCounts) (statusCounts as any)[r.status]++;
+      if (!r.answer || r.answer.trim() === '') answerCounts.unanswered++;
+      else answerCounts.answered++;
+    }
     const total = listResult.count || 0;
 
     return {

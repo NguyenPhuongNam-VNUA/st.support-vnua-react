@@ -104,10 +104,7 @@ class LLMGateway(LLMPort):
         return GenerationResult(
             content=fallback_text,
             parsed_json=None,
-            structured_output=None,
             usage=TokenUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0),
-            tokens=TokenUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0),
-            model_name=self._active_config.model,
             model=self._active_config.model,
             provider=self._active_config.provider,
             latency_ms=0,

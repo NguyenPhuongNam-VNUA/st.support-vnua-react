@@ -54,21 +54,7 @@ async function request(url: string, options: RequestOptions = {}) {
     credentials: 'include',
   });
 
-  let responseData: any = null;
-  const contentType = response.headers.get('content-type');
-  if (contentType && contentType.includes('application/json')) {
-    try {
-      responseData = await response.json();
-    } catch {
-      responseData = null;
-    }
-  } else {
-    try {
-      responseData = await response.text();
-    } catch {
-      responseData = null;
-    }
-  }
+  const responseData: any = await response.json().catch(() => response.text().catch(() => null));
 
   if (!response.ok) {
     if (response.status === 401 && typeof window !== 'undefined') {
