@@ -174,7 +174,7 @@ async def input_guardrail_node(state: GraphState) -> GraphState:
             if not decision.is_safe:
                 latency = int((time.perf_counter() - t0) * 1000)
                 state["is_blocked"] = True
-                state["block_reason"] = "Yêu cầu bị chặn bởi lớp bảo vệ Prompt Guard."
+                state["block_reason"] = "Nội dung câu hỏi chưa phù hợp với quy chuẩn sử dụng."
                 state["block_category"] = decision.category
                 state["status"] = RouteStatus.BLOCKED
                 state["fallback"] = FallbackInfo(
@@ -204,9 +204,7 @@ async def input_guardrail_node(state: GraphState) -> GraphState:
         if pattern.search(normalized):
             latency = int((time.perf_counter() - t0) * 1000)
             state["is_blocked"] = True
-            state["block_reason"] = (
-                "Phát hiện chỉ thị không an toàn hoặc yêu cầu vượt quyền (Prompt Injection)"
-            )
+            state["block_reason"] = "Yêu cầu vượt quá thẩm quyền hỗ trợ của hệ thống."
             state["block_category"] = "prompt_injection"
             state["status"] = RouteStatus.BLOCKED
             state["fallback"] = FallbackInfo(

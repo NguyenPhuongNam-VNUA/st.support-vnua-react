@@ -39,13 +39,20 @@ async def fallback_node(state: GraphState) -> GraphState:
         "guardrail_blocked",
         "prompt_injection_detected",
         "pii_detected",
+        "prompt_guard_model_blocked",
     ):
         state["status"] = RouteStatus.BLOCKED
-        block_msg = state.get("block_reason")
-        if block_msg:
-            answer = f"Yêu cầu chưa phù hợp do {block_msg.lower()}. Bạn đặt lại câu hỏi liên quan đến học tập nhé!"
+        category = state.get("block_category", "")
+
+        if category == "empty_payload":
+            answer = "Câu hỏi của bạn đang để trống. Bạn hãy nhập nội dung cần hỗ trợ nhé!"
+        elif category == "payload_too_large":
+            answer = "Câu hỏi của bạn vượt quá độ dài cho phép (4000 ký tự). Bạn vui lòng tóm tắt ngắn gọn lại để mình hỗ trợ chuẩn xác nhất nhé!"
+        elif category in ("pii_violation", "pii_detected"):
+            answer = "Để bảo đảm an toàn thông tin cá nhân, hệ thống không tiếp nhận các nội dung chứa dữ liệu nhạy cảm (như mật khẩu, CCCD, thông tin tài khoản). Bạn hãy đặt câu hỏi mà không kèm các thông tin này nhé!"
         else:
-            answer = "Nội dung này chưa phù hợp với tiêu chuẩn an toàn thông tin. Bạn hãy đặt câu hỏi liên quan đến học tập hoặc quy chế VNUA nhé!"
+            answer = "Yêu cầu này chưa phù hợp với quy chuẩn sử dụng hoặc vượt quá phạm vi hỗ trợ của hệ thống. Bạn vui lòng đặt lại câu hỏi liên quan đến học tập hoặc quy chế đào tạo tại VNUA nhé! 😊"
+
         if not fb_info:
             state["fallback"] = FallbackInfo(
                 reason="guardrail_blocked",

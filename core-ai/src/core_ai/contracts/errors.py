@@ -122,7 +122,7 @@ class DuplicateRequestError(CoreAIError):
 
 
 class CallBudgetExceededError(CoreAIError):
-    def __init__(self, message: str = "Vượt quá giới hạn cuộc gọi AI bên ngoài (tối đa 2 calls)") -> None:
+    def __init__(self, message: str = "Hệ thống đang tiếp nhận lượng lớn câu hỏi cùng lúc. Vui lòng thử lại sau giây lát") -> None:
         super().__init__(
             message=message,
             code=ErrorCode.BUDGET_EXCEEDED,

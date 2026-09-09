@@ -184,7 +184,7 @@ class InputGuardrail:
                 risk_score=0.95,
                 threat_category="encoded_instruction",
                 matched_patterns=["base64_instruction_payload"],
-                explanation="Phát hiện chỉ thị được mã hóa có dấu hiệu vượt quyền.",
+                explanation="Nội dung câu hỏi chứa cấu trúc bất thường hoặc không an toàn.",
             )
         elif injection_res.is_safe and self._contains_fuzzy_attack(security_shadow):
             injection_res = InjectionDetectionResult(
@@ -192,10 +192,10 @@ class InputGuardrail:
                 risk_score=0.9,
                 threat_category="obfuscated_instruction",
                 matched_patterns=["fuzzy_high_risk_phrase"],
-                explanation="Phát hiện chỉ thị vượt quyền đã bị làm nhiễu.",
+                explanation="Nội dung câu hỏi chưa phù hợp với quy chuẩn an toàn thông tin.",
             )
         if not injection_res.is_safe:
-            msg = injection_res.explanation or "Phát hiện nguy cơ prompt injection"
+            msg = injection_res.explanation or "Nội dung câu hỏi chưa phù hợp với quy chuẩn an toàn thông tin."
             violations.append(msg)
             if self.block_on_injection:
                 is_safe = False

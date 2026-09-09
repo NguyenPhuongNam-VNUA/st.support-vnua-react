@@ -158,10 +158,7 @@ class InjectionDetector:
         is_safe = highest_score < self.risk_threshold
         explanation = None
         if not is_safe:
-            explanation = (
-                f"Phát hiện nguy cơ prompt injection thuộc nhóm '{primary_category}' "
-                f"(điểm rủi ro: {highest_score:.2f})."
-            )
+            explanation = "Phát hiện nguy cơ prompt injection."
             logger.warning(
                 "Prompt injection attempt detected! Category: %s | Risk: %.2f | Triggers: %s",
                 primary_category,
