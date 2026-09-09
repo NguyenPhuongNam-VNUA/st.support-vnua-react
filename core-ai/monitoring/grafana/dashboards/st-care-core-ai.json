@@ -1,33 +1,377 @@
 {
-  "title": "ST-Care Core AI",
+  "title": "ST-Care AI - Tổng quan Giám sát Hệ thống",
   "uid": "st-care-core-ai",
   "schemaVersion": 39,
-  "version": 1,
-  "refresh": "30s",
+  "version": 2,
+  "refresh": "10s",
+  "timezone": "browser",
   "panels": [
     {
-      "type": "timeseries",
-      "title": "Request rate",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
-      "targets": [{"expr": "sum(rate(core_ai_requests_total[5m])) by (status)", "legendFormat": "{{status}}"}]
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "1. Hiệu năng Chatbot (Latency & Time-to-First-Token)",
+      "type": "row"
     },
     {
+      "id": 1,
+      "title": "Độ trễ phản hồi (P50 / P95 / P99)",
       "type": "timeseries",
-      "title": "Safe answer p95",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
-      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(core_ai_time_to_safe_answer_seconds_bucket[5m])) by (le, outcome))", "legendFormat": "{{outcome}}"}]
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth" }
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(core_ai_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P50 Latency"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(core_ai_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P95 Latency"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(core_ai_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P99 Latency"
+        }
+      ]
     },
     {
+      "id": 2,
+      "title": "Thời gian phát tín hiệu đầu tiên (Time to First Status/Token P95)",
       "type": "timeseries",
-      "title": "Cache outcomes",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
-      "targets": [{"expr": "sum(rate(core_ai_cache_level_total[5m])) by (level, result)", "legendFormat": "{{level}} {{result}}"}]
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(core_ai_time_to_status_seconds_bucket[5m])) by (le))",
+          "legendFormat": "TTFT P95"
+        }
+      ]
     },
     {
+      "id": 3,
+      "title": "Tổng thời gian trả lời an toàn (Time to Safe Answer P95)",
       "type": "timeseries",
-      "title": "Fallbacks",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
-      "targets": [{"expr": "sum(rate(core_ai_fallback_total[5m])) by (reason)", "legendFormat": "{{reason}}"}]
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(core_ai_time_to_safe_answer_seconds_bucket[5m])) by (le, outcome))",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "id": 200,
+      "title": "2. Từng bước AI (Guardrail, Reranker, Tools, Ingestion)",
+      "type": "row"
+    },
+    {
+      "id": 4,
+      "title": "Thời gian suy luận Model cục bộ (Prompt Guard / BGE Reranker P95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(core_ai_local_model_inference_seconds_bucket[5m])) by (le, model))",
+          "legendFormat": "{{model}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Thời gian gọi MCP Tool & Document Parser (P95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 10 },
+      "fieldConfig": { "defaults": { "unit": "s", "noValue": "0s" } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(core_ai_mcp_tool_duration_seconds_bucket[5m])) by (le, tool_name)) or vector(0)",
+          "legendFormat": "tool: {{tool_name}}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(core_ai_ingestion_duration_seconds_bucket[5m])) by (le, parser)) or vector(0)",
+          "legendFormat": "parser: {{parser}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Kết quả Guardrail (Pass / Blocked / Sanitized)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 10 },
+      "targets": [
+        {
+          "expr": "sum(rate(core_ai_guardrail_outcomes_total[5m])) by (stage, outcome)",
+          "legendFormat": "{{stage}} [{{outcome}}]"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "id": 300,
+      "title": "3. Bộ nhớ đệm Cache (Hit / Miss / Tỷ lệ Hit)",
+      "type": "row"
+    },
+    {
+      "id": 7,
+      "title": "Tỷ lệ trúng Cache tức thời (Hit Ratio)",
+      "type": "gauge",
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 19 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.3 },
+              { "color": "green", "value": 0.6 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "avg(semantic_cache_hit_ratio)",
+          "legendFormat": "Hit Ratio"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Số lượng truy vấn Cache theo tầng (Exact vs Semantic)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 18, "x": 6, "y": 19 },
+      "targets": [
+        {
+          "expr": "sum(rate(core_ai_cache_level_total[5m])) by (level, result)",
+          "legendFormat": "{{level}} - {{result}}"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
+      "id": 400,
+      "title": "4. Độ ổn định & Tin cậy (Lỗi, Fallback, Suy giảm dịch vụ)",
+      "type": "row"
+    },
+    {
+      "id": 9,
+      "title": "Tần suất kích hoạt Fallback",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 27 },
+      "targets": [
+        {
+          "expr": "sum(rate(core_ai_fallback_total[5m])) by (reason)",
+          "legendFormat": "{{reason}}"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Lỗi HTTP (4xx / 5xx)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 27 },
+      "targets": [
+        {
+          "expr": "sum(rate(core_ai_requests_total{status=~\"4..|5..\"}[5m])) by (status)",
+          "legendFormat": "Status {{status}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Sự kiện suy giảm Redis & Không có bằng chứng",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 27 },
+      "targets": [
+        {
+          "expr": "sum(rate(core_ai_redis_degraded_total[5m])) by (reason)",
+          "legendFormat": "Redis Degraded: {{reason}}"
+        },
+        {
+          "expr": "avg(retrieval_no_evidence_ratio) * 100",
+          "legendFormat": "No Evidence Ratio (%)"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "id": 500,
+      "title": "5. Sử dụng và Chi phí (Request, Token, Chi phí ước tính)",
+      "type": "row"
+    },
+    {
+      "id": 12,
+      "title": "Lưu lượng Request (RPS)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 35 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        {
+          "expr": "sum(rate(core_ai_requests_total[5m])) by (route)",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Tiêu thụ Token LLM (Input vs Output)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 35 },
+      "fieldConfig": { "defaults": { "noValue": "0" } },
+      "targets": [
+        {
+          "expr": "sum(rate(core_ai_llm_tokens_total[5m])) by (model, token_type)",
+          "legendFormat": "{{model}} ({{token_type}})"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Tốc độ Chi phí ($/giờ)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 35 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "noValue": "$0.00" } },
+      "targets": [
+        {
+          "expr": "(sum(rate(estimated_cost_total[5m])) * 3600) or vector(0)",
+          "legendFormat": "Chi phí: {{model}}"
+        }
+      ]
+    },
+    {
+      "id": 141,
+      "title": "Tổng Chi phí Tích lũy (USD)",
+      "type": "stat",
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 35 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 5,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1.0 },
+              { "color": "red", "value": 5.0 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(estimated_cost_total) or vector(0)",
+          "legendFormat": "Tổng chi phí"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 42 },
+      "id": 600,
+      "title": "6. Hạ tầng Container (CPU, RAM, Uptime)",
+      "type": "row"
+    },
+    {
+      "id": 15,
+      "title": "Trạng thái Container (Uptime)",
+      "type": "stat",
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 43 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "up{job=\"st-care-core-ai\"}",
+          "legendFormat": "core-ai"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "CPU Sử dụng (%)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 9, "x": 6, "y": 43 },
+      "fieldConfig": { "defaults": { "unit": "percent", "noValue": "0" } },
+      "targets": [
+        {
+          "expr": "(rate(process_cpu_seconds_total{job=\"st-care-core-ai\"}[5m]) * 100) or vector(0)",
+          "legendFormat": "Core-AI CPU"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "title": "Bộ nhớ RAM tiêu thụ (Resident Memory)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 9, "x": 15, "y": 43 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes{job=\"st-care-core-ai\"}",
+          "legendFormat": "Core-AI RAM"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 50 },
+      "id": 700,
+      "title": "7. Log, Route & Phân luồng Hội thoại",
+      "type": "row"
+    },
+    {
+      "id": 18,
+      "title": "Phân luồng Intent / Topic chuyên mục",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 51 },
+      "targets": [
+        {
+          "expr": "sum(rate(core_ai_topic_routes_total[5m])) by (topic, route)",
+          "legendFormat": "{{topic}} -> {{route}}"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "title": "Tỷ lệ thành công và mã trạng thái Endpoint",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 51 },
+      "targets": [
+        {
+          "expr": "sum(rate(core_ai_requests_total[5m])) by (status)",
+          "legendFormat": "HTTP {{status}}"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "🔍 Lưu vết chi tiết & Trace Luồng xử lý (Distributed Traces & Audit Trail)",
+      "type": "text",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 58 },
+      "options": {
+        "mode": "markdown",
+        "content": "### 📌 Vị trí xem Trace và Lưu vết chi tiết trong hệ thống ST-Care:\n\n1. **Trực tiếp trên giao diện Chatbot (`http://localhost:3000/chatbot`)**:\n   - Dưới góc mỗi câu trả lời AI, bấm vào **`Đã suy nghĩ (X bước · Y ms)`** (icon Claude thinking).\n   - Bung ra toàn bộ waterfall thu gọn: `Kiểm tra an toàn` ➔ `Tra cứu bộ nhớ đệm` ➔ `Truy xuất tài liệu` ➔ `Đánh giá xác thực` ➔ `Tổng hợp câu trả lời` kèm thời gian xử lý chính xác của từng bước.\n\n2. **Waterfall Gantt Chart trên Grafana Tempo (`http://localhost:3001/explore`)**:\n   - Vào menu bên trái Grafana ➔ Chọn **Explore** (hoặc [Click vào đây để mở Explore](/explore?left=%7B%22datasource%22:%22tempo%22%7D)).\n   - Chọn Datasource là **Tempo**.\n   - Nhập Query / Search Service: `st-care-core-ai` hoặc Trace ID / Request ID.\n   - Bạn sẽ thấy biểu đồ thời gian thực dạng **Waterfall Gantt** chi tiết đến từng micro-giây của mọi function, span và exception (đã được lọc sạch PII đảm bảo an ninh dữ liệu sinh viên).\n\n3. **Audit Log Quản trị viên (`http://localhost:3000/admin`)**:\n   - Vào danh sách câu hỏi & hội thoại để xem toàn bộ lịch sử hỏi đáp của sinh viên, người duyệt, trạng thái duyệt và log chỉnh sửa (`/api/admin/questions/:id/audit`)."
+      }
     }
   ]
 }

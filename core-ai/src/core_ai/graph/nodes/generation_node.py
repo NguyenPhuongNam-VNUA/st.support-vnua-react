@@ -212,6 +212,30 @@ QUY TẮC BẢO MẬT & ĐẦU RA:
                 if active_cfg:
                     model_name = active_cfg.model
                     provider = active_cfg.provider
+
+                # Count tokens and record cost for streaming generation
+                import litellm
+                from core_ai.observability.metrics import record_llm_tokens, record_estimated_cost
+                try:
+                    p_text = " ".join([m.content for m in gen_request.messages if m.content])
+                    p_tokens = litellm.token_counter(model=model_name, text=p_text)
+                except Exception:
+                    p_tokens = max(1, len(user_prompt) // 4)
+
+                try:
+                    c_tokens = litellm.token_counter(model=model_name, text=answer_text)
+                except Exception:
+                    c_tokens = max(1, len(answer_text) // 4)
+
+                cost_usd = 0.0
+                try:
+                    p_cost, c_cost = litellm.cost_per_token(model=model_name, prompt_tokens=p_tokens, completion_tokens=c_tokens)
+                    cost_usd = float(p_cost + c_cost)
+                except Exception:
+                    pass
+
+                record_llm_tokens(provider, model_name, p_tokens, c_tokens)
+                record_estimated_cost(provider, model_name, cost_usd)
             except Exception as exc:
                 state["external_calls_count"] = min(max_calls, current_calls + 1)
                 logger.error(

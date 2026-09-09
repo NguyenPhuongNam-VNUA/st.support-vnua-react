@@ -18,6 +18,7 @@ from prometheus_client import (
     Counter,
     Gauge,
     Histogram,
+    ProcessCollector,
     generate_latest,
 )
 
@@ -25,6 +26,10 @@ logger = logging.getLogger("core_ai.observability.metrics")
 
 # Use a dedicated or default registry
 metrics_registry = CollectorRegistry(auto_describe=True)
+try:
+    ProcessCollector(registry=metrics_registry)
+except Exception:
+    pass
 
 # 1. Request Duration Histogram
 # Plan §12: core_ai_request_duration_seconds by route and status
