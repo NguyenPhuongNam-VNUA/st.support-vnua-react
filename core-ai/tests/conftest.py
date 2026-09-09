@@ -276,6 +276,15 @@ class MockLiteLLMResponse:
         usage_mock.total_tokens = prompt_tokens + completion_tokens
         self.usage = usage_mock
 
+    async def __aiter__(self):
+        words = (self.choices[0].message.content or "").split(" ")
+        for i, word in enumerate(words):
+            chunk = MagicMock()
+            delta = MagicMock()
+            delta.content = word if i == len(words) - 1 else word + " "
+            chunk.choices = [MagicMock(delta=delta)]
+            yield chunk
+
 
 @pytest.fixture
 def mock_litellm_completion() -> Generator[AsyncMock, None, None]:

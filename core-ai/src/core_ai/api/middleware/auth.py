@@ -5,7 +5,7 @@ for inter-service calls between Node.js BFF and core-ai.
 """
 
 import hmac
-from typing import Any, Callable, Optional, Set
+from typing import Any, Optional, Set
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware

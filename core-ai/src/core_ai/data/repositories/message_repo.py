@@ -61,7 +61,7 @@ class MessageRepository:
                 if valid_conv_id:
                     exists = await conn.fetchval(
                         """
-                        SELECT id FROM public.conversations 
+                        SELECT id FROM public.conversations
                         WHERE id = $1 AND started_at >= NOW() - INTERVAL '48 hours';
                         """,
                         valid_conv_id,
@@ -73,7 +73,7 @@ class MessageRepository:
                 if valid_conv_id is None and raw_session_id:
                     valid_conv_id = await conn.fetchval(
                         """
-                        SELECT id FROM public.conversations 
+                        SELECT id FROM public.conversations
                         WHERE session_id = $1 AND started_at >= NOW() - INTERVAL '48 hours'
                         ORDER BY started_at DESC LIMIT 1;
                         """,
@@ -84,7 +84,7 @@ class MessageRepository:
                 if valid_conv_id is None and client_ip and client_ip != "127.0.0.1":
                     valid_conv_id = await conn.fetchval(
                         """
-                        SELECT id FROM public.conversations 
+                        SELECT id FROM public.conversations
                         WHERE client_ip = $1 AND started_at >= NOW() - INTERVAL '48 hours'
                         ORDER BY started_at DESC LIMIT 1;
                         """,
@@ -206,6 +206,94 @@ class MessageRepository:
         except Exception as exc:
             logger.warning("48-Hour TTL message cleanup encountered an error: %s", exc)
             return 0
+
+    async def get_messages_by_conversation(
+        self, conversation_id: int | str, limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """Retrieves messages for a conversation ordered chronologically."""
+        if not conversation_id:
+            return []
+
+        valid_conv_id: Optional[int] = None
+        try:
+            valid_conv_id = int(str(conversation_id).replace("conv_", ""))
+        except ValueError:
+            valid_conv_id = None
+
+        str_conv = str(conversation_id)
+        try:
+            async with get_db_connection("vnua") as conn:
+                # If non-numeric, resolve conversation_id via session_id
+                if valid_conv_id is None:
+                    valid_conv_id = await conn.fetchval(
+                        "SELECT id FROM public.conversations WHERE session_id = $1 ORDER BY started_at DESC LIMIT 1;",
+                        str_conv,
+                    )
+
+                if valid_conv_id is None:
+                    return []
+
+                rows = await conn.fetch(
+                    """
+                    SELECT id, sender, content, status, confidence_score, retrieved_chunk_ids, created_at
+                    FROM public.messages
+                    WHERE conversation_id = $1
+                    ORDER BY id ASC
+                    LIMIT $2;
+                    """,
+                    valid_conv_id,
+                    limit,
+                )
+                messages = []
+                for r in rows:
+                    messages.append({
+                        "id": r["id"],
+                        "role": "assistant" if r["sender"] == "bot" else "user",
+                        "content": r["content"],
+                        "status": r["status"],
+                        "confidence_score": float(r["confidence_score"]) if r["confidence_score"] is not None else None,
+                        "retrieved_chunk_ids": r["retrieved_chunk_ids"],
+                        "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+                    })
+                return messages
+        except Exception as exc:
+            logger.warning("Failed to fetch messages for conversation %s: %s", conversation_id, exc)
+            return []
+
+    async def delete_conversation(self, conversation_id: int | str) -> bool:
+        """Deletes messages and conversation row for this conversation."""
+        if not conversation_id:
+            return False
+
+        valid_conv_id: Optional[int] = None
+        try:
+            valid_conv_id = int(str(conversation_id).replace("conv_", ""))
+        except ValueError:
+            valid_conv_id = None
+
+        str_conv = str(conversation_id)
+        # Clear RAM session memory if present
+        try:
+            from core_ai.data.memory_store import get_session_memory_store
+            get_session_memory_store().delete_session(str_conv)
+        except Exception as mem_exc:
+            logger.debug("Could not clear session memory store: %s", mem_exc)
+
+        try:
+            async with get_db_connection("vnua") as conn:
+                if valid_conv_id is None:
+                    valid_conv_id = await conn.fetchval(
+                        "SELECT id FROM public.conversations WHERE session_id = $1;",
+                        str_conv,
+                    )
+                if valid_conv_id is not None:
+                    await conn.execute("DELETE FROM public.messages WHERE conversation_id = $1;", valid_conv_id)
+                    await conn.execute("DELETE FROM public.conversations WHERE id = $1;", valid_conv_id)
+                    return True
+                return False
+        except Exception as exc:
+            logger.warning("Failed to delete conversation %s: %s", conversation_id, exc)
+            return False
 
 
 _global_message_repo: Optional[MessageRepository] = None
