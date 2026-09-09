@@ -1,0 +1,180 @@
+# ==============================================================================
+# ST-Care Full-Stack Docker Compose Orchestration
+# ==============================================================================
+# Services:
+# - web: Next.js 15 (Frontend UI + Backend BFF API routes) on port 3000
+# - core-ai: FastAPI Python Microservice (LangGraph RAG & MCP tools) on port 5001
+# - redis: Semantic cache, idempotency lock, and rate limiter on internal port 6379
+# - otel-collector: OpenTelemetry metrics & traces collector
+# - prometheus: Metrics time-series DB (Profile: monitoring) on port 9090
+# - grafana: Observability Dashboards (Profile: monitoring) on port 3001
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Frontend & Backend BFF (Next.js 15)
+  # ----------------------------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: st-care-web:latest
+    container_name: stcare-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NODE_ENV=production
+      - PYTHON_AGENT_BASE_URL=http://core-ai:5001
+      - CORE_AI_TENANT_ID=${CORE_AI_TENANT_ID:-vnua}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    depends_on:
+      core-ai:
+        condition: service_healthy
+    networks:
+      - stcare_network
+
+  # ----------------------------------------------------------------------------
+  # 2. ST-Care Core AI Microservice (FastAPI + LangGraph)
+  # ----------------------------------------------------------------------------
+  core-ai:
+    build:
+      context: ./core-ai
+      dockerfile: Dockerfile
+    image: st-care-core-ai:latest
+    container_name: stcare-core-ai
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./core-ai/models:/app/models:ro
+    env_file:
+      - ./core-ai/.env
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - CORE_AI_HOST=0.0.0.0
+      - CORE_AI_PORT=5001
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-st-care}@redis:6379/0
+      - BUSINESS_API_BASE_URL=http://web:3000/api
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      redis:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    networks:
+      - stcare_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ----------------------------------------------------------------------------
+  # 3. Redis Semantic Cache & Rate Limiting
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7.2.4-alpine
+    container_name: stcare-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-st-care}
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy volatile-lru
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - stcare_network
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-st-care}
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD:-st-care}\" ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # ----------------------------------------------------------------------------
+  # 4. OpenTelemetry Collector
+  # ----------------------------------------------------------------------------
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.108.0
+    container_name: stcare-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./core-ai/monitoring/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    expose:
+      - "4317"
+      - "4318"
+      - "8889"
+    networks:
+      - stcare_network
+
+  # ----------------------------------------------------------------------------
+  # 5. Prometheus Monitoring (Profile: monitoring)
+  # ----------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: stcare-prometheus
+    profiles:
+      - monitoring
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./core-ai/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./core-ai/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - stcare_network
+    depends_on:
+      - core-ai
+
+  # ----------------------------------------------------------------------------
+  # 6. Grafana Dashboard (Profile: monitoring)
+  # ----------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: stcare-grafana
+    profiles:
+      - monitoring
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./core-ai/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./core-ai/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - stcare_network
+    depends_on:
+      - prometheus
+
+# ------------------------------------------------------------------------------
+# Networks & Storage Volumes
+# ------------------------------------------------------------------------------
+networks:
+  stcare_network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

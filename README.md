@@ -87,6 +87,35 @@ Chi tiết hợp đồng tích hợp Python nằm tại `docs/python-ai-agent-co
 
 ## Chạy dự án
 
+### 1. Khởi chạy toàn bộ hệ thống bằng Docker Compose (Khuyến nghị)
+
+Khởi chạy đồng thời **Next.js (Frontend & Backend BFF)**, **Core AI Microservice**, **Redis Cache**:
+
+```bash
+docker compose up --build -d
+```
+
+- **Frontend & Backend (Next.js)**: [http://localhost:3000](http://localhost:3000)
+- **Core AI Microservice**: [http://localhost:5001](http://localhost:5001)
+- **Core AI Swagger Docs**: [http://localhost:5001/docs](http://localhost:5001/docs)
+
+Nếu muốn khởi chạy thêm cụm giám sát (Prometheus & Grafana):
+
+```bash
+docker compose --profile monitoring up --build -d
+```
+
+- **Grafana Observability**: [http://localhost:3001](http://localhost:3001)
+- **Prometheus Metrics**: [http://localhost:9090](http://localhost:9090)
+
+Dừng hệ thống:
+
+```bash
+docker compose down
+```
+
+### 2. Khởi chạy thủ công (Development)
+
 ```bash
 npm install
 npm run dev

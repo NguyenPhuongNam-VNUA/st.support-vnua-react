@@ -1,0 +1,23 @@
+# Dependencies & artifacts
+node_modules
+.next
+.git
+.github
+.agents
+core-ai/.venv
+core-ai/models
+core-ai/__pycache__
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files with local overrides
+.env*.local
+
+# System files
+.DS_Store
+Thumbs.db
