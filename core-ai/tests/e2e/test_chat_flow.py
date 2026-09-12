@@ -97,13 +97,19 @@ class TestChatFlowE2E:
 
         # 3. Answer deltas follow
         delta_events = [e for e in events if e == "answer.delta"]
-        assert len(delta_events) >= 1
+        assert len(delta_events) > 1
+        streamed_answer = "".join(
+            payload["delta"]
+            for event, payload in zip(events, data_payloads)
+            if event == "answer.delta"
+        )
 
         # 4. Final event MUST be answer.completed
         assert events[-1] == "answer.completed"
         final_payload = data_payloads[-1]
 
         assert final_payload["status"] == "answered"
+        assert streamed_answer in final_payload["answer"]
         assert len(final_payload["answer"]) > 0
         assert "citations" in final_payload
         assert len(final_payload["citations"]) >= 1

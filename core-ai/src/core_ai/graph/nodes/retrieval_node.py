@@ -125,6 +125,27 @@ def _select_with_facet_coverage(
     return selected[:top_k]
 
 
+def _ensure_document_coverage(
+    ranked: List[RankedChunk], selected: List[RankedChunk], top_k: int
+) -> List[RankedChunk]:
+    """Keep one relevant document result when FAQ scores dominate the final cut."""
+    if top_k <= 0 or any(item.source_type == "document" for item in selected):
+        return selected
+    best_document = next(
+        (
+            item
+            for item in ranked
+            if item.source_type == "document" and float(item.final_score or 0.0) >= 0.5
+        ),
+        None,
+    )
+    if best_document is None:
+        return selected
+    if len(selected) < top_k:
+        return [*selected, best_document]
+    return [*selected[:-1], best_document]
+
+
 def _rank_deterministically(
     candidates: List[RankedChunk], as_of: date, query: str
 ) -> List[RankedChunk]:
@@ -295,6 +316,11 @@ async def retrieval_node(state: GraphState) -> GraphState:
     state["current_stage"] = "retrieval"
     attempts = state.get("retrieval_attempts", 0) + 1
     state["retrieval_attempts"] = attempts
+    previous_evidence = list(state.get("retrieved_chunks", [])) if attempts > 1 else []
+    previous_citations = [
+        item if isinstance(item, Citation) else Citation(**item)
+        for item in state.get("citations", [])
+    ] if attempts > 1 else []
     query = (
         reformulate_query_deterministic(state.get("message", ""))
         if attempts > 1
@@ -372,12 +398,17 @@ async def retrieval_node(state: GraphState) -> GraphState:
             reranker = get_component("local_reranker")
             if reranker is not None and getattr(reranker, "available", False) is True:
                 try:
+                    rerank_candidates = sorted(
+                        candidates,
+                        key=lambda item: max(item.similarity or 0.0, item.rrf_score or 0.0),
+                        reverse=True,
+                    )[: final_top_k * 2]
                     reranked = await asyncio.wait_for(
                         asyncio.to_thread(
                             reranker.rerank,
                             query,
-                            candidates,
-                            target_top_n=len(candidates),
+                            rerank_candidates,
+                            target_top_n=len(rerank_candidates),
                         ),
                         timeout=get_settings().reranker_timeout_seconds,
                     )
@@ -397,7 +428,11 @@ async def retrieval_node(state: GraphState) -> GraphState:
                 state["rerank_strategy"] = "deterministic_rrf_weighted"
 
             ranked_candidates = _rank_deterministically(candidates, _query_date(query), query)
-            candidates = _select_with_facet_coverage(ranked_candidates, final_top_k, query)
+            candidates = _ensure_document_coverage(
+                ranked_candidates,
+                _select_with_facet_coverage(ranked_candidates, final_top_k, query),
+                final_top_k,
+            )
         except Exception as exc:
             retrieval_status = "degraded"
             state["error_code"] = "retrieval_failed"
@@ -417,6 +452,11 @@ async def retrieval_node(state: GraphState) -> GraphState:
         evidence.append(item)
         if citation is not None:
             citations.append(citation)
+    retained_previous = False
+    if previous_evidence and not evidence:
+        evidence = previous_evidence
+        citations = previous_citations
+        retained_previous = True
     state["retrieved_chunks"] = evidence
     state["citations"] = citations
     add_execution_trace(
@@ -431,6 +471,7 @@ async def retrieval_node(state: GraphState) -> GraphState:
             "faq_count": sum(chunk.source_type == "faq" for chunk in candidates),
             "rerank_strategy": state.get("rerank_strategy", "none"),
             "retrieval_route": state.get("retrieval_route", "none"),
+            "retained_previous": retained_previous,
         },
     )
     return state

@@ -20,22 +20,40 @@ async function streamAi(data: unknown, onEvent: StreamHandler, signal?: AbortSig
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
-    const frames = buffer.split(/\r?\n\r?\n/);
-    buffer = frames.pop() || '';
-    for (const frame of frames) {
-      let eventName = 'message';
-      const dataLines: string[] = [];
-      for (const line of frame.split(/\r?\n/)) {
-        if (line.startsWith('event:')) eventName = line.slice(6).trim();
-        if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart());
-      }
-      if (!dataLines.length) continue;
-      onEvent({ event: eventName as AiStreamEvent['event'], data: JSON.parse(dataLines.join('\n')) });
+  let terminalReceived = false;
+  const emitFrame = (frame: string) => {
+    if (!frame.trim()) return;
+    let eventName = 'message';
+    const dataLines: string[] = [];
+    for (const line of frame.split(/\r?\n/)) {
+      if (line.startsWith('event:')) eventName = line.slice(6).trim();
+      if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart());
     }
-    if (done) break;
+    if (!dataLines.length) return;
+    if (eventName === 'answer.completed' || eventName === 'answer.error') {
+      terminalReceived = true;
+    }
+    onEvent({ event: eventName as AiStreamEvent['event'], data: JSON.parse(dataLines.join('\n')) });
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+      const frames = buffer.split(/\r?\n\r?\n/);
+      buffer = frames.pop() || '';
+      frames.forEach(emitFrame);
+      if (done) {
+        emitFrame(buffer);
+        break;
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  if (!terminalReceived && !signal?.aborted) {
+    throw new Error('Kết nối bị gián đoạn trước khi câu trả lời hoàn tất');
   }
 }
 

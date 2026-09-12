@@ -238,6 +238,14 @@ export const documentService = {
     return data.signedUrl;
   },
 
+  async getPublishedSignedFileUrl(id: number) {
+    const document = await this.getById(id);
+    if (!document.is_active || document.pipeline_stage !== 'ready') {
+      throw new DocumentServiceError('Tài liệu chưa sẵn sàng để xem', 404);
+    }
+    return this.getSignedFileUrl(id);
+  },
+
   async listChunks(id: number) {
     await this.getById(id);
     return documentRepository.listChunks(id);

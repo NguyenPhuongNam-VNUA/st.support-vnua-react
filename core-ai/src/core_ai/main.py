@@ -99,7 +99,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Load optional local weights before readiness. Missing weights keep deterministic fallbacks active.
     for model_name in ("prompt_guard_model",):
         model_component = get_component(model_name)
-        if model_component is not None and hasattr(model_component, "load"):
+        if (
+            model_component is not None
+            and hasattr(model_component, "load")
+            and not getattr(model_component, "available", False)
+        ):
             try:
                 await asyncio.to_thread(model_component.load)
             except Exception as exc:

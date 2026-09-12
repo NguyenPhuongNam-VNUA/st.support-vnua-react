@@ -33,10 +33,10 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY pyproject.toml README.md ./
 COPY src/ ./src/
 
-# Install only runtime dependencies. OCR is handled by Tesseract and retrieval
-# uses deterministic RRF, so PyTorch/Transformers are intentionally excluded.
+# Install runtime dependencies and the optional local-model stack. The extra
+# PyTorch index provides CPU-only wheels; PyPI remains available for its deps.
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install "."
+    pip install --extra-index-url https://download.pytorch.org/whl/cpu ".[local-models]"
 
 # ------------------------------------------------------------------------------
 # Stage 2: Minimal Production Runtime

@@ -13,7 +13,7 @@ import time
 from typing import Any, Dict, List, Literal, cast
 
 from core_ai.contracts.chat import FallbackInfo, RouteStatus
-from core_ai.contracts.events import AnswerDeltaPayload, SSEEvent
+from core_ai.contracts.events import AnswerDeltaPayload, PipelineStatusPayload, SSEEvent
 from core_ai.contracts.llm import ChatMessage, GenerationRequest, GenerationResult
 from core_ai.dependencies import get_component
 from core_ai.graph.state import GraphState, add_execution_trace
@@ -86,6 +86,29 @@ async def generation_node(state: GraphState) -> GraphState:
     t0 = time.perf_counter()
     state["current_stage"] = "generation"
 
+    chunks = state.get("retrieved_chunks", [])
+    intent = state.get("user_intent", "academic")
+    has_grounded_evidence = bool(chunks) and (
+        state.get("is_sufficient_evidence", False)
+        or state.get("evidence_band") == "medium"
+    ) and state.get("has_distinctive_match", True)
+    if intent == "academic" and not has_grounded_evidence:
+        state["status"] = RouteStatus.CLARIFIED
+        state["fallback"] = FallbackInfo(
+            reason="insufficient_evidence",
+            original_route="generation",
+            fallback_strategy="safe_template",
+            contact_channel="Ban Quản lý Đào tạo VNUA: phongdaotao@vnua.edu.vn",
+        )
+        add_execution_trace(
+            state,
+            "generation",
+            "skipped",
+            int((time.perf_counter() - t0) * 1000),
+            {"reason": "academic_answer_requires_grounded_evidence"},
+        )
+        return state
+
     current_calls = state.get("external_calls_count", 0)
     max_calls = state.get("max_external_calls", 2)
 
@@ -121,10 +144,8 @@ async def generation_node(state: GraphState) -> GraphState:
     mem_store = get_session_memory_store()
     pers_ctx = mem_store.get_personalization_context(client_ip)
 
-    chunks = state.get("retrieved_chunks", [])
     context_text = build_evidence_context(chunks)
     has_document_evidence = any(chunk.get("source_type") == "document" for chunk in chunks)
-    intent = state.get("user_intent", "academic")
 
     # Specific system guidance based on intent (kept strictly in SYSTEM role)
     if intent == "social":
@@ -143,7 +164,7 @@ async def generation_node(state: GraphState) -> GraphState:
             "- Lái ngay về việc sẵn sàng hỗ trợ các vấn đề học vụ VNUA (học phí, lịch học, đăng ký tín chỉ...)."
         )
     else:
-        if chunks and state.get("is_sufficient_evidence", True):
+        if has_grounded_evidence:
             citation_guidance = (
                 "- Chỉ gắn mã [src_X] cho thông tin lấy từ tài liệu; dữ liệu FAQ không cần trích nguồn.\n"
                 if has_document_evidence
@@ -151,7 +172,7 @@ async def generation_node(state: GraphState) -> GraphState:
             )
             intent_guidance = (
                 "HƯỚNG DẪN CHO LƯỢT NÀY:\n"
-                "- Dựa vào [DỮ LIỆU TRA CỨU] được cung cấp để trả lời đúng trọng tâm.\n"
+                "- CHỈ trả lời bằng thông tin có trong [DỮ LIỆU TRA CỨU]; không dùng kiến thức bên ngoài, không suy đoán và không tự bổ sung dữ kiện.\n"
                 f"{citation_guidance}"
                 "- Trình bày thoáng mắt, rõ ràng. Nếu có các bước hay điều kiện, BẮT BUỘC xuống dòng riêng biệt cho từng mục (1., 2., 3. hoặc gạch đầu dòng -).\n"
                 "- Nếu dùng bảng Markdown (Table), BẮT BUỘC mỗi hàng phải xuống dòng riêng biệt, không viết dính liền trên 1 dòng.\n"
@@ -180,7 +201,7 @@ QUY TẮC BẢO MẬT & ĐẦU RA:
     user_parts: List[str] = []
     if pers_ctx:
         user_parts.append(f"[NGỮ CẢNH & THÔNG TIN SINH VIÊN]:\n{pers_ctx}")
-    if chunks and state.get("is_sufficient_evidence", True):
+    if has_grounded_evidence:
         user_parts.append(f"[DỮ LIỆU TRA CỨU]:\n{context_text}")
     user_parts.append(state.get("message", ""))
     user_prompt = "\n\n".join(user_parts)
@@ -224,25 +245,38 @@ QUY TẮC BẢO MẬT & ĐẦU RA:
         ttft_ms = 0
         if event_queue is not None and hasattr(llm_port, "generate_stream"):
             try:
+                await event_queue.put(
+                    SSEEvent(
+                        event="pipeline.status",
+                        data=PipelineStatusPayload(
+                            request_id=state.get("request_id", ""),
+                            stage="generation",
+                            status="in_progress",
+                            message="Đang tổng hợp câu trả lời",
+                            progress_percent=85,
+                        ),
+                    ).to_dict()
+                )
                 collected_chunks: List[str] = []
                 idx = 0
-                req_id = state.get("request_id", "")
                 async for chunk in llm_port.generate_stream(gen_request):
                     if chunk:
                         if idx == 0:
                             ttft_ms = int((time.perf_counter() - t0) * 1000)
                         collected_chunks.append(chunk)
-                        delta_payload = AnswerDeltaPayload(
-                            request_id=req_id,
-                            delta=chunk,
-                            index=idx,
-                        )
                         await event_queue.put(
-                            SSEEvent(event="answer.delta", data=delta_payload).to_dict()
+                            SSEEvent(
+                                event="answer.delta",
+                                data=AnswerDeltaPayload(
+                                    request_id=state.get("request_id", ""),
+                                    delta=chunk,
+                                    index=idx,
+                                ),
+                            ).to_dict()
                         )
                         idx += 1
+                        state["streamed_deltas_count"] = idx
                 answer_text = "".join(collected_chunks)
-                state["streamed_deltas_count"] = idx
                 state["external_calls_count"] = min(max_calls, current_calls + 1)
                 active_cfg = await llm_port.get_active_model_config() if hasattr(llm_port, "get_active_model_config") else None
                 if active_cfg:
@@ -296,7 +330,7 @@ QUY TẮC BẢO MẬT & ĐẦU RA:
                     latency,
                     {"error_type": type(exc).__name__},
                 )
-                return state
+                raise
         elif hasattr(llm_port, "generate"):
             try:
                 gen_result: GenerationResult = await llm_port.generate(gen_request)
@@ -309,16 +343,6 @@ QUY TẮC BẢO MẬT & ĐẦU RA:
                 if gen_result.usage:
                     p_tokens = gen_result.usage.prompt_tokens
                     c_tokens = gen_result.usage.completion_tokens
-                if event_queue is not None and answer_text:
-                    delta_payload = AnswerDeltaPayload(
-                        request_id=state.get("request_id", ""),
-                        delta=answer_text,
-                        index=0,
-                    )
-                    await event_queue.put(
-                        SSEEvent(event="answer.delta", data=delta_payload).to_dict()
-                    )
-                    state["streamed_deltas_count"] = 1
             except Exception as exc:
                 state["external_calls_count"] = min(max_calls, current_calls + 1)
                 logger.error(
@@ -375,6 +399,18 @@ QUY TẮC BẢO MẬT & ĐẦU RA:
             {"reason": "llm_gateway_unavailable"},
         )
         return state
+
+    document_citation_ids = [
+        str(chunk.get("citation_id"))
+        for chunk in chunks
+        if chunk.get("source_type") == "document" and chunk.get("citation_id")
+    ]
+    if (
+        answer_text
+        and document_citation_ids
+        and not any(f"[{citation_id}]" in answer_text for citation_id in document_citation_ids)
+    ):
+        answer_text = f"{answer_text.rstrip()}\n\n[{document_citation_ids[0]}]"
 
     state["answer"] = answer_text
     if state.get("retrieved_chunks"):

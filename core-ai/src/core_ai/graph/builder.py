@@ -76,12 +76,16 @@ def build_orchestration_graph() -> Any:
     builder.add_conditional_edges(
         "query_prep",
         route_after_query_prep,
-        {"topic_scoring": "topic_scoring", "generation": "generation"},
+        {
+            "topic_scoring": "topic_scoring",
+            "generation": "generation",
+            "fallback": "fallback",
+        },
     )
     builder.add_conditional_edges(
         "topic_scoring",
         route_after_topic,
-        {"cache_check": "cache_check", "generation": "generation"},
+        {"cache_check": "cache_check", "fallback": "fallback"},
     )
     builder.add_conditional_edges(
         "cache_check",
@@ -98,7 +102,7 @@ def build_orchestration_graph() -> Any:
     # retrieval -> evidence_eval
     builder.add_edge("retrieval", "evidence_eval")
 
-    # evidence_eval -> generation OR retrieval (corrective retry) OR tool_node OR fallback
+    # evidence_eval -> grounded generation OR one corrective retry OR safe refusal
     builder.add_conditional_edges(
         "evidence_eval",
         route_after_evidence,

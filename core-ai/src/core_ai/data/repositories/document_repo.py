@@ -5,6 +5,7 @@ tenant predicates in every read/write query.
 """
 
 import logging
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -15,6 +16,39 @@ from core_ai.contracts.errors import RetrievalError
 from core_ai.data.postgres import get_db_connection
 
 logger = logging.getLogger("core_ai.data.repositories.document_repo")
+
+FTS_STOP_WORDS = {
+    "bao",
+    "bạn",
+    "cho",
+    "có",
+    "của",
+    "được",
+    "học",
+    "hỏi",
+    "kỳ",
+    "là",
+    "mỗi",
+    "nào",
+    "nhiêu",
+    "nông",
+    "nghiệp",
+    "như",
+    "ra",
+    "sao",
+    "sinh",
+    "tại",
+    "thế",
+    "thì",
+    "trong",
+    "viên",
+    "viện",
+    "vnua",
+    "và",
+    "về",
+    "đâu",
+    "ở",
+}
 
 
 class DocumentRecord(BaseModel):
@@ -240,6 +274,11 @@ class DocumentRepository:
         cleaned_text = query_text.strip()
         if not cleaned_text:
             return []
+        raw_terms = re.findall(r"[\w]+", cleaned_text.lower())[:20]
+        search_terms = [term for term in raw_terms if term not in FTS_STOP_WORDS]
+        ts_query = " | ".join(search_terms or raw_terms)
+        if not ts_query:
+            return []
 
         query = """
             SELECT
@@ -275,7 +314,7 @@ class DocumentRepository:
                 dc.markdown_end_offset,
                 ts_rank_cd(
                     to_tsvector('simple', coalesce(dc.search_text, dc.content)),
-                    plainto_tsquery('simple', $1)
+                    to_tsquery('simple', $1)
                 ) AS fts_score,
                 dc.created_at
             FROM public.document_chunks dc
@@ -285,14 +324,14 @@ class DocumentRepository:
               AND d.tenant_id = $3
               AND dc.tenant_id = $3
               AND to_tsvector('simple', coalesce(dc.search_text, dc.content))
-                  @@ plainto_tsquery('simple', $1)
+                  @@ to_tsquery('simple', $1)
             ORDER BY fts_score DESC
             LIMIT $2;
         """
 
         try:
             async with get_db_connection(tenant_id) as conn:
-                rows = await conn.fetch(query, cleaned_text, top_k, tenant_id)
+                rows = await conn.fetch(query, ts_query, top_k, tenant_id)
                 if not rows:
                     # Fallback to ILIKE substring search if tsquery matched 0 tokens
                     fallback_query = """

@@ -18,12 +18,17 @@ async def topic_scoring_node(state: GraphState) -> GraphState:
     state["current_stage"] = "topic_scoring"
     query = state.get("normalized_query") or state.get("message", "")
     topic, topic_score, slot_coverage = _ANCHORS.score(query, state.get("query_embedding", []))
+    is_general_academic = topic is None and state.get("user_intent") == "academic"
+    if is_general_academic:
+        topic = "general_academic"
     meaningful_terms = [term for term in state.get("query_terms", []) if len(term) > 2]
     clarity = min(1.0, len(meaningful_terms) / 6.0)
     context_fit = 1.0 if state.get("history") else (0.65 if topic else 0.0)
     score = 0.45 * topic_score + 0.25 * slot_coverage + 0.15 * clarity + 0.15 * context_fit
     settings = get_settings()
-    is_in_domain = bool(topic and score >= settings.topic_in_domain_threshold)
+    is_in_domain = is_general_academic or bool(
+        topic and score >= settings.topic_in_domain_threshold
+    )
     should_clarify = bool(
         is_in_domain
         and score < settings.topic_clarify_threshold

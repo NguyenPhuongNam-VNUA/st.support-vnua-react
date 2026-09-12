@@ -33,3 +33,20 @@ def test_markdown_list_number_is_not_treated_as_factual_mismatch() -> None:
         require_citations=True,
     )
     assert result.is_safe is True
+
+
+def test_faq_numeric_claim_is_checked_without_a_document_citation() -> None:
+    guard = OutputGuardrail()
+    result = guard.validate(
+        "Sinh viên được đăng ký tối đa 30 tín chỉ.",
+        [],
+        [
+            {
+                "source_type": "faq",
+                "snippet": "Sinh viên được đăng ký tối đa 24 tín chỉ.",
+            }
+        ],
+        require_citations=False,
+    )
+    assert result.is_safe is False
+    assert "30" not in result.sanitized_answer

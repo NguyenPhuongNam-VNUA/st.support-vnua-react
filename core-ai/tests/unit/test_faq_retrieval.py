@@ -7,6 +7,7 @@ from core_ai.data.repositories.question_repo import QuestionRecord
 from core_ai.graph.nodes.generation_node import build_evidence_context
 from core_ai.graph.nodes.guardrail_node import output_guardrail_node
 from core_ai.graph.nodes.retrieval_node import retrieval_node
+from core_ai.graph.nodes.topic_scoring_node import topic_scoring_node
 from core_ai.graph.state import create_initial_state
 from core_ai.retrieval.bm25 import RankedChunk
 
@@ -148,6 +149,107 @@ async def test_combines_faq_and_document_then_cites_only_document() -> None:
     assert len(result["citations"]) == 1
     assert result["citations"][0].source_type == "document"
     hybrid.retrieve_parallel.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_faq_ranking_keeps_a_relevant_document_source() -> None:
+    faqs = [
+        QuestionRecord(
+            id=index,
+            question=f"Câu hỏi học bổng {index}",
+            answer="Điều kiện nhận học bổng.",
+            status="approved",
+            similarity=0.95 - index / 100,
+        )
+        for index in range(1, 5)
+    ]
+    document_chunk = RankedChunk(
+        chunk_id="chunk-scholarship",
+        document_id=3,
+        chunk_index=170,
+        page=106,
+        document_title="Sổ tay sinh viên K69",
+        content="Điều kiện xét học bổng khuyến khích học tập cho sinh viên.",
+        similarity=0.8,
+        rank=1,
+        retrieval_source="dense",
+        source_type="document",
+    )
+    vector_retriever = MagicMock()
+    vector_retriever.search_faq = AsyncMock(return_value=faqs)
+    hybrid = MagicMock()
+    hybrid.vector_retriever = vector_retriever
+    hybrid.retrieve_parallel = AsyncMock(return_value=([document_chunk], []))
+    settings = MagicMock(retrieval_top_k=3)
+    state = create_initial_state("req-doc-coverage", "Điều kiện học bổng K69")
+    state["query_embedding"] = [0.1] * 128
+
+    with (
+        patch("core_ai.graph.nodes.retrieval_node.get_component", return_value=hybrid),
+        patch("core_ai.graph.nodes.retrieval_node.get_settings", return_value=settings),
+    ):
+        result = await retrieval_node(state)
+
+    assert len(result["retrieved_chunks"]) == 3
+    assert any(item["source_type"] == "document" for item in result["retrieved_chunks"])
+    assert len(result["citations"]) == 1
+    assert result["citations"][0].document_id == 3
+
+
+@pytest.mark.asyncio
+async def test_unlisted_academic_topic_continues_to_retrieval() -> None:
+    state = create_initial_state(
+        "req-general-academic",
+        "Thủ tục đăng ký ở ký túc xá và chi phí dịch vụ ra sao?",
+    )
+    state["normalized_query"] = state["message"]
+    state["query_terms"] = state["message"].lower().split()
+    state["user_intent"] = "academic"
+
+    with patch(
+        "core_ai.graph.nodes.topic_scoring_node.get_settings",
+        return_value=MagicMock(topic_in_domain_threshold=0.38, topic_clarify_threshold=0.52),
+    ):
+        result = await topic_scoring_node(state)
+
+    assert result["topic"] == "general_academic"
+    assert result["is_in_domain"] is True
+
+
+@pytest.mark.asyncio
+async def test_corrective_retry_does_not_discard_better_document_evidence() -> None:
+    document_chunk = RankedChunk(
+        chunk_id="chunk-ktx",
+        document_id=3,
+        chunk_index=159,
+        page=104,
+        document_title="Sổ tay sinh viên K69",
+        content="Thông tin ký túc xá và đơn vị hỗ trợ sinh viên.",
+        similarity=0.74,
+        rank=1,
+        retrieval_source="dense",
+        source_type="document",
+    )
+    hybrid = MagicMock()
+    hybrid.vector_retriever = MagicMock()
+    hybrid.vector_retriever.search_faq = AsyncMock(return_value=[])
+    hybrid.retrieve_parallel = AsyncMock(side_effect=[([document_chunk], []), ([], [])])
+    settings = MagicMock(retrieval_top_k=3)
+    state = create_initial_state("req-corrective", "Thông tin ký túc xá")
+    state["query_embedding"] = [0.1] * 128
+
+    with (
+        patch("core_ai.graph.nodes.retrieval_node.get_component", return_value=hybrid),
+        patch("core_ai.graph.nodes.retrieval_node.get_settings", return_value=settings),
+    ):
+        first = await retrieval_node(state)
+        original_citation = first["citations"][0]
+        second = await retrieval_node(first)
+
+    assert second["retrieval_attempts"] == 2
+    assert second["retrieved_chunks"][0]["document_id"] == 3
+    assert second["citations"] == [original_citation]
+    assert second["execution_trace"][-1].details["retained_previous"] is True
 
 
 def test_faq_prompt_context_has_no_document_provenance() -> None:

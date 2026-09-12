@@ -72,6 +72,7 @@ class GraphState(TypedDict, total=False):
     evidence_threshold: float
     evidence_band: str
     is_sufficient_evidence: bool
+    has_distinctive_match: bool
     rerank_strategy: str
     retrieval_route: Literal["none", "faq_and_document"]
 
@@ -169,6 +170,7 @@ def create_initial_state(
         "evidence_threshold": evidence_threshold,
         "evidence_band": "low",
         "is_sufficient_evidence": False,
+        "has_distinctive_match": False,
         "rerank_strategy": "none",
         "retrieval_route": "none",
         "tool_calls_made": 0,

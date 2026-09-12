@@ -47,13 +47,17 @@ def route_after_cache(
     return "embedding"
 
 
-def route_after_query_prep(state: GraphState) -> Literal["topic_scoring", "generation"]:
-    return "generation" if state.get("topic_precheck_out", False) else "topic_scoring"
+def route_after_query_prep(
+    state: GraphState,
+) -> Literal["topic_scoring", "generation", "fallback"]:
+    if not state.get("topic_precheck_out", False):
+        return "topic_scoring"
+    return "generation" if state.get("user_intent") == "social" else "fallback"
 
 
-def route_after_topic(state: GraphState) -> Literal["cache_check", "generation"]:
+def route_after_topic(state: GraphState) -> Literal["cache_check", "fallback"]:
     if not state.get("is_in_domain", False):
-        return "generation"
+        return "fallback"
     return "cache_check"
 
 
@@ -63,10 +67,13 @@ def route_after_semantic_cache(state: GraphState) -> Literal["output_guardrail",
 
 def route_after_evidence(
     state: GraphState,
-) -> Literal["generation", "retrieval", "tool_node", "fallback"]:
-    """Route by evidence quality, corrective retry budget, and tool availability."""
-    # 1. Sufficient evidence -> Answer Generation
-    if state.get("is_sufficient_evidence", False):
+) -> Literal["generation", "retrieval", "fallback"]:
+    """Generate only from usable FAQ/document evidence; otherwise refuse safely."""
+    evidence_band = state.get("evidence_band")
+    has_distinctive_match = state.get("has_distinctive_match", True)
+
+    # 1. Strong evidence still needs a meaningful query-term match.
+    if state.get("is_sufficient_evidence", False) and has_distinctive_match:
         logger.info(
             "Routing after evidence_eval: SUFFICIENT (score=%.3f) -> generation",
             state.get("evidence_score", 0.0),
@@ -75,7 +82,7 @@ def route_after_evidence(
 
     # 2. Corrective retrieval retry: strictly limited to at most 1 retry and 0 extra LLM calls
     retrieval_attempts = state.get("retrieval_attempts", 0)
-    if state.get("evidence_band") == "medium" and retrieval_attempts < 2:
+    if evidence_band in ("medium", "high") and retrieval_attempts < 2:
         logger.info(
             "Routing after evidence_eval: INSUFFICIENT -> corrective retrieval "
             "retry (attempt %d of 2)",
@@ -83,31 +90,20 @@ def route_after_evidence(
         )
         return "retrieval"
 
-    # 3. If corrective retrieval already exhausted, attempt MCP tool lookup
-    tool_calls = state.get("tool_calls_made", 0)
-    structured_tool_terms = (
-        "học phí",
-        "công nợ",
-        "đóng học",
-        "lịch thi",
-        "thời khóa biểu",
-        "lịch học",
-        "quy chế",
-        "quy định",
-        "tốt nghiệp",
-        "hỗ trợ",
-        "khiếu nại",
-    )
-    needs_structured_tool = any(
-        term in state.get("message", "").lower() for term in structured_tool_terms
-    )
-    if tool_calls == 0 and needs_structured_tool:
-        logger.info("Routing after evidence_eval: INSUFFICIENT -> tool_node (MCP lookup)")
-        return "tool_node"
+    # 3. Medium evidence remains usable after the single corrective retry.
+    if (
+        evidence_band in ("medium", "high")
+        and has_distinctive_match
+        and state.get("retrieved_chunks")
+    ):
+        logger.info(
+            "Routing after evidence_eval: MEDIUM evidence retained after retry -> generation"
+        )
+        return "generation"
 
-    # 4. Route to generation for dynamic, helpful AI synthesis and friendly guidance
-    logger.info("Routing after evidence_eval: INSUFFICIENT -> generation (dynamic AI response)")
-    return "generation"
+    # 4. Low/empty evidence must never reach the LLM as an academic answer.
+    logger.info("Routing after evidence_eval: LOW_OR_EMPTY evidence -> fallback")
+    return "fallback"
 
 
 def route_after_tool(

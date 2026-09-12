@@ -95,7 +95,7 @@ class PipelineStatusPayload(BaseModel):
 
 
 class AnswerDeltaPayload(BaseModel):
-    """Incremental streaming of verified text chunks emitted after output guardrail validation."""
+    """Incremental model text; answer.completed remains authoritative after final validation."""
     request_id: str = Field(..., description="Request UUID")
     delta: str = Field(..., description="Incremental verified text fragment")
     index: int = Field(..., ge=0, description="Sequential chunk counter (0-indexed)")

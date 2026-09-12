@@ -24,6 +24,10 @@ export async function callAiAgent(
     throw new AiAgentError('Python AI Agent chưa được cấu hình', 503);
   }
 
+  const timeoutSignal = AbortSignal.timeout(60_000);
+  const signal = init.signal
+    ? AbortSignal.any([init.signal, timeoutSignal])
+    : timeoutSignal;
   const response = await fetch(`${baseUrl.replace(/\/$/, '')}${path}`, {
     ...init,
     headers: {
@@ -35,7 +39,7 @@ export async function callAiAgent(
       ...init.headers,
     },
     cache: 'no-store',
-    signal: AbortSignal.timeout(60_000),
+    signal,
   });
 
   return response;

@@ -108,9 +108,21 @@ class OutputGuardrail:
         return cleaned
 
     @staticmethod
-    def unsupported_factual_claims(answer: str, citations: List[Citation]) -> List[str]:
+    def unsupported_factual_claims(
+        answer: str,
+        citations: List[Citation],
+        retrieved_chunks: Optional[List[Any]] = None,
+    ) -> List[str]:
         """Find numeric/date claims whose values do not occur in verified evidence."""
-        evidence = " ".join(citation.snippet.lower() for citation in citations)
+        evidence_parts = [citation.snippet for citation in citations]
+        for chunk in retrieved_chunks or []:
+            if isinstance(chunk, dict):
+                evidence_parts.append(str(chunk.get("snippet") or chunk.get("content") or ""))
+            else:
+                evidence_parts.append(
+                    str(getattr(chunk, "snippet", None) or getattr(chunk, "content", ""))
+                )
+        evidence = " ".join(evidence_parts).lower()
         unsupported: List[str] = []
         # Ignore Markdown list ordinals and isolated one-digit values. Ground
         # dates, percentages, money and multi-digit quantities that can change
@@ -272,19 +284,22 @@ class OutputGuardrail:
         invalid_inline = any(int(match.group(1)) not in valid_indices for match in inline_matches)
         sanitized = self.clean_inline_citations(sanitized, valid_indices)
 
-        unsupported_claims = self.unsupported_factual_claims(sanitized, validated_citations)
+        unsupported_claims = self.unsupported_factual_claims(
+            sanitized, validated_citations, chunks
+        )
 
         # 5. Hallucination Blocking Policy
         # If citations were strictly required (e.g. tuition, regulations) but none valid remain
         missing_required_inline = (
             require_citations and bool(validated_citations) and not inline_matches
         )
-        if require_citations and (
+        citation_failure = require_citations and (
             (raw_citations and not validated_citations)
             or invalid_inline
             or missing_required_inline
-            or unsupported_claims
-        ):
+        )
+        evidence_failure = bool(chunks and unsupported_claims)
+        if citation_failure or evidence_failure:
             logger.warning("Citation grounding failed; triggering safe ungrounded fallback.")
             sanitized = self.SAFE_UNGROUNDED_FALLBACK
             is_safe = False

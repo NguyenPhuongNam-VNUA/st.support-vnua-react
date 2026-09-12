@@ -3,16 +3,105 @@
 import React, { useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { Check, ChevronDown, Copy, ExternalLink } from "lucide-react";
+import { Check, ChevronDown, Copy, ExternalLink, FileText, Loader2 } from "lucide-react";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+export type FileType = "pdf" | "docx" | "xlsx" | "pptx" | "other";
+
+export interface FileTypeMeta {
+  type: FileType;
+  label: string;
+  actionLabel: string;
+  iconColor: string;
+  linkColor: string;
+  badgeBg: string;
+  cardHoverBorder: string;
+  bgLight: string;
+}
+
+export function getFileTypeMeta(
+  title: string = "",
+  page?: number | null,
+): FileTypeMeta {
+  const t = title.toLowerCase();
+
+  if (
+    t.endsWith(".docx") ||
+    t.endsWith(".doc") ||
+    t.includes("word") ||
+    t.includes("docx") ||
+    t.includes(".doc")
+  ) {
+    return {
+      type: "docx",
+      label: "DOCX",
+      actionLabel: "Mở Word",
+      iconColor: "text-blue-600",
+      linkColor: "text-blue-600 hover:text-blue-800",
+      badgeBg: "bg-blue-50 text-blue-700 border-blue-200/70",
+      cardHoverBorder: "hover:border-blue-400/60",
+      bgLight: "bg-blue-50/30 border-blue-100/80",
+    };
+  }
+
+  if (
+    t.endsWith(".xlsx") ||
+    t.endsWith(".xls") ||
+    t.endsWith(".csv") ||
+    t.includes("excel") ||
+    t.includes("bảng tính")
+  ) {
+    return {
+      type: "xlsx",
+      label: "XLSX",
+      actionLabel: "Mở Excel",
+      iconColor: "text-emerald-600",
+      linkColor: "text-emerald-600 hover:text-emerald-800",
+      badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200/70",
+      cardHoverBorder: "hover:border-emerald-400/60",
+      bgLight: "bg-emerald-50/30 border-emerald-100/80",
+    };
+  }
+
+  if (
+    t.endsWith(".pptx") ||
+    t.endsWith(".ppt") ||
+    t.includes("powerpoint") ||
+    t.includes("slide")
+  ) {
+    return {
+      type: "pptx",
+      label: "PPTX",
+      actionLabel: "Mở Slide",
+      iconColor: "text-amber-600",
+      linkColor: "text-amber-600 hover:text-amber-800",
+      badgeBg: "bg-amber-50 text-amber-700 border-amber-200/70",
+      cardHoverBorder: "hover:border-amber-400/60",
+      bgLight: "bg-amber-50/30 border-amber-100/80",
+    };
+  }
+
+  // PDF is default for handbooks, regulations, files with page numbers or .pdf extension
+  return {
+    type: "pdf",
+    label: "PDF",
+    actionLabel: "Mở PDF",
+    iconColor: "text-red-500",
+    linkColor: "text-red-600 hover:text-red-800",
+    badgeBg: "bg-red-50 text-red-700 border-red-200/70",
+    cardHoverBorder: "hover:border-red-400/60",
+    bgLight: "bg-red-50/30 border-red-100/80",
+  };
+}
 
 export interface ChatCitation {
   citation_id: string;
   document_id: string | number;
   title: string;
   page?: number | null;
+  page_end?: number | null;
   snippet?: string;
   relevance_score?: number | null;
 }
@@ -184,12 +273,15 @@ function preprocessMarkdown(content: string): string {
     return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
   });
 
+  // Mã nguồn nội bộ đã được hiển thị riêng trong danh sách tài liệu tham khảo.
+  text = text.replace(/\[\s*src[_-]?\s*\d+(?:\s*[,;]\s*src[_-]?\s*\d+)*\s*\]/gi, "");
+
   // 1. Chuẩn hóa bảng Markdown (Table) khi các hàng bị gom trên cùng 1 dòng
   if (text.includes("|") && /\|[\s:-]+-[\s:-]*\|/.test(text)) {
     // Tách câu dẫn phía trước nếu dính liền hàng đầu của bảng (VD: "...cụ thể: | Tiêu chí |")
     text = text.replace(
       /([^\n|])\s*(\|[^|\n]+(?:\|[^|\n]+)+\|)(?=\s*\|[\s:-]+-)/g,
-      "$1\n\n$2"
+      "$1\n\n$2",
     );
 
     // Tách các hàng bị dính liền bởi '| |' hoặc '||' thành từng dòng mới
@@ -204,7 +296,7 @@ function preprocessMarkdown(content: string): string {
           return `${prefix}${row}\n\n${trimmedTrailing}`;
         }
         return match;
-      }
+      },
     );
 
     // Đảm bảo trước hàng header của bảng luôn có dòng trống ngăn cách
@@ -225,7 +317,10 @@ function preprocessMarkdown(content: string): string {
   text = text.replace(/([^\n])\n([•\-\*]\s+)/g, "$1\n\n$2");
 
   // Khôi phục code blocks
-  text = text.replace(/__CODE_BLOCK_(\d+)__/g, (_, idx) => codeBlocks[Number(idx)] || "");
+  text = text.replace(
+    /__CODE_BLOCK_(\d+)__/g,
+    (_, idx) => codeBlocks[Number(idx)] || "",
+  );
 
   return text;
 }
@@ -237,12 +332,12 @@ const markdownComponents = {
     </p>
   ),
   ol: ({ children }: any) => (
-    <ol className="my-3 space-y-2.5 pl-5 list-decimal text-slate-700 marker:text-emerald-700 marker:font-bold marker:text-[0.95rem]">
+    <ol className="my-3 space-y-2.5 pl-5 list-decimal text-slate-700 marker:text-blue-600 marker:font-bold marker:text-[0.95rem]">
       {children}
     </ol>
   ),
   ul: ({ children }: any) => (
-    <ul className="my-3 space-y-2 pl-5 list-disc text-slate-700 marker:text-emerald-600">
+    <ul className="my-3 space-y-2 pl-5 list-disc text-slate-700 marker:text-blue-500">
       {children}
     </ul>
   ),
@@ -252,7 +347,7 @@ const markdownComponents = {
     </li>
   ),
   strong: ({ children }: any) => (
-    <strong className="font-semibold text-slate-900 bg-emerald-50/70 px-1 py-0.5 rounded text-[0.93rem] border border-emerald-100/60">
+    <strong className="font-semibold text-slate-900 bg-blue-50/80 px-1.5 py-0.5 rounded text-[0.93rem] border border-blue-100/70">
       {children}
     </strong>
   ),
@@ -260,31 +355,32 @@ const markdownComponents = {
     <em className="italic text-slate-600 font-medium">{children}</em>
   ),
   h1: ({ children }: any) => (
-    <h1 className="text-base font-bold text-slate-900 mt-4 mb-2 pb-1.5 border-b border-emerald-100 flex items-center gap-2">
-      <span className="w-1.5 h-4 bg-emerald-600 rounded-full inline-block"></span>
-      {children}
+    <h1 className="text-[1.06rem] font-extrabold text-slate-900 mt-5 mb-2.5 pb-2 border-b border-blue-200/60 flex items-center gap-2.5 tracking-tight">
+      <span className="w-1.5 h-5 bg-blue-600 rounded-full inline-block flex-shrink-0 shadow-xs" />
+      <span>{children}</span>
     </h1>
   ),
   h2: ({ children }: any) => (
-    <h2 className="text-[0.98rem] font-bold text-slate-900 mt-3.5 mb-1.5 flex items-center gap-1.5">
-      <span className="w-1 h-3.5 bg-emerald-500 rounded-full inline-block"></span>
-      {children}
+    <h2 className="ml-4 pl-3 border-l-2 border-blue-500/80 text-[0.97rem] font-bold text-slate-800 mt-4 mb-2 flex items-center gap-2 tracking-tight">
+      <span className="w-2 h-2 rounded-full bg-blue-500 inline-block flex-shrink-0" />
+      <span>{children}</span>
     </h2>
   ),
   h3: ({ children }: any) => (
-    <h3 className="text-[0.95rem] font-semibold text-slate-800 mt-3 mb-1">
-      {children}
+    <h3 className="ml-7 pl-2.5 border-l border-blue-300/70 text-[0.91rem] font-semibold text-slate-700 mt-3 mb-1.5 flex items-center gap-1.5">
+      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block flex-shrink-0" />
+      <span>{children}</span>
     </h3>
   ),
   blockquote: ({ children }: any) => (
-    <blockquote className="my-3.5 border-l-4 border-emerald-600 bg-emerald-50/50 py-2.5 px-4 rounded-r-xl text-slate-700 italic text-[0.91rem] leading-relaxed shadow-xs">
+    <blockquote className="my-3.5 border-l-4 border-blue-500 bg-blue-50/40 py-2.5 px-4 rounded-r-xl text-slate-700 italic text-[0.91rem] leading-relaxed shadow-xs">
       {children}
     </blockquote>
   ),
   code: ({ inline, className, children, ...props }: any) => {
     if (inline) {
       return (
-        <code className="px-1.5 py-0.5 mx-0.5 rounded-md bg-emerald-50/80 text-emerald-800 font-mono text-[0.85em] font-medium border border-emerald-200/60">
+        <code className="px-1.5 py-0.5 mx-0.5 rounded-md bg-blue-50/80 text-blue-800 font-mono text-[0.85em] font-medium border border-blue-200/60">
           {children}
         </code>
       );
@@ -303,22 +399,20 @@ const markdownComponents = {
     </div>
   ),
   thead: ({ children }: any) => (
-    <thead className="bg-emerald-50/90 font-semibold text-emerald-950 border-b border-emerald-200/80">
+    <thead className="bg-blue-50/90 font-semibold text-blue-950 border-b border-blue-200/80">
       {children}
     </thead>
   ),
   tbody: ({ children }: any) => (
-    <tbody className="divide-y divide-slate-100 bg-white">
-      {children}
-    </tbody>
+    <tbody className="divide-y divide-slate-100 bg-white">{children}</tbody>
   ),
   tr: ({ children }: any) => (
-    <tr className="transition-colors hover:bg-emerald-50/40 even:bg-slate-50/50">
+    <tr className="transition-colors hover:bg-blue-50/40 even:bg-slate-50/50">
       {children}
     </tr>
   ),
   th: ({ children }: any) => (
-    <th className="px-3.5 py-2.5 text-left font-bold text-emerald-900 tracking-normal text-[0.82rem] whitespace-nowrap">
+    <th className="px-3.5 py-2.5 text-left font-bold text-blue-900 tracking-normal text-[0.82rem] whitespace-nowrap">
       {children}
     </th>
   ),
@@ -397,7 +491,7 @@ export default function ChatMsg({
         >
           <Typography
             variant="caption"
-            sx={{ fontWeight: 700, color: "#006837", fontSize: "0.75rem" }}
+            sx={{ fontWeight: 700, color: "#2563eb", fontSize: "0.75rem" }}
           >
             ST - Care
           </Typography>
@@ -442,11 +536,11 @@ export default function ChatMsg({
                       className="flex items-center justify-between gap-3 text-slate-600 py-0.5"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                        <span className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full ${isDone ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"}`}>
                           {isDone ? (
                             <Check size={11} strokeWidth={2.5} />
                           ) : (
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <Loader2 size={11} className="animate-spin text-blue-600" />
                           )}
                         </span>
                         <span className="font-medium text-slate-700">
@@ -512,7 +606,9 @@ export default function ChatMsg({
                   {copied ? (
                     <>
                       <Check size={12} className="text-emerald-600" />
-                      <span className="text-emerald-700 font-semibold">Đã chép</span>
+                      <span className="text-emerald-700 font-semibold">
+                        Đã chép
+                      </span>
                     </>
                   ) : (
                     <>
@@ -525,46 +621,56 @@ export default function ChatMsg({
             )}
 
             {citations.length > 0 && (
-              <Box sx={{ mt: 2, pt: 1.6, borderTop: "1px dashed rgba(13, 138, 79, 0.18)" }}>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontWeight: 700,
-                    color: "#065f46",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.8,
-                    fontSize: "0.78rem",
-                  }}
-                >
-                  <ExternalLink size={12} className="text-emerald-600" />
-                  Nguồn văn bản tham khảo ({citations.length})
-                </Typography>
-                <div className="mt-2 grid gap-1.5">
-                  {citations.slice(0, 3).map((source) => (
-                    <div
-                      key={source.citation_id}
-                      className="group rounded-xl border border-emerald-100/80 bg-emerald-50/30 hover:bg-emerald-50/70 p-2.5 text-xs text-slate-600 transition-all"
-                    >
-                      <div className="flex items-center justify-between gap-2 font-semibold text-slate-800">
-                        <span className="truncate">
-                          <span className="text-emerald-700">[{source.citation_id}]</span>{" "}
-                          {source.title}
-                        </span>
-                        {source.page ? (
-                          <span className="flex-shrink-0 text-[11px] px-1.5 py-0.5 rounded bg-white text-slate-500 border border-slate-200/60 font-normal">
-                            Trang {source.page}
-                          </span>
-                        ) : null}
-                      </div>
-                      {source.snippet && (
-                        <p className="mt-1 line-clamp-2 text-slate-500 text-[11.5px] leading-relaxed">
-                          {source.snippet}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
+              <Box
+                sx={{
+                  mt: 2,
+                  pt: 1.6,
+                  borderTop: "1px dashed rgba(13, 138, 79, 0.18)",
+                }}
+              >
+                <details className="group/source">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-[0.78rem] font-bold text-emerald-800 [&::-webkit-details-marker]:hidden">
+                    <ChevronDown
+                      size={14}
+                      className="transition-transform group-open/source:rotate-180"
+                    />
+                    Nguồn văn bản tham khảo
+                  </summary>
+                  <div className="mt-2 grid gap-1.5">
+                    {citations.slice(0, 3).map((source, index) => {
+                      const meta = getFileTypeMeta(source.title, source.page);
+                      return (
+                        <div
+                          key={source.citation_id}
+                          className={`flex items-center justify-between gap-3 rounded-xl border p-2.5 text-xs text-slate-700 shadow-2xs transition-all ${meta.bgLight}`}
+                        >
+                          <div className="flex items-start gap-1.5 min-w-0">
+                            <FileText
+                              size={14}
+                              className={`${meta.iconColor} flex-shrink-0 mt-0.5`}
+                            />
+                            <strong className="min-w-0 leading-relaxed font-semibold text-slate-800">
+                              ({index + 1}) {source.title}
+                              {source.page
+                                ? ` — Trang ${source.page}${source.page_end && source.page_end !== source.page ? `–${source.page_end}` : ""}`
+                                : ""}
+                            </strong>
+                          </div>
+                          <a
+                            href={`/api/documents/${encodeURIComponent(String(source.document_id))}/file${source.page ? `?page=${source.page}` : ""}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`inline-flex flex-shrink-0 items-center gap-1 rounded-lg px-2 py-1 font-semibold ${meta.linkColor}`}
+                            title={`Mở ${meta.label} trong tab mới`}
+                          >
+                            {meta.actionLabel}
+                            <ExternalLink size={12} />
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
               </Box>
             )}
 

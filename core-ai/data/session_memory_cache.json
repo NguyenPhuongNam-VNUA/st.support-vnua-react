@@ -2,71 +2,74 @@
   "::1": {
     "session_key": "::1",
     "created_at": 1789200322.7321677,
-    "last_accessed_at": 1789203879.0570238,
+    "last_accessed_at": 1789232598.0451536,
     "profile": {
       "cohort_k": "K68"
     },
     "topics": [
+      "Thời khóa biểu & Lịch học",
       "Ký túc xá",
-      "Đăng ký tín chỉ"
+      "Xét tốt nghiệp",
+      "Học phí & Công nợ",
+      "Học bổng & Khen thưởng"
     ],
     "turns": [
       {
         "role": "user",
-        "content": "cho tôi bảng so sánh giữa việc học lại , cải thiện , đăng kí mới\nQuy trình và điều kiện đăng ký tín chỉ môn học tại VNUA như thế nào?",
-        "timestamp": 1789202843.8186762
+        "content": "Hồ sơ và thủ tục xin xét miễn giảm học phí hoặc trợ cấp xã hội cho sinh viên gồm những gì?",
+        "timestamp": 1789232319.4589221
       },
       {
         "role": "assistant",
-        "content": "Dưới đây là bảng so sánh giữa việc học lại, cải thiện điểm và đăng ký mới môn học tại Học viện Nông nghiệp Việt Nam: | Tiêu chí | Học lại | Cải thiện điểm | Đăng ký mới |\n|----------------------|-------------------------------------------------|------------------------------------------------|-----------------------------------------------|\n| **Điều kiện** | - Học phần bắt buộc bị điểm F | - Điểm D hoặc D+ | - Chưa học hoặc đã học nhưng không đạt |\n| **Mục đích** | - Đạt yêu cầu học phần bắt buộc | - Nâng cao điểm số | - Học môn mới hoặc thay thế môn cũ |\n| **Thời gian đăng ký**| - Cùng thời gian đăng ký học phần | - Cùng thời gian đăng ký học phần | - Theo lịch đăng ký môn học mới |\n| **Kết quả** | - Phải đạt điểm tối thiểu | - Có thể giữ điểm cũ nếu cải thiện không thành công | - Điểm mới sẽ được ghi nhận |\n| **Học phần tự chọn** | - Có thể học lại hoặc đổi sang môn khác | - Có thể cải thiện nếu có điểm D/D+ | - Đăng ký môn tự chọn mới | --- ### Quy trình và điều kiện đăng ký tín chỉ môn học tại VNUA: 1. **Thời gian đăng ký**: - Sinh viên sử dụng tài khoản cá nhân để đăng ký học phần trực tuyến theo thời gian Học viện thông báo. - Thời gian đăng ký muộn nhất là 2 tuần trước khi học kỳ bắt đầu. 2. **Điều kiện đăng ký**: - Việc đăng ký phải đáp ứng điều kiện học trước và trình tự của chương trình học. - Sinh viên chỉ được đăng ký sau khi đã hoàn thành học phí. 3. **Phương thức đăng ký**: - Tất cả đều thực hiện trực tuyến qua hệ thống của Học viện. Nếu bạn cần thêm thông tin chi tiết hoặc có câu hỏi nào khác, hãy cho mình biết nhé! 😊",
-        "timestamp": 1789202843.8186762
+        "content": "Để xin xét miễn giảm học phí hoặc trợ cấp xã hội, sinh viên cần chuẩn bị hồ sơ và thủ tục như sau:\n\n### **1. Hồ sơ xin miễn giảm học phí:**\n\n- **Đối tượng sinh viên khuyết tật:**\n - Đơn đề nghị miễn, giảm học phí.\n - Bản sao chứng thực Giấy xác nhận khuyết tật do UBND cấp xã cấp hoặc Quyết định về việc trợ cấp xã hội của Chủ tịch UBND cấp huyện.\n\n- **Đối tượng sinh viên dân tộc thiểu số có cha/mẹ/ông bà thuộc hộ nghèo hoặc cận nghèo:**\n - Đơn đề nghị miễn, giảm học phí.\n - Bản sao chứng thực Giấy khai sinh.\n - Bản sao chứng thực Giấy xác nhận hộ nghèo hoặc hộ cận nghèo do UBND xã cấp.\n\n- **Đối tượng sinh viên dân tộc thiểu số rất ít người sống ở vùng kinh tế khó khăn:**\n - Đơn đề nghị miễn, giảm học phí.\n - Bản sao chứng thực Giấy khai sinh.\n - Giấy xác nhận sinh sống tại vùng kinh tế đặc biệt khó khăn.\n\n### **2. Hồ sơ xin trợ cấp xã hội:**\n\n- **Đối tượng sinh viên dân tộc thiểu số thuộc hộ nghèo, hộ cận nghèo:**\n - Đơn đề nghị hỗ trợ chi phí học tập.\n - Giấy khai sinh (bản sao có công chứng).\n - Giấy chứng nhận hộ nghèo, hộ cận nghèo do Ủy ban nhân dân xã, phường, thị trấn cấp (bản sao công chứng).\n\n- **Đối tượng sinh viên mồ côi cả cha lẫn mẹ:**\n - Đơn xin trợ cấp xã hội.\n - Giấy khai sinh (bản sao có công chứng).\n - Giấy xác nhận mồ côi do Ủy ban nhân dân xã, phường, thị trấn cấp.\n\n- **Đối tượng sinh viên tàn tật:**\n - Đơn xin trợ cấp xã hội.\n - Giấy chứng nhận khuyết tật do cơ quan có thẩm quyền cấp (bản sao có công chứng).\n\n- **Đối tượng sinh viên có hoàn cảnh đặc biệt khó khăn:**\n - Đơn xin trợ cấp xã hội.\n - Giấy chứng nhận hộ nghèo hoặc cận nghèo do Ủy ban nhân dân xã, phường, thị trấn cấp (bản sao công chứng).\n\n### **3. Lưu ý:**\n- Hồ sơ cần nộp bản sao chứng thực hoặc bản sao kèm bản chính để đối chiếu.\n- Trợ cấp xã hội được cấp theo từng học kỳ, mỗi học kỳ cấp 6 tháng.\n\nNếu bạn cần thêm thông tin cụ thể hơn về các bước nộp hồ sơ, hãy cho mình biết nhé! 😊\n\n[src_1] [src_2]",
+        "timestamp": 1789232319.4589221
       },
       {
         "role": "user",
-        "content": "Chép\ncho tôi bảng so sánh giữa việc học lại , cải thiện , đăng kí mới\nQuy trình và điều kiện đăng ký tín chỉ môn học tại VNUA như thế nào?",
-        "timestamp": 1789202925.9689019
+        "content": "Cho tôi biết thông tin chỉ tiêu và các phương thức tuyển sinh năm 2025 của Học viện Nông nghiệp Việt Nam.",
+        "timestamp": 1789232499.1805882
       },
       {
         "role": "assistant",
-        "content": "Dưới đây là bảng so sánh giữa việc học lại, cải thiện điểm và đăng ký mới môn học tại Học viện Nông nghiệp Việt Nam: | Tiêu chí | Học lại | Cải thiện điểm | Đăng ký mới |\n|----------------------|----------------------------------------------|-------------------------------------------|-------------------------------------------|\n| **Điều kiện** | - Học phần bắt buộc bị điểm F | - Điểm D hoặc D+ | - Chưa học hoặc đã học nhưng không đạt |\n| **Mục đích** | - Đạt yêu cầu học phần bắt buộc | - Nâng cao điểm số | - Học môn mới hoặc thay thế môn cũ |\n| **Thời gian đăng ký**| - Cùng thời gian đăng ký học phần | - Cùng thời gian đăng ký học phần | - Theo lịch đăng ký môn học mới |\n| **Kết quả** | - Phải đạt điểm tối thiểu | - Có thể giữ điểm cũ nếu cải thiện không thành công | - Điểm mới sẽ được ghi nhận |\n| **Học phần tự chọn** | - Có thể học lại hoặc đổi sang môn khác | - Có thể cải thiện nếu có điểm D/D+ | - Đăng ký môn tự chọn mới | --- ### Quy trình và điều kiện đăng ký tín chỉ môn học tại VNUA: 1. **Thời gian đăng ký**: - Sinh viên sử dụng tài khoản cá nhân để đăng ký học phần trực tuyến theo thời gian Học viện thông báo. - Thời gian đăng ký muộn nhất là 2 tuần trước khi học kỳ bắt đầu. 2. **Điều kiện đăng ký**: - Việc đăng ký phải đáp ứng điều kiện học trước và trình tự của chương trình học. - Sinh viên chỉ được đăng ký sau khi đã hoàn thành học phí. 3. **Phương thức đăng ký**: - Tất cả đều thực hiện trực tuyến qua hệ thống của Học viện. Nếu bạn cần thêm thông tin chi tiết hoặc có câu hỏi nào khác, hãy cho mình biết nhé! 😊",
-        "timestamp": 1789202925.9689019
+        "content": "Hiện tại mình chưa có thông tin chính xác về nội dung này trong các văn bản quy chế hiện hành. Có thể bạn đang tìm hiểu các quy định hoặc thông báo mới nhất từ Ban Quản lý Đào tạo. Bạn đang hỏi cho sinh viên khóa K mấy hoặc thuộc ngành/khoa nào để mình tra cứu chuẩn nhất nhé? 😊",
+        "timestamp": 1789232499.1805882
       },
       {
         "role": "user",
-        "content": "cho tôi bảng so sánh giữa việc học lại , cải thiện , đăng kí mới\nQuy trình và điều kiện đăng ký tín chỉ môn học tại VNUA như thế nào?",
-        "timestamp": 1789203080.6929095
+        "content": "Quy định về chuẩn đầu ra ngoại ngữ, tin học và điều kiện xét tốt nghiệp tại VNUA?",
+        "timestamp": 1789232532.2770667
       },
       {
         "role": "assistant",
-        "content": "Dưới đây là bảng so sánh giữa việc học lại, cải thiện điểm và đăng ký mới môn học tại Học viện Nông nghiệp Việt Nam: | Tiêu chí | Học lại | Cải thiện điểm | Đăng ký mới |\n|--------------------|----------------------------------------------|-------------------------------------------|-------------------------------------------|\n| **Điều kiện** | - Học phần bắt buộc bị điểm F | - Điểm D hoặc D+ | - Chưa học hoặc đã học nhưng không đạt |\n| **Mục đích** | - Đạt yêu cầu học phần bắt buộc | - Nâng cao điểm số | - Học môn mới hoặc thay thế môn cũ |\n| **Thời gian đăng ký** | - Cùng thời gian đăng ký học phần | - Cùng thời gian đăng ký học phần | - Theo lịch đăng ký môn học mới |\n| **Kết quả** | - Phải đạt điểm tối thiểu | - Có thể giữ điểm cũ nếu cải thiện không thành công | - Điểm mới sẽ được ghi nhận |\n| **Học phần tự chọn** | - Có thể học lại hoặc đổi sang môn khác | - Có thể cải thiện nếu có điểm D/D+ | - Đăng ký môn tự chọn mới | --- ### Quy trình và điều kiện đăng ký tín chỉ môn học tại VNUA: 1. **Thời gian đăng ký**: - Sinh viên sử dụng tài khoản cá nhân để đăng ký học phần trực tuyến theo thời gian Học viện thông báo. - Thời gian đăng ký muộn nhất là 2 tuần trước khi học kỳ bắt đầu. 2. **Điều kiện đăng ký**: - Việc đăng ký phải đáp ứng điều kiện học trước và trình tự của chương trình học. - Sinh viên chỉ được đăng ký sau khi đã hoàn thành học phí. 3. **Phương thức đăng ký**: - Tất cả đều thực hiện trực tuyến qua hệ thống của Học viện. Nếu bạn cần thêm thông tin chi tiết hoặc có câu hỏi nào khác, hãy cho mình biết nhé! 😊",
-        "timestamp": 1789203080.6929095
+        "content": "Về quy định chuẩn đầu ra ngoại ngữ, tin học và điều kiện xét tốt nghiệp tại Học viện Nông nghiệp Việt Nam (VNUA), bạn có thể tham khảo thông tin sau:\n\n### **1. Điều kiện xét tốt nghiệp:**\nSinh viên cần đáp ứng các điều kiện sau để được công nhận tốt nghiệp:\n- **Nộp đầy đủ học phí** theo quy định.\n- Không bị truy cứu trách nhiệm hình sự hoặc không trong thời gian bị kỷ luật ở mức đình chỉ học tập.\n- Tích lũy đủ số tín chỉ quy định của chương trình theo học (bao gồm các học phần bắt buộc và tổng số tín chỉ tự chọn tối thiểu).\n- Điểm trung bình chung tích lũy của toàn khóa học đạt từ **2,00 trở lên**.\n- Có chứng chỉ **Giáo dục quốc phòng - an ninh** (không áp dụng đối với sinh viên quốc tế) và **Giáo dục thể chất**.\n- Đạt chuẩn đầu ra **Ngoại ngữ** theo quy định của Học viện (không áp dụng đối với sinh viên quốc tế và sinh viên ngành Ngôn ngữ Anh).\n- Hoàn thành chương trình đào tạo **kỹ năng mềm** theo quy định của Học viện.\n- Đạt chuẩn đầu ra về **kỹ năng sử dụng công nghệ thông tin** (không áp dụng đối với sinh viên theo học các ngành thuộc lĩnh vực Máy tính và công nghệ thông tin) theo quy định của Học viện.\n\n### **2. Chuẩn đầu ra về ngoại ngữ và tin học:**\n- **Ngoại ngữ**: Sinh viên phải đạt chuẩn đầu ra ngoại ngữ theo quy định của Học viện, cụ thể là phải có chứng chỉ ngoại ngữ tương đương với trình độ B1 (hoặc tương đương) theo khung năng lực ngoại ngữ 6 bậc dùng cho Việt Nam.\n- **Tin học**: Đối với kỹ năng sử dụng công nghệ thông tin, sinh viên cần có chứng chỉ tin học cơ bản theo quy định của Học viện.\n\nNếu bạn cần thêm thông tin chi tiết hơn hoặc có câu hỏi khác, hãy cho mình biết nhé! 😊\n\n[src_1]",
+        "timestamp": 1789232532.2770667
       },
       {
         "role": "user",
-        "content": "cho tôi bảng so sánh giữa việc học lại , cải thiện , đăng kí mới\nQuy trình và điều kiện đăng ký tín chỉ môn học tại VNUA như thế nào?",
-        "timestamp": 1789203518.6002343
+        "content": "Cho tôi biết thông tin chỉ tiêu và các phương thức tuyển sinh năm 2025 của Học viện Nông nghiệp Việt Nam.",
+        "timestamp": 1789232565.3958147
       },
       {
         "role": "assistant",
-        "content": "Dưới đây là bảng so sánh giữa việc học lại, cải thiện điểm và đăng ký mới môn học tại Học viện Nông nghiệp Việt Nam:\n\n| Tiêu chí | Học lại | Cải thiện điểm | Đăng ký mới |\n|----------------------|-------------------------------------------------|---------------------------------------------|-----------------------------------------------|\n| **Điều kiện** | - Học phần bắt buộc bị điểm F | - Có điểm D hoặc D+ | - Chưa học hoặc đã học nhưng không đạt |\n| **Mục đích** | - Đạt yêu cầu học phần bắt buộc | - Nâng cao điểm số | - Học môn mới hoặc thay thế môn cũ |\n| **Thời gian đăng ký**| - Cùng thời gian đăng ký học phần | - Cùng thời gian đăng ký học phần | - Theo lịch đăng ký môn học mới |\n| **Kết quả** | - Phải đạt điểm tối thiểu | - Có thể giữ điểm cũ nếu cải thiện không thành công | - Điểm mới sẽ được ghi nhận |\n| **Học phần tự chọn** | - Có thể học lại hoặc đổi sang môn khác | - Có thể cải thiện nếu có điểm D/D+ | - Đăng ký môn tự chọn mới |\n\n---\n\n### Quy trình và điều kiện đăng ký tín chỉ môn học tại VNUA:\n\n1. **Thời gian đăng ký**:\n - Sinh viên sử dụng tài khoản cá nhân để đăng ký học phần trực tuyến theo thời gian Học viện thông báo.\n - Thời gian đăng ký muộn nhất là 2 tuần trước khi học kỳ bắt đầu.\n\n2. **Điều kiện đăng ký**:\n - Việc đăng ký phải đáp ứng điều kiện học trước và trình tự của chương trình học.\n - Sinh viên chỉ được đăng ký sau khi đã hoàn thành học phí.\n\n3. **Phương thức đăng ký**:\n - Tất cả đều thực hiện trực tuyến qua hệ thống của Học viện.\n\nNếu bạn cần thêm thông tin chi tiết hoặc có câu hỏi nào khác, hãy cho mình biết nhé! 😊",
-        "timestamp": 1789203518.6002343
+        "content": "Hiện tại mình chưa có thông tin chính xác về nội dung này trong các văn bản quy chế hiện hành. Có thể bạn đang tìm hiểu các quy định hoặc thông báo mới nhất từ Ban Quản lý Đào tạo. Bạn đang hỏi cho sinh viên khóa K mấy hoặc thuộc ngành/khoa nào để mình tra cứu chuẩn nhất nhé? 😊",
+        "timestamp": 1789232565.3958147
       },
       {
         "role": "user",
-        "content": "cho tôi bảng so sánh giữa việc học lại , cải thiện , đăng kí mới\nQuy trình và điều kiện đăng ký tín chỉ môn học tại VNUA như thế nào?",
-        "timestamp": 1789203879.0570238
+        "content": "Mức học phí theo từng ngành và các loại học bổng sinh viên có thể nhận tại VNUA?",
+        "timestamp": 1789232598.0451536
       },
       {
         "role": "assistant",
-        "content": "Dưới đây là bảng so sánh giữa việc học lại, cải thiện điểm và đăng ký mới môn học tại Học viện Nông nghiệp Việt Nam:\n\n| Tiêu chí | Học lại | Cải thiện điểm | Đăng ký mới |\n|----------------------|-------------------------------------------------|---------------------------------------------|-----------------------------------------------|\n| **Điều kiện** | - Học phần bắt buộc bị điểm F | - Có điểm D hoặc D+ | - Chưa học hoặc đã học nhưng không đạt |\n| **Mục đích** | - Đạt yêu cầu học phần bắt buộc | - Nâng cao điểm số | - Học môn mới hoặc thay thế môn cũ |\n| **Thời gian đăng ký**| - Cùng thời gian đăng ký học phần | - Cùng thời gian đăng ký học phần | - Theo lịch đăng ký môn học mới |\n| **Kết quả** | - Phải đạt điểm tối thiểu | - Có thể giữ điểm cũ nếu cải thiện không thành công | - Điểm mới sẽ được ghi nhận |\n| **Học phần tự chọn** | - Có thể học lại hoặc đổi sang môn khác | - Có thể cải thiện nếu có điểm D/D+ | - Đăng ký môn tự chọn mới |\n\n---\n\n### Quy trình và điều kiện đăng ký tín chỉ môn học tại VNUA:\n\n1. **Thời gian đăng ký**:\n - Sinh viên sử dụng tài khoản cá nhân để đăng ký học phần trực tuyến theo thời gian Học viện thông báo.\n - Thời gian đăng ký muộn nhất là 2 tuần trước khi học kỳ bắt đầu.\n\n2. **Điều kiện đăng ký**:\n - Việc đăng ký phải đáp ứng điều kiện học trước và trình tự của chương trình học.\n - Sinh viên chỉ được đăng ký sau khi đã hoàn thành học phí.\n\n3. **Phương thức đăng ký**:\n - Tất cả đều thực hiện trực tuyến qua hệ thống của Học viện.\n\nNếu bạn cần thêm thông tin chi tiết hoặc có câu hỏi nào khác, hãy cho mình biết nhé! 😊",
-        "timestamp": 1789203879.0570238
+        "content": "Mình xin cung cấp thông tin về mức học phí và các loại học bổng sinh viên có thể nhận tại Học viện Nông nghiệp Việt Nam (VNUA) như sau:\n\n### **1. Mức học phí:**\nMức học phí cụ thể cho từng ngành sẽ được quy định hàng năm và thường được thông báo vào đầu mỗi năm học. Tuy nhiên, mức học phí cho các ngành đại trà thường dao động trong khoảng từ 1.980.000 đồng đến 2.300.000 đồng/tháng tùy theo ngành học.\n\n### **2. Các loại học bổng:**\nSinh viên có thể nhận các loại học bổng khuyến khích học tập với các tiêu chuẩn như sau:\n\n- **Học bổng khuyến khích học tập**:\n - **Đối tượng**: Sinh viên đại học, cao đẳng hệ chính quy.\n - **Tiêu chuẩn**:\n - Điểm trung bình chung học kỳ (ĐTBCHK) đạt từ 2.50 trở lên.\n - Không có học phần bị điểm F.\n - Tích lũy tối thiểu 15 tín chỉ/học kỳ (không tính học phần Giáo dục Thể chất và Giáo dục Quốc phòng).\n - Kết quả rèn luyện (ĐRL) đạt từ loại Khá trở lên.\n\n- **Mức học bổng**:\n - Học bổng được cấp theo từng học kỳ và có các mức khác nhau:\n - Ngành Thú y: \n - Khá: 1.980.000 đồng\n - Giỏi: 2.100.000 đồng\n - Xuất sắc: 2.300.000 đồng\n\n### **3. Quỹ học bổng:**\nQuỹ học bổng khuyến khích học tập được bố trí tối thiểu bằng 8% nguồn thu học phí hệ chính quy, cân đối theo ngành học, khoa và khóa học.\n\nNếu bạn cần thêm thông tin chi tiết hơn hoặc có câu hỏi khác, hãy cho mình biết nhé! 😊\n\n[src_1]",
+        "timestamp": 1789232598.0451536
       }
     ]
   },
   "testclient": {
     "session_key": "testclient",
     "created_at": 1789201117.1775577,
-    "last_accessed_at": 1789210343.134561,
+    "last_accessed_at": 1789228979.6292763,
     "profile": {},
     "topics": [
       "Học phí & Công nợ",
@@ -75,53 +78,102 @@
     "turns": [
       {
         "role": "user",
-        "content": "Quy chế đào tạo áp dụng cho sinh viên nào?",
-        "timestamp": 1789210277.1596105
-      },
-      {
-        "role": "assistant",
-        "content": "Hiện tại mình chưa có thông tin chính xác về nội dung này trong các văn bản quy chế hiện hành. Có thể bạn đang tìm hiểu các quy định hoặc thông báo mới nhất từ Ban Quản lý Đào tạo. Bạn đang hỏi cho sinh viên khóa K mấy hoặc thuộc ngành/khoa nào để mình tra cứu chuẩn nhất nhé? 😊",
-        "timestamp": 1789210277.1596105
-      },
-      {
-        "role": "user",
-        "content": "Quy định số tín chỉ tích lũy tối thiểu để tốt nghiệp VNUA?",
-        "timestamp": 1789210305.2219908
-      },
-      {
-        "role": "assistant",
-        "content": "Sinh viên cần tích lũy tối thiểu 125 tín chỉ để được xét tốt nghiệp đại học chính quy.",
-        "timestamp": 1789210305.2219908
-      },
-      {
-        "role": "user",
         "content": "Sinh viên đại học chính quy được đăng ký tối đa bao nhiêu tín chỉ?",
-        "timestamp": 1789210321.3232412
+        "timestamp": 1789228834.690102
       },
       {
         "role": "assistant",
         "content": "Theo Quy chế đào tạo của Học viện Nông nghiệp Việt Nam [src_1], sinh viên cần hoàn thành đủ số tín chỉ tích lũy theo chương trình đào tạo để được xét tốt nghiệp.",
-        "timestamp": 1789210321.3232412
+        "timestamp": 1789228834.690102
       },
       {
         "role": "user",
         "content": "Học phí một tín chỉ là bao nhiêu?",
-        "timestamp": 1789210334.5768821
+        "timestamp": 1789228840.4558232
       },
       {
         "role": "assistant",
-        "content": "Hiện tại mình chưa có thông tin chính xác về nội dung này trong các văn bản quy chế hiện hành. Có thể bạn đang cần tra cứu mức thu học phí theo tín chỉ hoặc biểu phí của năm học mới. Bạn cho mình biết bạn thuộc khóa K mấy và ngành nào để mình xem biểu phí chính xác nha? 😊",
-        "timestamp": 1789210334.5768821
+        "content": "Theo Quy chế đào tạo của Học viện Nông nghiệp Việt Nam [src_1], sinh viên cần hoàn thành đủ số tín chỉ tích lũy theo chương trình đào tạo để được xét tốt nghiệp.",
+        "timestamp": 1789228840.4558232
       },
       {
         "role": "user",
         "content": "Tôi xác nhận tạo phiếu hỗ trợ.",
-        "timestamp": 1789210343.134561
+        "timestamp": 1789228843.2117374
       },
       {
         "role": "assistant",
         "content": "Yêu cầu hỗ trợ của bạn đã được chuyển tới cán bộ phụ trách. Mã phiếu: CASE-2026-0042.",
-        "timestamp": 1789210343.134561
+        "timestamp": 1789228843.2117374
+      },
+      {
+        "role": "user",
+        "content": "Học phí một tín chỉ ngành Công nghệ thông tin là bao nhiêu?",
+        "timestamp": 1789228972.4611397
+      },
+      {
+        "role": "assistant",
+        "content": "Hiện tại mình chưa có thông tin chính xác về nội dung này trong các văn bản quy chế hiện hành. Có thể bạn đang cần tra cứu mức thu học phí theo tín chỉ hoặc biểu phí của năm học mới. Bạn cho mình biết bạn thuộc khóa K mấy và ngành nào để mình xem biểu phí chính xác nha? 😊",
+        "timestamp": 1789228972.4611397
+      },
+      {
+        "role": "user",
+        "content": "Quy chế đào tạo áp dụng cho sinh viên nào?",
+        "timestamp": 1789228979.6292763
+      },
+      {
+        "role": "assistant",
+        "content": "Hiện tại mình chưa có thông tin chính xác về nội dung này trong các văn bản quy chế hiện hành. Có thể bạn đang tìm hiểu các quy định hoặc thông báo mới nhất từ Ban Quản lý Đào tạo. Bạn đang hỏi cho sinh viên khóa K mấy hoặc thuộc ngành/khoa nào để mình tra cứu chuẩn nhất nhé? 😊",
+        "timestamp": 1789228979.6292763
+      }
+    ]
+  },
+  "127.0.0.1": {
+    "session_key": "127.0.0.1",
+    "created_at": 1789226895.5022733,
+    "last_accessed_at": 1789227340.013451,
+    "profile": {},
+    "topics": [],
+    "turns": [
+      {
+        "role": "user",
+        "content": "Quy định các hình thức kỷ luật sinh viên gồm những gì?",
+        "timestamp": 1789226895.5022733
+      },
+      {
+        "role": "assistant",
+        "content": "Các hình thức kỷ luật sinh viên tại Học viện Nông nghiệp Việt Nam được quy định như sau:\n\n1. **Khiển trách**: \n - Áp dụng cho sinh viên có hành vi vi phạm lần đầu ở mức độ nhẹ.\n\n2. **Cảnh cáo**: \n - Áp dụng cho sinh viên đã bị khiển trách mà tái phạm hoặc vi phạm ở mức độ nhẹ nhưng có tính chất thường xuyên, hoặc vi phạm lần đầu nhưng mức độ tương đối nghiêm trọng.\n\n3. **Đình chỉ học tập 1 năm**: \n - Áp dụng cho sinh viên trong thời gian bị cảnh cáo mà vẫn vi phạm kỷ luật hoặc vi phạm nghiêm trọng.\n\n4. **Buộc thôi học**: \n - Áp dụng cho sinh viên đang bị đình chỉ mà vẫn tiếp tục vi phạm kỷ luật hoặc vi phạm nghiêm trọng lần đầu.\n\nCác hình thức này sẽ được ghi vào hồ sơ sinh viên và có thể ảnh hưởng đến điểm rèn luyện cũng như bậc tốt nghiệp của sinh viên. Nếu bạn cần thêm thông tin về quy trình xử lý hoặc hồ sơ kỷ luật, hãy cho mình biết nhé! 😊\n\n[src_1]",
+        "timestamp": 1789226895.5022733
+      },
+      {
+        "role": "user",
+        "content": "Thủ tục xét kỷ luật sinh viên được thực hiện như thế nào?",
+        "timestamp": 1789227142.441463
+      },
+      {
+        "role": "assistant",
+        "content": "Thủ tục xét kỷ luật sinh viên tại Học viện Nông nghiệp Việt Nam được thực hiện theo các bước sau:\n\n1. **Sinh viên vi phạm**:\n - Sinh viên có hành vi vi phạm phải làm bản tự kiểm điểm và tự nhận hình thức kỷ luật.\n\n2. **Họp tập thể lớp**:\n - Tổ Công tác Sinh viên (CTSV) chủ trì họp với tập thể lớp để phân tích và đề nghị hình thức kỷ luật, sau đó nộp biên bản lên khoa.\n\n3. **Xét duyệt cấp Khoa**:\n - Hội đồng thi đua, khen thưởng và kỷ luật sinh viên cấp Khoa sẽ xem xét và ghi biên bản đề nghị lên Hội đồng thi đua, khen thưởng và kỷ luật cấp Học viện qua thường trực Hội đồng (Ban CTCT&amp;CTSV).\n\n4. **Họp xét kỷ luật cấp Học viện**:\n - Hội đồng thi đua, khen thưởng và kỷ luật sinh viên cấp Học viện tổ chức họp xét kỷ luật. Thành phần bao gồm:\n - Giám đốc Học viện hoặc Phó Giám đốc được ủy quyền.\n - Thường trực Hội đồng.\n - Phó trưởng các khoa phụ trách công tác sinh viên được ủy quyền.\n - Đại diện BCH Đoàn thanh niên, Hội Sinh viên Học viện.\n - Đại diện tập thể lớp có sinh viên vi phạm và sinh viên vi phạm.\n\n5. **Quyết định kỷ luật**:\n - Hội đồng cấp Học viện sẽ kiến nghị áp dụng hình thức kỷ luật và đề nghị Giám đốc Học viện ra quyết định kỷ luật bằng văn bản.\n\n6. **Gửi quyết định**:\n - Quyết định kỷ luật sẽ được gửi về:\n - Khoa quản lý sinh viên bị kỷ luật (01 bản).\n - Ban Quản lý đào tạo (01 bản).\n - Sinh viên bị kỷ luật (01 bản).\n - Lưu Hồ sơ sinh viên (01 bản).\n - Lưu tại bộ phận thường trực Hội đồng kỷ luật sinh viên (01 bản).\n - 02 bản gửi về địa phương nơi cư trú và gia đình sinh viên (đối với hình thức kỷ luật từ đình chỉ học tập 01 năm trở lên).\n\nNếu bạn cần thêm thông tin chi tiết về từng bước hoặc các tài liệu cần thiết, hãy cho mình biết nhé! 😊\n\n[src_1]",
+        "timestamp": 1789227142.441463
+      },
+      {
+        "role": "user",
+        "content": "Sinh viên vi phạm kỷ luật phải chuẩn bị hồ sơ xử lý gồm những giấy tờ gì?",
+        "timestamp": 1789227335.6374142
+      },
+      {
+        "role": "assistant",
+        "content": "Sinh viên vi phạm kỷ luật cần chuẩn bị hồ sơ xử lý gồm các giấy tờ sau:\n\n1. **Bản tự kiểm điểm**:\n - Nếu sinh viên không chấp hành việc làm bản tự kiểm điểm, Hội đồng vẫn có thể họp để xử lý dựa trên các chứng cứ thu thập được.\n\n2. **Biên bản của tập thể lớp**:\n - Biên bản họp kiểm điểm sinh viên có hành vi vi phạm.\n\n3. **Ý kiến của khoa quản lý sinh viên**:\n - Biên bản họp Hội đồng kỷ luật sinh viên cấp Khoa.\n\n4. **Các tài liệu có liên quan**:\n - Tất cả các tài liệu khác hỗ trợ cho quá trình xử lý kỷ luật.\n\nNếu bạn cần thêm thông tin chi tiết về từng loại tài liệu hoặc quy trình, hãy cho mình biết nhé! 😊\n\n[src_1]",
+        "timestamp": 1789227335.6374142
+      },
+      {
+        "role": "user",
+        "content": "Cho tôi biết thông tin chỉ tiêu và các phương thức tuyển sinh năm 2025 của Học viện Nông nghiệp Việt Nam.",
+        "timestamp": 1789227340.013451
+      },
+      {
+        "role": "assistant",
+        "content": "Hiện tại mình chưa có thông tin chính xác về nội dung này trong các văn bản quy chế hiện hành. Có thể bạn đang tìm hiểu các quy định hoặc thông báo mới nhất từ Ban Quản lý Đào tạo. Bạn đang hỏi cho sinh viên khóa K mấy hoặc thuộc ngành/khoa nào để mình tra cứu chuẩn nhất nhé? 😊",
+        "timestamp": 1789227340.013451
       }
     ]
   }

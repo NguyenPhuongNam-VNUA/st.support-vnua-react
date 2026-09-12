@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       '/v1/chat',
       {
         method: 'POST',
+        signal: request.signal,
         headers: {
           Accept: 'text/event-stream',
           'X-Forwarded-For': clientIp,

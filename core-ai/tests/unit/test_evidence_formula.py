@@ -45,3 +45,24 @@ async def test_medium_evidence_is_not_marked_sufficient(mock_settings) -> None:
         result = await evidence_node(state)
     assert result["evidence_band"] in {"medium", "high"}
     assert result["is_sufficient_evidence"] == (result["evidence_band"] == "high")
+
+
+@pytest.mark.asyncio
+async def test_unmatched_distinctive_terms_reject_generic_document_hits(mock_settings) -> None:
+    state = {
+        "tenant_id": "vnua",
+        "query_terms": ["sinh", "viên", "vnua", "tàu", "vũ", "trụ"],
+        "retrieved_chunks": [
+            {
+                "snippet": "Sổ tay sinh viên, hướng dẫn trực tuyến và địa chỉ trụ sở.",
+                "relevance_score": 0.9,
+                "freshness_score": 1.0,
+                "source_trust": 1.0,
+            }
+        ],
+        "execution_trace": [],
+    }
+    with patch("core_ai.config.get_settings", return_value=mock_settings):
+        result = await evidence_node(state)
+
+    assert result["has_distinctive_match"] is False
