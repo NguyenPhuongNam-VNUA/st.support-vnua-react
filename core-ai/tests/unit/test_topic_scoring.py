@@ -8,6 +8,7 @@ def test_keyword_topics_cover_core_student_intents(tmp_path) -> None:
         "Cho mình xem lịch học môn Toán": "schedule",
         "Quy chế đăng ký tín chỉ": "regulations",
         "Điểm chuẩn tuyển sinh năm 2026": "admissions",
+        "Điều kiện nhận học bổng khuyến khích học tập": "scholarships",
     }
     for query, expected in cases.items():
         topic, score, _ = store.score(query, [])

@@ -15,7 +15,7 @@ import logging
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, AsyncGenerator, Dict, List
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from core_ai.config import get_settings
 from core_ai.contracts.chat import (
@@ -51,6 +51,7 @@ STAGE_LABELS_VI = {
     "cache_check": ("Đang tra cứu bộ nhớ đệm", 30),
     "query_prep": ("Đang chuẩn bị truy vấn", 38),
     "topic_scoring": ("Đang xác định chủ đề", 44),
+    "embedding": ("Đang mã hóa câu hỏi", 47),
     "semantic_cache": ("Đang tìm câu trả lời tương tự", 48),
     "retrieval": ("Đang tìm kiếm tài liệu", 58),
     "evidence_eval": ("Đang đánh giá nguồn tri thức", 65),

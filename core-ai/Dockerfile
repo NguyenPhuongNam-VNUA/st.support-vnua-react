@@ -33,10 +33,10 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY pyproject.toml README.md ./
 COPY src/ ./src/
 
-# Install pip and wheel tools, then install project dependencies
+# Install only runtime dependencies. OCR is handled by Tesseract and retrieval
+# uses deterministic RRF, so PyTorch/Transformers are intentionally excluded.
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.4,<3.0" && \
-    pip install ".[local-models,onnx-models]"
+    pip install "."
 
 # ------------------------------------------------------------------------------
 # Stage 2: Minimal Production Runtime

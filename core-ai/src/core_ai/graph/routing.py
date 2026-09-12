@@ -1,9 +1,8 @@
 """Conditional edge routing functions for LangGraph orchestration.
 
-Implements deterministic routing rules adhering to Section 10 of
-CORE_AI_IMPLEMENTATION_PLAN.md:
-- Cache hit -> output_guardrail (0 external AI calls)
-- Cache miss -> retrieval -> evidence_eval
+Implements deterministic routing rules:
+- Safe academic input -> topic validation -> embedding
+- FAQ and document candidates -> merged reranking -> generation
 - Evidence evaluation -> generation (if sufficient)
   or corrective retrieval (max 1 retry, 0 extra LLM calls)
   or tool_node (MCP lookup)
@@ -23,8 +22,8 @@ logger = logging.getLogger("core_ai.graph.routing")
 
 def route_after_input_guardrail(
     state: GraphState,
-) -> Literal["cache_check", "tool_node", "fallback"]:
-    """Routes to semantic cache if input is safe, or directly to fallback if blocked."""
+) -> Literal["query_prep", "tool_node", "fallback"]:
+    """Route safe input to normalization, or blocked input to fallback."""
     if state.get("is_blocked", False):
         logger.info("Routing after input_guardrail: BLOCKED -> fallback")
         return "fallback"
@@ -35,27 +34,27 @@ def route_after_input_guardrail(
     ):
         logger.info("Routing explicitly approved support request to MCP tool")
         return "tool_node"
-    return "cache_check"
+    return "query_prep"
 
 
 def route_after_cache(
     state: GraphState,
-) -> Literal["output_guardrail", "query_prep"]:
-    """Routes to output guardrail if cache hit (0 external AI calls), or retrieval on miss."""
+) -> Literal["output_guardrail", "embedding"]:
+    """Route a cache hit to output verification, otherwise create the embedding."""
     if state.get("cache_hit", False):
         logger.info("Routing after cache_check: CACHE_HIT -> output_guardrail (0 external calls)")
         return "output_guardrail"
-    return "query_prep"
+    return "embedding"
 
 
 def route_after_query_prep(state: GraphState) -> Literal["topic_scoring", "generation"]:
     return "generation" if state.get("topic_precheck_out", False) else "topic_scoring"
 
 
-def route_after_topic(state: GraphState) -> Literal["semantic_cache", "generation"]:
+def route_after_topic(state: GraphState) -> Literal["cache_check", "generation"]:
     if not state.get("is_in_domain", False):
         return "generation"
-    return "semantic_cache"
+    return "cache_check"
 
 
 def route_after_semantic_cache(state: GraphState) -> Literal["output_guardrail", "retrieval"]:

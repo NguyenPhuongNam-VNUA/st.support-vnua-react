@@ -73,6 +73,7 @@ class GraphState(TypedDict, total=False):
     evidence_band: str
     is_sufficient_evidence: bool
     rerank_strategy: str
+    retrieval_route: Literal["none", "faq_and_document"]
 
     # 5. MCP Tool Execution State
     tool_calls_made: int
@@ -169,6 +170,7 @@ def create_initial_state(
         "evidence_band": "low",
         "is_sufficient_evidence": False,
         "rerank_strategy": "none",
+        "retrieval_route": "none",
         "tool_calls_made": 0,
         "tool_results": [],
         "tool_name_requested": tool_name_requested,

@@ -90,6 +90,8 @@ class QuestionRepository:
             FROM public.questions
             WHERE status = 'approved'
               AND tenant_id = $3
+              AND answer IS NOT NULL
+              AND btrim(answer) <> ''
               AND embedding IS NOT NULL
               AND embedding_model = $4
               AND embedding_dimension = $5

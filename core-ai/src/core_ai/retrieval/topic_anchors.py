@@ -14,6 +14,11 @@ TOPICS: dict[str, dict[str, Any]] = {
         "slots": ("học kỳ", "năm học", "ngành", "khóa", "tín chỉ"),
         "clarification": "Bạn cần tra cứu học phí của học kỳ/năm học và ngành hoặc khóa nào?",
     },
+    "scholarships": {
+        "keywords": ("học bổng", "khuyến khích học tập", "miễn giảm học phí", "tài trợ"),
+        "slots": ("loại", "điều kiện", "mức", "kỳ", "năm học"),
+        "clarification": "Bạn cần tra cứu loại học bổng, điều kiện hay mức học bổng nào?",
+    },
     "schedule": {
         "keywords": ("lịch học", "thời khóa biểu", "lịch thi", "phòng học", "ca học"),
         "slots": ("học kỳ", "môn", "lớp", "ngày", "tuần"),

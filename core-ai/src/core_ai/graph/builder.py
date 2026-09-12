@@ -1,8 +1,8 @@
 """Graph builder constructing the LangGraph state machine for ST-Care Core AI.
 
 Builds the complete state machine coordinating:
-Input Guardrail -> Cache Check -> Parallel Retrieval -> Evidence Evaluation ->
-MCP Tool Node / Fallback / Generation -> Output Guardrail -> Safe Trace.
+Input Guardrail -> Topic Validation -> Embedding -> FAQ + Document Retrieval ->
+Merged Reranking -> Generation -> Output Guardrail.
 
 Uses the official LangGraph StateGraph runtime.
 """
@@ -15,6 +15,7 @@ from typing import Any
 from langgraph.graph import END, START, StateGraph
 
 from core_ai.graph.nodes import (
+    embedding_node,
     evidence_node,
     exact_cache_node,
     fallback_node,
@@ -52,6 +53,7 @@ def build_orchestration_graph() -> Any:
     builder.add_node("cache_check", exact_cache_node)
     builder.add_node("query_prep", query_prep_node)
     builder.add_node("topic_scoring", topic_scoring_node)
+    builder.add_node("embedding", embedding_node)
     builder.add_node("semantic_cache", semantic_cache_node)
     builder.add_node("retrieval", retrieval_node)
     builder.add_node("evidence_eval", evidence_node)
@@ -64,18 +66,11 @@ def build_orchestration_graph() -> Any:
     # START -> input_guardrail
     builder.add_edge(START, "input_guardrail")
 
-    # input_guardrail -> cache_check OR fallback
+    # input_guardrail -> query preparation OR fallback
     builder.add_conditional_edges(
         "input_guardrail",
         route_after_input_guardrail,
-        {"cache_check": "cache_check", "tool_node": "tool_node", "fallback": "fallback"},
-    )
-
-    # cache_check -> output_guardrail (cache hit) OR retrieval (cache miss)
-    builder.add_conditional_edges(
-        "cache_check",
-        route_after_cache,
-        {"output_guardrail": "output_guardrail", "query_prep": "query_prep"},
+        {"query_prep": "query_prep", "tool_node": "tool_node", "fallback": "fallback"},
     )
 
     builder.add_conditional_edges(
@@ -86,8 +81,14 @@ def build_orchestration_graph() -> Any:
     builder.add_conditional_edges(
         "topic_scoring",
         route_after_topic,
-        {"semantic_cache": "semantic_cache", "generation": "generation"},
+        {"cache_check": "cache_check", "generation": "generation"},
     )
+    builder.add_conditional_edges(
+        "cache_check",
+        route_after_cache,
+        {"output_guardrail": "output_guardrail", "embedding": "embedding"},
+    )
+    builder.add_edge("embedding", "semantic_cache")
     builder.add_conditional_edges(
         "semantic_cache",
         route_after_semantic_cache,

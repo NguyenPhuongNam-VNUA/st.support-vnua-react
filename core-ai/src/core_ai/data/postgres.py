@@ -4,6 +4,7 @@ Configured specifically for Supavisor Transaction Pooler (port 6543) using async
 with statement_cache_size=0 to eliminate prepared statement collisions.
 """
 
+import json
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
@@ -18,6 +19,17 @@ logger = logging.getLogger("core_ai.data.postgres")
 
 # Global singleton connection pool
 _db_pool: Optional[asyncpg.Pool] = None
+
+
+async def _configure_connection(connection: asyncpg.Connection) -> None:
+    """Decode PostgreSQL JSON values consistently for all repositories."""
+    for type_name in ("json", "jsonb"):
+        await connection.set_type_codec(
+            type_name,
+            schema="pg_catalog",
+            encoder=json.dumps,
+            decoder=json.loads,
+        )
 
 
 async def init_db_pool(settings: Optional[Settings] = None) -> asyncpg.Pool:
@@ -49,6 +61,7 @@ async def init_db_pool(settings: Optional[Settings] = None) -> asyncpg.Pool:
             command_timeout=app_settings.db_command_timeout_seconds,
             statement_cache_size=app_settings.db_statement_cache_size,  # Strictly 0 for Supavisor
             max_cached_statement_lifetime=0,
+            init=_configure_connection,
         )
         logger.info("PostgreSQL connection pool successfully initialized.")
         return _db_pool

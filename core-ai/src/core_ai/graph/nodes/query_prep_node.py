@@ -1,11 +1,10 @@
-"""Prepare one reusable query embedding and local sparse terms."""
+"""Normalize and classify the query before topic validation."""
 
 from __future__ import annotations
 
 import re
 import time
 
-from core_ai.dependencies import get_component
 from core_ai.graph.state import GraphState, add_execution_trace
 
 _OBVIOUS_OUT_OF_DOMAIN = re.compile(
@@ -129,30 +128,14 @@ async def query_prep_node(state: GraphState) -> GraphState:
         )
         return state
 
-    # 4. Academic intent -> Prepare embedding and proceed with retrieval
-    status = "completed"
-    embedding_service = get_component("embedding_service")
-    if embedding_service is not None and state.get("external_calls_count", 0) < state.get(
-        "max_external_calls", 2
-    ):
-        state["external_calls_count"] = state.get("external_calls_count", 0) + 1
-        try:
-            state["query_embedding"] = await embedding_service.embed_query(query)
-        except Exception:
-            state["query_embedding"] = []
-            status = "degraded"
-            state["error_code"] = "query_embedding_unavailable"
-    else:
-        state["query_embedding"] = []
-        status = "degraded"
+    # 4. Academic intent -> validate topic before spending the embedding call.
     add_execution_trace(
         state,
         "query_prep",
-        status,  # type: ignore[arg-type]
+        "completed",
         int((time.perf_counter() - started) * 1000),
         {
             "intent": "academic",
-            "embedding_ready": bool(state["query_embedding"]),
             "terms_count": len(state["query_terms"]),
         },
     )

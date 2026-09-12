@@ -1,6 +1,7 @@
 """Orchestration nodes package for ST-Care Core AI LangGraph state machine."""
 
 from core_ai.graph.nodes.cache_node import cache_node, exact_cache_node, semantic_cache_node
+from core_ai.graph.nodes.embedding_node import embedding_node
 from core_ai.graph.nodes.evidence_node import evidence_node
 from core_ai.graph.nodes.fallback_node import fallback_node
 from core_ai.graph.nodes.generation_node import generation_node
@@ -16,6 +17,7 @@ __all__ = [
     "cache_node",
     "exact_cache_node",
     "semantic_cache_node",
+    "embedding_node",
     "query_prep_node",
     "topic_scoring_node",
     "retrieval_node",

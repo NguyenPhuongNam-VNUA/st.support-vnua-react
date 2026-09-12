@@ -42,6 +42,7 @@ class PipelineStatusPayload(BaseModel):
             "cache_check",
             "query_prep",
             "topic_scoring",
+            "embedding",
             "semantic_cache",
             "retrieval",
             "rerank",

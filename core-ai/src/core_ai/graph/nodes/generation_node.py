@@ -46,9 +46,12 @@ def build_evidence_context(chunks: List[Dict[str, Any]]) -> str:
         return "Không có trích dẫn tài liệu quy chế cụ thể."
     lines: List[str] = []
     for chunk in chunks:
+        snippet = chunk.get("snippet", "").strip()
+        if chunk.get("source_type") == "faq":
+            lines.append(f"[FAQ ĐÃ DUYỆT]\nNội dung: {snippet}")
+            continue
         c_id = chunk.get("citation_id", "src_?")
         title = chunk.get("title", "Tài liệu đào tạo")
-        snippet = chunk.get("snippet", "").strip()
         provenance = [
             f"loại nguồn={chunk.get('source_type', 'document')}",
             f"số văn bản={chunk['document_number']}" if chunk.get("document_number") else "",
@@ -111,6 +114,7 @@ async def generation_node(state: GraphState) -> GraphState:
 
     chunks = state.get("retrieved_chunks", [])
     context_text = build_evidence_context(chunks)
+    has_document_evidence = any(chunk.get("source_type") == "document" for chunk in chunks)
     intent = state.get("user_intent", "academic")
 
     # Specific system guidance based on intent (kept strictly in SYSTEM role)
@@ -131,10 +135,16 @@ async def generation_node(state: GraphState) -> GraphState:
         )
     else:
         if chunks and state.get("is_sufficient_evidence", True):
+            citation_guidance = (
+                "- Chỉ gắn mã [src_X] cho thông tin lấy từ tài liệu; dữ liệu FAQ không cần trích nguồn.\n"
+                if has_document_evidence
+                else "- Không tạo mã nguồn [src_X] cho dữ liệu FAQ.\n"
+            )
             intent_guidance = (
                 "HƯỚNG DẪN CHO LƯỢT NÀY:\n"
-                "- Dựa vào [TRÍCH DẪN TÀI LIỆU] được cung cấp để trả lời đúng trọng tâm.\n"
-                "- Câu trả lời rõ ràng, cô đọng, dễ hiểu (2-4 câu hoặc vài gạch đầu dòng ngắn), gắn mã nguồn [src_X] tương ứng.\n"
+                "- Dựa vào [DỮ LIỆU TRA CỨU] được cung cấp để trả lời đúng trọng tâm.\n"
+                f"{citation_guidance}"
+                "- Câu trả lời rõ ràng, cô đọng, dễ hiểu (2-4 câu hoặc vài gạch đầu dòng ngắn).\n"
                 "- Không dùng văn mẫu rập khuôn."
             )
         else:
@@ -161,7 +171,7 @@ QUY TẮC BẢO MẬT & ĐẦU RA:
     if pers_ctx:
         user_parts.append(f"[NGỮ CẢNH & THÔNG TIN SINH VIÊN]:\n{pers_ctx}")
     if chunks and state.get("is_sufficient_evidence", True):
-        user_parts.append(f"[TRÍCH DẪN TÀI LIỆU]:\n{context_text}")
+        user_parts.append(f"[DỮ LIỆU TRA CỨU]:\n{context_text}")
     user_parts.append(state.get("message", ""))
     user_prompt = "\n\n".join(user_parts)
 

@@ -287,6 +287,14 @@ async def output_guardrail_node(state: GraphState) -> GraphState:
     # Apply the full guardrail implementation for answers. It checks
     # document/chunk membership, sanitizes HTML and masks PII.
     is_general_conv = state.get("topic_precheck_out", False) or not state.get("is_in_domain", True)
+    has_document_evidence = any(
+        chunk.get("source_type") == "document"
+        for chunk in state.get("retrieved_chunks", [])
+    )
+    has_faq_evidence = any(
+        chunk.get("source_type") == "faq"
+        for chunk in state.get("retrieved_chunks", [])
+    )
     ext_guardrail = get_component("output_guardrail")
     if (
         state.get("status") == RouteStatus.ANSWERED
@@ -298,7 +306,9 @@ async def output_guardrail_node(state: GraphState) -> GraphState:
             answer=answer,
             citations=verified_citations,
             retrieved_chunks=state.get("retrieved_chunks", []),
-            require_citations=not is_general_conv and bool(state.get("retrieved_chunks")),
+            require_citations=(
+                not is_general_conv and has_document_evidence and not has_faq_evidence
+            ),
         )
         answer = result.sanitized_answer
         verified_citations = result.validated_citations
