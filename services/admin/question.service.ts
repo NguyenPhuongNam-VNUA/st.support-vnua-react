@@ -4,6 +4,7 @@ import {
   QuestionModel,
   QuestionStatus,
 } from '@/repositories/admin/question.repository';
+import { callAiAgent } from '@/lib/ai/agent-client';
 
 const TOPICS = ['Học vụ', 'Học phí', 'Ký túc xá', 'Tuyển sinh', 'Bảo lưu', 'Đồ án', 'Khác'];
 const STATUSES: QuestionStatus[] = ['pending', 'approved', 'rejected', 'needs_edit'];
@@ -63,6 +64,36 @@ function normalizeCreateInput(input: unknown, actorId: number) {
   };
 }
 
+async function embedAndApprove(questionIds: number[], actorId: number, background = false) {
+  let upstream: Response;
+  try {
+    upstream = await callAiAgent(
+      '/questions/embeddings',
+      {
+        method: 'POST',
+        body: JSON.stringify({ question_ids: questionIds, background }),
+      },
+      {
+        requestId: crypto.randomUUID(),
+        tenantId: process.env.CORE_AI_TENANT_ID || 'vnua',
+        userId: actorId,
+      }
+    );
+  } catch {
+    throw new QuestionServiceError(
+      'Câu hỏi đã được giữ ở trạng thái chờ duyệt vì dịch vụ embedding chưa sẵn sàng',
+      503
+    );
+  }
+
+  if (!upstream.ok) {
+    throw new QuestionServiceError(
+      'Câu hỏi đã được giữ ở trạng thái chờ duyệt vì embedding không thành công',
+      502
+    );
+  }
+}
+
 export const questionService = {
   list(options: QuestionListOptions) {
     if (options.status && !STATUSES.includes(options.status as QuestionStatus)) {
@@ -78,8 +109,17 @@ export const questionService = {
     return question;
   },
 
-  create(input: unknown, actorId: number) {
-    return questionRepository.create(normalizeCreateInput(input, actorId));
+  async create(input: unknown, actorId: number) {
+    const normalized = normalizeCreateInput(input, actorId);
+    const shouldApprove = normalized.status === 'approved';
+    const created = await questionRepository.create({
+      ...normalized,
+      ...(shouldApprove ? { status: 'pending' } : {}),
+    });
+    if (!shouldApprove) return created;
+
+    await embedAndApprove([created.id], actorId);
+    return this.getById(created.id);
   },
 
   async createMany(rows: unknown[], actorId: number) {
@@ -87,7 +127,17 @@ export const questionService = {
       throw new QuestionServiceError('File phải có từ 1 đến 1000 dòng dữ liệu', 422);
     }
     const normalized = rows.map((row) => normalizeCreateInput(row, actorId));
-    return questionRepository.createMany(normalized);
+    const created = await questionRepository.createMany(
+      normalized.map((row) => ({
+        ...row,
+        ...(row.status === 'approved' ? { status: 'pending' } : {}),
+      }))
+    );
+    const idsToApprove = created
+      .filter((_, index) => normalized[index]?.status === 'approved')
+      .map((row) => row.id);
+    if (idsToApprove.length > 0) await embedAndApprove(idsToApprove, actorId, true);
+    return created;
   },
 
   async update(id: number, input: unknown, actorId: number) {
@@ -123,6 +173,22 @@ export const questionService = {
     if (nextStatus === 'approved' && (typeof nextAnswer !== 'string' || !nextAnswer.trim())) {
       throw new QuestionServiceError('Cần thêm câu trả lời trước khi duyệt', 422);
     }
+    const questionChanged =
+      typeof update.question === 'string' && update.question !== current.question;
+    const needsEmbedding =
+      nextStatus === 'approved' && (current.status !== 'approved' || questionChanged);
+    if (needsEmbedding) {
+      await questionRepository.update(id, {
+        ...update,
+        status: 'pending',
+        embedding: null,
+        embedding_model: null,
+        embedding_dimension: null,
+        verified_at: null,
+      });
+      await embedAndApprove([id], actorId);
+      return this.getById(id);
+    }
     return questionRepository.update(id, update);
   },
 
@@ -135,12 +201,25 @@ export const questionService = {
     }
     if (source.status === 'approved') {
       const rows = await questionRepository.getManyByIds(ids);
+      if (rows.length !== ids.length) {
+        throw new QuestionServiceError('Có câu hỏi không còn tồn tại', 404);
+      }
       if (rows.some((row) => !row.answer?.trim())) {
         throw new QuestionServiceError(
           'Không thể duyệt hàng loạt: có câu hỏi chưa có câu trả lời',
           422
         );
       }
+      await questionRepository.bulkUpdate(ids, {
+        status: 'pending',
+        updated_by: actorId,
+        embedding: null,
+        embedding_model: null,
+        embedding_dimension: null,
+        verified_at: null,
+      });
+      await embedAndApprove(ids, actorId, true);
+      return questionRepository.getManyByIds(ids);
     }
     return questionRepository.bulkUpdate(ids, { status: source.status, updated_by: actorId });
   },

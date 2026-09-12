@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import math
-from typing import List, Optional, Protocol, runtime_checkable
+from typing import Awaitable, Callable, List, Optional, Protocol, runtime_checkable
 
 import httpx
 
@@ -41,7 +41,11 @@ class EmbeddingService(Protocol):
         """Generate a dense embedding for a user query."""
         ...
 
-    async def embed_documents(self, texts: List[str]) -> List[List[float]]:
+    async def embed_documents(
+        self,
+        texts: List[str],
+        on_progress: Optional[Callable[[int, int], Awaitable[None]]] = None,
+    ) -> List[List[float]]:
         """Generate dense embeddings for document chunks."""
         ...
 
@@ -202,12 +206,24 @@ class GeminiEmbedding2Embeddings:
             f"Gemini embedding request failed for model '{self.model_name}'"
         ) from last_error
 
-    async def _embed_prepared(self, texts: List[str]) -> List[List[float]]:
+    async def _embed_prepared(
+        self,
+        texts: List[str],
+        on_progress: Optional[Callable[[int, int], Awaitable[None]]] = None,
+    ) -> List[List[float]]:
+        async def embed_all(client: httpx.AsyncClient) -> List[List[float]]:
+            vectors: List[List[float]] = []
+            for completed, text in enumerate(texts, start=1):
+                vectors.append(await self._request_embedding(client, text))
+                if on_progress is not None:
+                    await on_progress(completed, len(texts))
+            return vectors
+
         if self._client is not None:
-            return [await self._request_embedding(self._client, text) for text in texts]
+            return await embed_all(self._client)
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            return [await self._request_embedding(client, text) for text in texts]
+            return await embed_all(client)
 
     async def embed_query(self, text: str) -> List[float]:
         if not text or not text.strip():
@@ -215,8 +231,12 @@ class GeminiEmbedding2Embeddings:
         prepared = f"task: question answering | query: {text.strip()}"
         return (await self._embed_prepared([prepared]))[0]
 
-    async def embed_documents(self, texts: List[str]) -> List[List[float]]:
+    async def embed_documents(
+        self,
+        texts: List[str],
+        on_progress: Optional[Callable[[int, int], Awaitable[None]]] = None,
+    ) -> List[List[float]]:
         if not texts:
             return []
         prepared = [f"title: none | text: {text.strip()}" for text in texts]
-        return await self._embed_prepared(prepared)
+        return await self._embed_prepared(prepared, on_progress=on_progress)

@@ -2,6 +2,16 @@ from core_ai.ingestion.chunker import DocumentChunker, build_legal_markdown
 from core_ai.ingestion.pdf_parser import ParsedPDF, PDFPage
 
 
+def test_default_chunk_limits_match_ingestion_policy() -> None:
+    chunker = DocumentChunker()
+    assert (
+        chunker.target_tokens,
+        chunker.max_tokens,
+        chunker.hard_max_tokens,
+        chunker.overlap_tokens,
+    ) == (800, 1000, 1000, 100)
+
+
 def test_heading_and_table_provenance_are_preserved() -> None:
     text = """# Học phí
 Mức thu được công bố theo từng học kỳ.
@@ -14,9 +24,40 @@ Mức thu được công bố theo từng học kỳ.
 Lịch học được công bố trên cổng đào tạo.
 """
     chunks = DocumentChunker(min_tokens=10, max_tokens=80, target_tokens=30).chunk_text(text)
-    assert any(chunk.kind == "table" and chunk.heading_path == ["Học phí"] for chunk in chunks)
+    tuition_chunk = next(chunk for chunk in chunks if chunk.heading_path == ["Học phí"])
+    assert tuition_chunk.kind == "mixed"
+    assert "| Khoản | Mức |" in tuition_chunk.content
     assert any(chunk.heading_path == ["Lịch học"] for chunk in chunks)
     assert len({chunk.content_hash for chunk in chunks}) == len(chunks)
+
+
+def test_small_blocks_under_one_heading_are_not_fragmented() -> None:
+    text = """# Học phí
+Mức thu được công bố theo từng học kỳ.
+
+| Khoản | Mức |
+|---|---|
+| Tín chỉ | Theo thông báo |
+
+Sinh viên kiểm tra công nợ trên cổng đào tạo.
+
+# Lịch học
+Lịch học được công bố riêng.
+"""
+
+    chunks = DocumentChunker(
+        min_tokens=10,
+        target_tokens=80,
+        max_tokens=100,
+        hard_max_tokens=100,
+        overlap_tokens=10,
+    ).chunk_text(text)
+
+    assert len(chunks) == 2
+    assert chunks[0].heading_path == ["Học phí"]
+    assert chunks[0].kind == "mixed"
+    assert chunks[1].heading_path == ["Lịch học"]
+    assert all(chunk.tokens <= 100 for chunk in chunks)
 
 
 def test_legal_markdown_and_chunks_preserve_document_order_and_metadata() -> None:

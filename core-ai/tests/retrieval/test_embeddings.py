@@ -82,6 +82,10 @@ async def test_document_embedding_requests_are_serialized_by_configured_interval
     mock_settings, monkeypatch
 ) -> None:
     requested_at: list[float] = []
+    progress: list[tuple[int, int]] = []
+
+    async def on_progress(completed: int, total: int) -> None:
+        progress.append((completed, total))
 
     async def handler(request: httpx.Request) -> httpx.Response:
         requested_at.append(asyncio.get_running_loop().time())
@@ -98,10 +102,14 @@ async def test_document_embedding_requests_are_serialized_by_configured_interval
             settings=settings,
             client=client,
         )
-        await service.embed_documents(["chunk one", "chunk two"])
+        await service.embed_documents(
+            ["chunk one", "chunk two"],
+            on_progress=on_progress,
+        )
 
     assert len(requested_at) == 2
     assert requested_at[1] - requested_at[0] >= 0.08
+    assert progress == [(1, 2), (2, 2)]
 
 
 @pytest.mark.asyncio

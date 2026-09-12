@@ -34,10 +34,15 @@ class DocumentEmbeddingCreatePayload(BaseModel):
     )
 
 
+class DocumentMarkdownReindexRequest(BaseModel):
+    document_id: int = Field(..., gt=0)
+
+
 async def handle_document_embed(
-    request: DocumentEmbedRequest,
+    request: DocumentEmbedRequest | DocumentMarkdownReindexRequest,
     background_tasks: BackgroundTasks,
     tenant_id: str,
+    use_stored_markdown: bool = False,
 ) -> DocumentEmbedResponse:
     """Core handler to validate and queue document embedding job."""
     doc_id = int(request.document_id)
@@ -61,12 +66,14 @@ async def handle_document_embed(
 
     task_arguments = {
         "document_id": doc_id,
-        "file_url": request.file_url,
+        "file_url": getattr(request, "file_url", ""),
         "job_id": job_id,
         "tenant_id": tenant_id,
     }
     if already_claimed:
         task_arguments["already_claimed"] = True
+    if use_stored_markdown:
+        task_arguments["use_stored_markdown"] = True
     background_tasks.add_task(worker.process_document, **task_arguments)
 
     return DocumentEmbedResponse(
@@ -172,4 +179,24 @@ async def embed_document_legacy(
 ) -> DocumentEmbedResponse:
     return await handle_document_embed(
         request, background_tasks, http_request.state.context.tenant_id
+    )
+
+
+@router.post(
+    "/documents/reindex-markdown",
+    response_model=DocumentEmbedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Reindex admin-edited Markdown",
+    dependencies=[Depends(verify_internal_token)],
+)
+async def reindex_document_markdown(
+    http_request: Request,
+    request: DocumentMarkdownReindexRequest,
+    background_tasks: BackgroundTasks,
+) -> DocumentEmbedResponse:
+    return await handle_document_embed(
+        request,
+        background_tasks,
+        http_request.state.context.tenant_id,
+        use_stored_markdown=True,
     )

@@ -211,8 +211,8 @@ class OutputGuardrail:
             return ""
 
         cleaned = self._INLINE_CITATION_PATTERN.sub(replace_match, text)
-        # Clean double spaces caused by removed tags
-        cleaned = re.sub(r"\s{2,}", " ", cleaned)
+        # Clean double horizontal spaces caused by removed tags while strictly preserving newlines
+        cleaned = re.sub(r"[^\S\r\n]{2,}", " ", cleaned)
         return cleaned
 
     def validate(

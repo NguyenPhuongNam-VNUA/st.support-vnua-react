@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   documentRepository,
   DocumentListOptions,
@@ -8,6 +8,7 @@ import { getSupabaseAdmin } from '@/utils/supabase/admin';
 
 const DOCUMENT_BUCKET = 'documents';
 const MAX_PDF_SIZE = 15 * 1024 * 1024;
+const MAX_MARKDOWN_SIZE = 10 * 1024 * 1024;
 const DOCUMENT_TYPES = new Set(['quy_che', 'quyet_dinh', 'thong_bao', 'huong_dan', 'quy_trinh', 'phu_luc', 'other']);
 const PIPELINE_STAGES: DocumentPipelineStage[] = [
   'uploading',
@@ -249,5 +250,42 @@ export const documentService = {
       throw new DocumentServiceError('Tài liệu chưa được chuyển đổi sang Markdown', 409);
     }
     return markdown;
+  },
+
+  async saveMarkdown(id: number, input: unknown) {
+    const current = await this.getById(id);
+    if (current.pipeline_stage === 'chunking' || current.pipeline_stage === 'embedding') {
+      throw new DocumentServiceError('Tài liệu đang được xử lý, vui lòng chờ hoàn tất trước khi sửa Markdown', 409);
+    }
+    if (!input || typeof input !== 'object') {
+      throw new DocumentServiceError('Dữ liệu Markdown không hợp lệ', 422);
+    }
+
+    const raw = (input as Record<string, unknown>).markdown_content;
+    if (typeof raw !== 'string' || !raw.trim()) {
+      throw new DocumentServiceError('Nội dung Markdown không được để trống', 422);
+    }
+    const markdownContent = `${raw.replace(/\r\n?/g, '\n').trimEnd()}\n`;
+    if (Buffer.byteLength(markdownContent, 'utf8') > MAX_MARKDOWN_SIZE) {
+      throw new DocumentServiceError('Nội dung Markdown vượt quá 10 MB', 413);
+    }
+
+    const markdownSha256 = createHash('sha256').update(markdownContent).digest('hex');
+    if (markdownSha256 === current.markdown_sha256) {
+      return { document: current, changed: false };
+    }
+
+    const document = await documentRepository.update(id, {
+      markdown_content: markdownContent,
+      markdown_sha256: markdownSha256,
+      markdown_path: `db://documents/${id}/markdown/${markdownSha256}.md`,
+      markdown_generated_at: new Date().toISOString(),
+      parser_used: 'admin_markdown',
+      review_status: 'approved',
+      pipeline_stage: 'uploading',
+      progress: 0,
+      is_active: false,
+    });
+    return { document, changed: true };
   },
 };

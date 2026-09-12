@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -23,13 +23,14 @@ import {
   CheckCircle2,
   Cpu,
   AlertTriangle,
-  Download,
+  FilePenLine,
 } from 'lucide-react';
 import { LibraryShelfIcon } from '@/components/icons/SidebarIcons';
 import DocChunkInspectorDrawer from './DocChunkInspectorDrawer';
 import RagTestRetrievalModal from './RagTestRetrievalModal';
 import UploadPdfDialog from './UploadPdfDialog';
 import DialogPreview from './DialogPreview';
+import MarkdownEditorDialog from './MarkdownEditorDialog';
 import documentApi from '@/api/admin/documentApi';
 
 export const VALIDITY_OPTIONS = ['Còn hiệu lực', 'Hết hiệu lực', 'Theo học kỳ (HK1 2025-2026)'];
@@ -43,11 +44,12 @@ export default function DocumentLifecycleView() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [testRetrievalOpen, setTestRetrievalOpen] = useState(false);
   const [chunkInspectorOpen, setChunkInspectorOpen] = useState(false);
+  const [markdownEditorOpen, setMarkdownEditorOpen] = useState(false);
   const [selectedDocTitle, setSelectedDocTitle] = useState('');
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     try {
       const response: any = await documentApi.getAll({ limit: 100 });
       setDocuments(response?.data?.documents || []);
@@ -57,11 +59,21 @@ export default function DocumentLifecycleView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadDocuments();
-  }, []);
+    void loadDocuments();
+  }, [loadDocuments]);
+
+  const hasProcessingDocument = documents.some(
+    (doc) => doc.pipeline_stage === 'chunking' || doc.pipeline_stage === 'embedding'
+  );
+
+  useEffect(() => {
+    if (!hasProcessingDocument) return;
+    const intervalId = window.setInterval(() => void loadDocuments(), 2000);
+    return () => window.clearInterval(intervalId);
+  }, [hasProcessingDocument, loadDocuments]);
 
   const handleToggleActive = async (id: number, isActive: boolean) => {
     try {
@@ -104,6 +116,12 @@ export default function DocumentLifecycleView() {
     setSelectedDocId(id);
     setSelectedDocTitle(title);
     setChunkInspectorOpen(true);
+  };
+
+  const openMarkdownEditor = (id: number, title: string) => {
+    setSelectedDocId(id);
+    setSelectedDocTitle(title);
+    setMarkdownEditorOpen(true);
   };
 
   return (
@@ -294,11 +312,12 @@ export default function DocumentLifecycleView() {
                     <Button
                       size="small"
                       variant="text"
-                      startIcon={<Download className="w-4 h-4" />}
-                      href={`/api/admin/documents/${doc.id}/markdown`}
+                      startIcon={<FilePenLine className="w-4 h-4" />}
+                      onClick={() => openMarkdownEditor(doc.id, doc.title)}
+                      disabled={isProcessing}
                       sx={{ borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'none', color: '#0d8a4f' }}
                     >
-                      Tải MD
+                      Xem / sửa MD
                     </Button>
                   )}
 
@@ -382,6 +401,17 @@ export default function DocumentLifecycleView() {
         open={!!previewUrl}
         onClose={() => setPreviewUrl(null)}
         filePath={previewUrl}
+      />
+
+      <MarkdownEditorDialog
+        open={markdownEditorOpen}
+        onClose={() => setMarkdownEditorOpen(false)}
+        documentId={selectedDocId}
+        documentTitle={selectedDocTitle}
+        onSaved={(document) => {
+          setDocuments((prev) => prev.map((item) => (item.id === document.id ? document : item)));
+          setApiError(null);
+        }}
       />
     </Box>
   );

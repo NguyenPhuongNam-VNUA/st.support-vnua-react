@@ -124,6 +124,22 @@ class TestRestfulEndpoints:
         assert response.json()["document_id"] == 42
         mock_worker.process_document.assert_awaited_once()
 
+    def test_admin_markdown_reindex_uses_stored_content(self, client: TestClient) -> None:
+        mock_worker = MagicMock()
+        mock_worker.process_document = AsyncMock()
+        register_component("ingestion_worker", mock_worker)
+
+        response = client.post(
+            "/documents/reindex-markdown",
+            json={"document_id": 42},
+            headers={"Authorization": "Bearer test-secret-token-123"},
+        )
+
+        assert response.status_code == 202
+        assert response.json()["document_id"] == 42
+        assert mock_worker.process_document.await_args.kwargs["use_stored_markdown"] is True
+        assert mock_worker.process_document.await_args.kwargs["file_url"] == ""
+
     def test_get_job_status_success_and_not_found(self, client: TestClient) -> None:
         """GET /api/v1/jobs/{job_id} returns 200 OK for valid jobs and 404 for unknown jobs."""
         from core_ai.api.routes.jobs import register_job

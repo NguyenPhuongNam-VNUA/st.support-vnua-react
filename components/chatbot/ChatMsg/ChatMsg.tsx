@@ -174,6 +174,162 @@ function formatTraceStep(item: ChatTraceStep): string {
   return FRIENDLY_STEP_TITLES[key] || "Xử lý thông tin yêu cầu";
 }
 
+function preprocessMarkdown(content: string): string {
+  if (!content) return "";
+
+  // Tách và bảo vệ code blocks khỏi regex
+  const codeBlocks: string[] = [];
+  let text = content.replace(/```[\s\S]*?```/g, (match) => {
+    codeBlocks.push(match);
+    return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
+  });
+
+  // 1. Chuẩn hóa bảng Markdown (Table) khi các hàng bị gom trên cùng 1 dòng
+  if (text.includes("|") && /\|[\s:-]+-[\s:-]*\|/.test(text)) {
+    // Tách câu dẫn phía trước nếu dính liền hàng đầu của bảng (VD: "...cụ thể: | Tiêu chí |")
+    text = text.replace(
+      /([^\n|])\s*(\|[^|\n]+(?:\|[^|\n]+)+\|)(?=\s*\|[\s:-]+-)/g,
+      "$1\n\n$2"
+    );
+
+    // Tách các hàng bị dính liền bởi '| |' hoặc '||' thành từng dòng mới
+    text = text.replace(/\|\s*\|\s*/g, "|\n| ");
+
+    // Tách đoạn văn bản, đường kẻ hoặc tiêu đề phía sau bảng nếu dính liền ô cuối cùng (VD: "| Ô cuối | --- ### Tiêu đề...")
+    text = text.replace(
+      /(^|\n)(\|[^|\n]+(?:\|[^|\n]+)+\|)[ \t]*([^|\r\n]+)$/gm,
+      (match, prefix, row, trailing) => {
+        const trimmedTrailing = trailing.trim();
+        if (trimmedTrailing.length > 0) {
+          return `${prefix}${row}\n\n${trimmedTrailing}`;
+        }
+        return match;
+      }
+    );
+
+    // Đảm bảo trước hàng header của bảng luôn có dòng trống ngăn cách
+    text = text.replace(/([^\n])\n(\|.+?\|\s*\n\|[\s:-]+-)/g, "$1\n\n$2");
+  }
+
+  // 2. Tách đường kẻ ngang và tiêu đề markdown nếu bị dính liền trên 1 dòng
+  text = text.replace(/([^\n])\s+(---)\s+/g, "$1\n\n$2\n\n");
+  text = text.replace(/([^\n])\s+(#{1,4}\s+)/g, "$1\n\n$2");
+
+  // 3. Tách các mục đánh số hoặc gạch đầu dòng bị dính liền trên cùng 1 dòng
+  text = text.replace(/([.!?])\s+(\d+\.\s+\*\*)/g, "$1\n\n$2");
+  text = text.replace(/([.!?])\s+(\d+\.\s+[A-ZÀ-Ỹa-zà-ỹ])/g, "$1\n\n$2");
+  text = text.replace(/([.!?])\s+([•\-\*]\s+\*\*)/g, "$1\n\n$2");
+
+  // 4. Nếu có tiêu đề danh sách xuất hiện ngay sau câu dẫn mà chưa có dòng trống, thêm \n\n
+  text = text.replace(/([^\n])\n(\d+\.\s+)/g, "$1\n\n$2");
+  text = text.replace(/([^\n])\n([•\-\*]\s+)/g, "$1\n\n$2");
+
+  // Khôi phục code blocks
+  text = text.replace(/__CODE_BLOCK_(\d+)__/g, (_, idx) => codeBlocks[Number(idx)] || "");
+
+  return text;
+}
+
+const markdownComponents = {
+  p: ({ children }: any) => (
+    <p className="mb-3.5 last:mb-0 leading-[1.74] text-slate-700 text-[0.935rem]">
+      {children}
+    </p>
+  ),
+  ol: ({ children }: any) => (
+    <ol className="my-3 space-y-2.5 pl-5 list-decimal text-slate-700 marker:text-emerald-700 marker:font-bold marker:text-[0.95rem]">
+      {children}
+    </ol>
+  ),
+  ul: ({ children }: any) => (
+    <ul className="my-3 space-y-2 pl-5 list-disc text-slate-700 marker:text-emerald-600">
+      {children}
+    </ul>
+  ),
+  li: ({ children }: any) => (
+    <li className="pl-1 leading-[1.68] text-slate-700 text-[0.935rem]">
+      {children}
+    </li>
+  ),
+  strong: ({ children }: any) => (
+    <strong className="font-semibold text-slate-900 bg-emerald-50/70 px-1 py-0.5 rounded text-[0.93rem] border border-emerald-100/60">
+      {children}
+    </strong>
+  ),
+  em: ({ children }: any) => (
+    <em className="italic text-slate-600 font-medium">{children}</em>
+  ),
+  h1: ({ children }: any) => (
+    <h1 className="text-base font-bold text-slate-900 mt-4 mb-2 pb-1.5 border-b border-emerald-100 flex items-center gap-2">
+      <span className="w-1.5 h-4 bg-emerald-600 rounded-full inline-block"></span>
+      {children}
+    </h1>
+  ),
+  h2: ({ children }: any) => (
+    <h2 className="text-[0.98rem] font-bold text-slate-900 mt-3.5 mb-1.5 flex items-center gap-1.5">
+      <span className="w-1 h-3.5 bg-emerald-500 rounded-full inline-block"></span>
+      {children}
+    </h2>
+  ),
+  h3: ({ children }: any) => (
+    <h3 className="text-[0.95rem] font-semibold text-slate-800 mt-3 mb-1">
+      {children}
+    </h3>
+  ),
+  blockquote: ({ children }: any) => (
+    <blockquote className="my-3.5 border-l-4 border-emerald-600 bg-emerald-50/50 py-2.5 px-4 rounded-r-xl text-slate-700 italic text-[0.91rem] leading-relaxed shadow-xs">
+      {children}
+    </blockquote>
+  ),
+  code: ({ inline, className, children, ...props }: any) => {
+    if (inline) {
+      return (
+        <code className="px-1.5 py-0.5 mx-0.5 rounded-md bg-emerald-50/80 text-emerald-800 font-mono text-[0.85em] font-medium border border-emerald-200/60">
+          {children}
+        </code>
+      );
+    }
+    return (
+      <code className="block p-3.5 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto my-3 leading-relaxed shadow-md border border-slate-800">
+        {children}
+      </code>
+    );
+  },
+  table: ({ children }: any) => (
+    <div className="my-4 overflow-x-auto rounded-xl border border-slate-200 shadow-xs bg-white">
+      <table className="min-w-full divide-y divide-slate-200 text-[0.84rem] text-slate-700 border-collapse">
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }: any) => (
+    <thead className="bg-emerald-50/90 font-semibold text-emerald-950 border-b border-emerald-200/80">
+      {children}
+    </thead>
+  ),
+  tbody: ({ children }: any) => (
+    <tbody className="divide-y divide-slate-100 bg-white">
+      {children}
+    </tbody>
+  ),
+  tr: ({ children }: any) => (
+    <tr className="transition-colors hover:bg-emerald-50/40 even:bg-slate-50/50">
+      {children}
+    </tr>
+  ),
+  th: ({ children }: any) => (
+    <th className="px-3.5 py-2.5 text-left font-bold text-emerald-900 tracking-normal text-[0.82rem] whitespace-nowrap">
+      {children}
+    </th>
+  ),
+  td: ({ children }: any) => (
+    <td className="px-3.5 py-2.5 text-[0.84rem] leading-relaxed text-slate-700 align-top">
+      {children}
+    </td>
+  ),
+  hr: () => <hr className="my-3.5 border-slate-200/80" />,
+};
+
 export default function ChatMsg({
   message,
   timestamp,
@@ -215,8 +371,8 @@ export default function ChatMsg({
         display: "flex",
         alignItems: "flex-start",
         gap: 1.5,
-        my: 1.5,
-        maxWidth: { md: "88%", xs: "97%" },
+        my: 2,
+        maxWidth: { md: "88%", xs: "98%" },
       }}
     >
       <Box sx={{ width: 36, height: 36, flexShrink: 0 }}>
@@ -275,7 +431,7 @@ export default function ChatMsg({
 
             {/* Expanded Dropdown Panel */}
             {showTrace && trace.length > 0 && (
-              <div className="mt-1.5 space-y-1.5 border-l-2 border-slate-200/80 pl-3 py-1 text-xs text-slate-600 max-w-xl">
+              <div className="mt-1.5 space-y-1.5 border-l-2 border-emerald-500/50 pl-3 py-1 text-xs text-slate-600 max-w-xl bg-emerald-50/20 rounded-r-lg">
                 {trace.map((item, index) => {
                   const title = formatTraceStep(item);
                   const isDone =
@@ -315,23 +471,27 @@ export default function ChatMsg({
           <Box
             sx={{
               position: "relative",
-              px: 2.2,
-              py: 1.6,
-              borderRadius: "4px 20px 20px 20px",
-              background: "rgba(255,255,255,.94)",
-              border: "1px solid rgba(226,232,240,.8)",
-              boxShadow: "0 4px 20px -4px rgba(0,0,0,.06)",
+              px: { xs: 2, sm: 2.6 },
+              py: { xs: 1.8, sm: 2.2 },
+              borderRadius: "4px 22px 22px 22px",
+              background: "rgba(255, 255, 255, 0.98)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              border: "1px solid rgba(13, 138, 79, 0.12)",
+              boxShadow:
+                "0 4px 24px -4px rgba(13, 138, 79, 0.06), 0 1px 3px 0 rgba(0, 0, 0, 0.02)",
               color: "#1e293b",
-              fontSize: ".925rem",
-              lineHeight: 1.65,
             }}
           >
             {message ? (
-              <Box className="prose prose-sm max-w-none prose-emerald">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {message}
+              <div className="markdown-content">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={markdownComponents}
+                >
+                  {preprocessMarkdown(message)}
                 </ReactMarkdown>
-              </Box>
+              </div>
             ) : (
               <Typography variant="body2" sx={{ color: "#64748b" }}>
                 Không có nội dung phản hồi.
@@ -339,44 +499,68 @@ export default function ChatMsg({
             )}
 
             {message && !isStreaming && (
-              <div className="mt-2.5 flex items-center justify-end pt-1.5 border-t border-slate-100">
+              <div className="mt-3.5 flex items-center justify-between pt-2 border-t border-slate-100">
+                <span className="text-[11px] text-slate-400 font-medium tracking-tight">
+                  ST-Care Assistant
+                </span>
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-slate-500 transition-all hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer"
                   title="Sao chép nội dung"
                 >
                   {copied ? (
-                    <Check size={12} className="text-emerald-600" />
+                    <>
+                      <Check size={12} className="text-emerald-600" />
+                      <span className="text-emerald-700 font-semibold">Đã chép</span>
+                    </>
                   ) : (
-                    <Copy size={12} />
+                    <>
+                      <Copy size={12} />
+                      <span>Sao chép</span>
+                    </>
                   )}
-                  <span>{copied ? "Đã chép" : "Chép"}</span>
                 </button>
               </div>
             )}
 
             {citations.length > 0 && (
-              <Box sx={{ mt: 1.8, pt: 1.4, borderTop: "1px solid #e2e8f0" }}>
+              <Box sx={{ mt: 2, pt: 1.6, borderTop: "1px dashed rgba(13, 138, 79, 0.18)" }}>
                 <Typography
                   variant="caption"
-                  sx={{ fontWeight: 700, color: "#475569" }}
+                  sx={{
+                    fontWeight: 700,
+                    color: "#065f46",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.8,
+                    fontSize: "0.78rem",
+                  }}
                 >
-                  Nguồn tham khảo
+                  <ExternalLink size={12} className="text-emerald-600" />
+                  Nguồn văn bản tham khảo ({citations.length})
                 </Typography>
-                <div className="mt-1.5 grid gap-1.5">
+                <div className="mt-2 grid gap-1.5">
                   {citations.slice(0, 3).map((source) => (
                     <div
                       key={source.citation_id}
-                      className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-600"
+                      className="group rounded-xl border border-emerald-100/80 bg-emerald-50/30 hover:bg-emerald-50/70 p-2.5 text-xs text-slate-600 transition-all"
                     >
-                      <div className="flex items-center gap-1 font-semibold text-slate-700">
-                        <ExternalLink size={12} /> [{source.citation_id}]{" "}
-                        {source.title}
-                        {source.page ? ` · Trang ${source.page}` : ""}
+                      <div className="flex items-center justify-between gap-2 font-semibold text-slate-800">
+                        <span className="truncate">
+                          <span className="text-emerald-700">[{source.citation_id}]</span>{" "}
+                          {source.title}
+                        </span>
+                        {source.page ? (
+                          <span className="flex-shrink-0 text-[11px] px-1.5 py-0.5 rounded bg-white text-slate-500 border border-slate-200/60 font-normal">
+                            Trang {source.page}
+                          </span>
+                        ) : null}
                       </div>
                       {source.snippet && (
-                        <p className="mt-1 line-clamp-2">{source.snippet}</p>
+                        <p className="mt-1 line-clamp-2 text-slate-500 text-[11.5px] leading-relaxed">
+                          {source.snippet}
+                        </p>
                       )}
                     </div>
                   ))}
@@ -387,7 +571,7 @@ export default function ChatMsg({
             {fallback?.redacted_query && onConfirmRedaction && (
               <button
                 onClick={onConfirmRedaction}
-                className="mt-3 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
+                className="mt-3 rounded-lg bg-emerald-700 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-800 transition-colors shadow-xs"
               >
                 Xác nhận dùng câu hỏi đã ẩn thông tin
               </button>

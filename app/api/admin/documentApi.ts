@@ -19,6 +19,12 @@ const documentApi = {
   getChunks(id: number) {
     return apiClient.get(`/api/admin/documents/${id}/chunks`);
   },
+  getMarkdown(id: number) {
+    return apiClient.get(`/api/admin/documents/${id}/markdown`, { params: { format: 'json' } });
+  },
+  updateMarkdown(id: number, markdownContent: string) {
+    return apiClient.put(`/api/admin/documents/${id}/markdown`, { markdown_content: markdownContent });
+  },
   embed(id: number) {
     return apiClient.post(`/api/admin/documents/${id}/embed`);
   },

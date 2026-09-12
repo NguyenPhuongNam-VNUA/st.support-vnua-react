@@ -12,8 +12,12 @@ function errorResponse(error: unknown) {
 export async function PATCH(request: NextRequest) {
   try {
     const user = await requireRole(request, ['admin']);
-    const questions = await questionService.bulkUpdate(await request.json(), user.id);
-    return NextResponse.json({ success: true, message: 'Cập nhật hàng loạt thành công', data: questions });
+    const body = await request.json();
+    const questions = await questionService.bulkUpdate(body, user.id);
+    const message = body?.status === 'approved'
+      ? 'Đã xếp hàng embedding; từng câu hỏi sẽ được duyệt sau khi tạo vector thành công'
+      : 'Cập nhật hàng loạt thành công';
+    return NextResponse.json({ success: true, message, data: questions });
   } catch (error) {
     return errorResponse(error);
   }

@@ -37,6 +37,15 @@ QUY TẮC XỬ LÝ:
 3. Không bao giờ trả lời rập khuôn giống hệt nhau cho các câu hỏi khác nội dung — nếu bạn thấy mình sắp lặp lại nguyên văn câu trước, hãy diễn đạt lại theo ngữ cảnh hiện tại.
 
 4. Phong cách giao tiếp: Sử dụng các câu văn ngắn gọn, tự xưng là "mình" và gọi đối phương là "bạn", thỉnh thoảng thêm emoji nhẹ nhàng phù hợp ngữ cảnh (😊, 🌾, ✨), tuyệt đối không dùng từ ngữ sáo rỗng hay văn bản hành chính cứng nhắc.
+
+5. QUY TẮC ĐỊNH DẠNG MARKDOWN (BẮT BUỘC):
+   - Luôn định dạng câu trả lời thoáng mắt, khoa học, dễ đọc.
+   - Khi có từ 2 bước thực hiện, điều kiện hay ý liệt kê: BẮT BUỘC XUỐNG DÒNG riêng cho từng mục (dùng danh sách số 1., 2., 3. hoặc gạch đầu dòng -) và in đậm tiêu đề mục.
+   - TUYỆT ĐỐI KHÔNG viết dồn các mục thành một đoạn văn dài dính liền trên cùng một dòng.
+   - KHI TẠO BẢNG (MARKDOWN TABLE) SO SÁNH HOẶC TỔNG HỢP:
+     + BẮT BUỘC mỗi hàng của bảng phải nằm trên MỘT DÒNG MỚI RIÊNG BIỆT (Header, hàng phân cách `|---|---|`, và từng hàng dữ liệu).
+     + Phải có một dòng trống trước và sau bảng markdown.
+     + TUYỆT ĐỐI KHÔNG viết các hàng dính liền trên cùng một dòng (như `| Cột 1 | Cột 2 | |---|---| | Hàng 1 |`).
 """
 
 
@@ -144,7 +153,8 @@ async def generation_node(state: GraphState) -> GraphState:
                 "HƯỚNG DẪN CHO LƯỢT NÀY:\n"
                 "- Dựa vào [DỮ LIỆU TRA CỨU] được cung cấp để trả lời đúng trọng tâm.\n"
                 f"{citation_guidance}"
-                "- Câu trả lời rõ ràng, cô đọng, dễ hiểu (2-4 câu hoặc vài gạch đầu dòng ngắn).\n"
+                "- Trình bày thoáng mắt, rõ ràng. Nếu có các bước hay điều kiện, BẮT BUỘC xuống dòng riêng biệt cho từng mục (1., 2., 3. hoặc gạch đầu dòng -).\n"
+                "- Nếu dùng bảng Markdown (Table), BẮT BUỘC mỗi hàng phải xuống dòng riêng biệt, không viết dính liền trên 1 dòng.\n"
                 "- Không dùng văn mẫu rập khuôn."
             )
         else:

@@ -27,7 +27,14 @@ function extractToken(request: NextRequest): string | null {
 export async function requireAuthenticatedUser(request: NextRequest): Promise<AuthSessionUser> {
   if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
     const origin = request.headers.get('origin');
-    if (origin && origin !== request.nextUrl.origin) {
+    const host = request.headers.get('host');
+    let originHost: string | null = null;
+    try {
+      originHost = origin ? new URL(origin).host : null;
+    } catch {
+      originHost = null;
+    }
+    if (origin && (!host || originHost?.toLowerCase() !== host.toLowerCase())) {
       throw new AuthorizationError('Nguồn yêu cầu không hợp lệ', 403);
     }
   }

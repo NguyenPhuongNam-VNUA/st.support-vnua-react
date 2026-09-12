@@ -23,6 +23,7 @@ from core_ai.api.routes.conversations import router as conversations_router
 from core_ai.api.routes.documents import router as documents_router
 from core_ai.api.routes.health import router as health_router
 from core_ai.api.routes.jobs import router as jobs_router
+from core_ai.api.routes.questions import router as questions_router
 from core_ai.config import Settings, get_settings
 from core_ai.contracts.errors import CoreAIError, ErrorCode
 from core_ai.observability.metrics import metrics_router, record_request_duration
@@ -219,6 +220,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     app.include_router(conversations_router)
     app.include_router(documents_router)
     app.include_router(jobs_router)
+    app.include_router(questions_router)
     app.include_router(metrics_router)
 
     from core_ai.mcp.server import get_mcp_asgi_app

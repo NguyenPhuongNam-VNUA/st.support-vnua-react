@@ -49,6 +49,67 @@ class QuestionRepository:
             allowed = [t.strip() for t in allowed.split(",")]
         return tenant_id in allowed or tenant_id == self.settings.default_tenant
 
+    async def get_questions_for_embedding(
+        self,
+        question_ids: List[int],
+        tenant_id: str = "vnua",
+    ) -> List[QuestionRecord]:
+        """Fetch tenant-scoped questions that have enough content to be embedded."""
+        if not question_ids or not self.is_tenant_allowed(tenant_id):
+            return []
+
+        query = """
+            SELECT id, question, answer, topic, status, duplicate_score,
+                   duplicate_of_question_id, source_document_id, created_at
+            FROM public.questions
+            WHERE id = ANY($1::bigint[])
+              AND tenant_id = $2
+              AND answer IS NOT NULL
+              AND btrim(answer) <> '';
+        """
+        async with get_db_connection(tenant_id) as conn:
+            rows = await conn.fetch(query, question_ids, tenant_id)
+            return [QuestionRecord(**dict(row)) for row in rows]
+
+    async def save_embedding_and_approve(
+        self,
+        question_id: int,
+        expected_question: str,
+        embedding: List[float],
+        tenant_id: str = "vnua",
+    ) -> bool:
+        """Persist an embedding only if the question text has not changed meanwhile."""
+        if not embedding or not self.is_tenant_allowed(tenant_id):
+            return False
+
+        vector_str = f"[{','.join(str(value) for value in embedding)}]"
+        query = """
+            UPDATE public.questions
+            SET embedding = $1::vector,
+                embedding_model = $2,
+                embedding_dimension = $3,
+                verified_at = now(),
+                status = 'approved',
+                updated_at = now()
+            WHERE id = $4
+              AND tenant_id = $5
+              AND question = $6
+              AND answer IS NOT NULL
+              AND btrim(answer) <> ''
+            RETURNING id;
+        """
+        async with get_db_connection(tenant_id) as conn:
+            row = await conn.fetchrow(
+                query,
+                vector_str,
+                self.settings.embedding_model,
+                self.settings.embedding_dimension,
+                question_id,
+                tenant_id,
+                expected_question,
+            )
+            return row is not None
+
     async def search_questions_by_vector(
         self,
         query_embedding: List[float],

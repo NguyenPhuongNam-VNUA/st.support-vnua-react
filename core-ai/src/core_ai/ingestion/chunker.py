@@ -16,7 +16,7 @@ from core_ai.ingestion.pdf_parser import ParsedPDF, PDFPage
 
 logger = logging.getLogger("core_ai.ingestion.chunker")
 
-CHUNKING_VERSION = "legal-semantic-v1"
+CHUNKING_VERSION = "legal-semantic-v2"
 EXTRACTION_VERSION = "legal-md-v1"
 
 _PAGE_MARKER = re.compile(
@@ -345,10 +345,10 @@ class DocumentChunker:
     def __init__(
         self,
         min_tokens: int = 200,
-        max_tokens: int = 900,
-        target_tokens: int = 600,
-        overlap_tokens: int = 80,
-        hard_max_tokens: int = 1100,
+        max_tokens: int = 1000,
+        target_tokens: int = 800,
+        overlap_tokens: int = 100,
+        hard_max_tokens: int = 1000,
     ) -> None:
         if not 0 < min_tokens <= target_tokens <= max_tokens <= hard_max_tokens:
             raise ValueError("Chunk limits must satisfy min <= target <= max <= hard max")
@@ -506,7 +506,6 @@ class DocumentChunker:
         return (
             left.article == right.article
             and left.heading_path == right.heading_path
-            and left.kind == right.kind
         )
 
     def chunk_markdown(
@@ -548,7 +547,7 @@ class DocumentChunker:
                 content=content,
                 search_text=search_text,
                 heading_path=list(first.heading_path),
-                kind=first.kind if all(item.kind == first.kind for item in current) else "text",
+                kind=first.kind if all(item.kind == first.kind for item in current) else "mixed",
                 part=first.part,
                 chapter=first.chapter,
                 section=first.section,
@@ -582,7 +581,7 @@ class DocumentChunker:
             chunks.append(chunk)
             previous = current
             current, current_tokens = [], 0
-            if carry_overlap and self.overlap_tokens and first.kind == "text":
+            if carry_overlap and self.overlap_tokens and previous[-1].kind == "text":
                 words = previous[-1].text.split()
                 overlap_words = max(1, int(self.overlap_tokens / 1.3))
                 overlap_text = " ".join(words[-overlap_words:])
@@ -607,9 +606,7 @@ class DocumentChunker:
                 flush("size_limit", carry_overlap=True)
             current.append(segment)
             current_tokens += segment_tokens
-            if segment.kind == "table":
-                flush("table_boundary")
-            elif current_tokens >= self.target_tokens:
+            if current_tokens >= self.target_tokens:
                 flush("size_limit", carry_overlap=True)
         flush("semantic_boundary")
 

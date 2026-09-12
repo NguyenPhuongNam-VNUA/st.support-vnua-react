@@ -2,7 +2,6 @@
 
 import asyncio
 import hashlib
-import json
 import logging
 import time
 from datetime import date, datetime, timezone
@@ -21,6 +20,7 @@ from core_ai.ingestion.chunker import (
     DocumentChunker,
     MarkdownArtifact,
     build_legal_markdown,
+    enrich_document_metadata,
 )
 from core_ai.ingestion.pdf_parser import PDFParser
 from core_ai.observability.metrics import record_ingestion
@@ -147,8 +147,11 @@ class IngestionWorker:
                        signed_date, issued_date, valid_from, valid_to, validity_status,
                        academic_year, semester, audiences, education_levels, study_modes,
                        faculties, programs, campuses, cohorts, original_filename,
-                       markdown_sha256, markdown_path, chunking_version, metadata,
+                       markdown_content, markdown_sha256, markdown_path,
+                       markdown_generated_at, chunking_version, metadata,
                        metadata_provenance, review_status,
+                       ingestion_quality, ocr_page_count, ocr_confidence_avg,
+                       ocr_confidence_min,
                        (SELECT count(*)
                         FROM public.document_chunks dc
                         WHERE dc.document_id = documents.id
@@ -266,14 +269,11 @@ class IngestionWorker:
                 self._as_date(metadata.get("issued_date")),
                 metadata.get("extraction_version", "legal-md-v1"),
                 CHUNKING_VERSION,
-                json.dumps(
-                    {
-                        "semantic_topics": metadata.get("semantic_topics", []),
-                        "markdown_format": "canonical_legal_markdown",
-                    },
-                    ensure_ascii=False,
-                ),
-                json.dumps(metadata.get("metadata_provenance") or {}, ensure_ascii=False),
+                {
+                    "semantic_topics": metadata.get("semantic_topics", []),
+                    "markdown_format": "canonical_legal_markdown",
+                },
+                metadata.get("metadata_provenance") or {},
             )
 
     async def _cached_embeddings(
@@ -419,7 +419,7 @@ class IngestionWorker:
                         self.settings.embedding_model,
                         self.settings.embedding_dimension,
                         chunk.content_hash,
-                        json.dumps(chunk.heading_path, ensure_ascii=False),
+                        chunk.heading_path,
                         parser_used,
                         chunk.ocr_confidence_min,
                         int(version),
@@ -432,7 +432,7 @@ class IngestionWorker:
                         chunk.point,
                         chunk.semantic_topics,
                         chunk.keywords,
-                        json.dumps(chunk.entities, ensure_ascii=False),
+                        chunk.entities,
                         chunk.markdown_start_offset,
                         chunk.markdown_end_offset,
                         chunk.is_complete_semantic_unit,
@@ -440,7 +440,7 @@ class IngestionWorker:
                         chunk.contains_ocr,
                         self.settings.embedding_provider,
                         CHUNKING_VERSION,
-                        json.dumps(chunk.metadata, ensure_ascii=False),
+                        chunk.metadata,
                         self._as_date(metadata.get("issued_date")),
                         self._as_datetime(metadata.get("valid_from")),
                         self._as_datetime(metadata.get("valid_to")),
@@ -524,11 +524,12 @@ class IngestionWorker:
         job_id: Optional[str] = None,
         tenant_id: str = "vnua",
         already_claimed: bool = False,
+        use_stored_markdown: bool = False,
     ) -> Dict[str, Any]:
         """Main background ingestion workflow.
 
-        Steps: claim -> bounded download -> native/OCR extraction -> canonical
-        Markdown -> legal semantic chunks -> paced embeddings -> transactional upsert.
+        Processes either the source PDF or admin-edited canonical Markdown, then
+        creates semantic chunks and transactionally replaces the vector index.
         """
         start_time = time.perf_counter()
         doc_id = int(document_id)
@@ -546,95 +547,124 @@ class IngestionWorker:
             if previous is None:
                 raise ValueError("Document does not exist in the authenticated tenant")
 
-            # 1. Download and content-address the source.
-            file_bytes = await self.download_file(file_url)
-            document_hash = hashlib.sha256(file_bytes).hexdigest()
-            if (
-                previous.get("content_sha256") == document_hash
-                and previous.get("embedding_model") == self.settings.embedding_model
-                and previous.get("embedding_dimension") == self.settings.embedding_dimension
-                and previous.get("chunking_version") == CHUNKING_VERSION
-                and previous.get("markdown_sha256")
-                and int(previous.get("chunk_count") or 0) > 0
-            ):
-                if already_claimed:
-                    await self.update_status(
-                        doc_id, stage="ready", progress=100, is_active=True, tenant_id=tenant_id
-                    )
-                record_ingestion("skipped", "content_hash", time.perf_counter() - start_time)
-                return {
-                    "status": "ready",
-                    "document_id": doc_id,
-                    "job_id": job_id,
-                    "skipped": True,
-                    "reason": "content_hash_unchanged",
-                }
-            claimed = already_claimed or await self.claim_document(doc_id, tenant_id)
-            if not claimed:
-                return {
-                    "status": "processing",
-                    "document_id": doc_id,
-                    "job_id": job_id,
-                    "skipped": True,
-                    "reason": "already_processing",
-                }
-            await self.update_status(doc_id, stage="chunking", progress=25, tenant_id=tenant_id)
-
-            # 3. Parse PDF into pages (40%)
-            parsed_pdf = await asyncio.to_thread(self.pdf_parser.parse, file_bytes)
-            parser_used = parsed_pdf.parser_used
-            if not parsed_pdf.pages or parsed_pdf.total_chars == 0:
-                raise ValueError(f"PDF document {doc_id} contains no extractable text or is empty.")
-            quality = (
-                parsed_pdf.ocr_confidence_min
-                if parsed_pdf.ocr_confidence_min is not None
-                else 1.0
-            )
             document_metadata = {
-                **previous,
+                **{key: value for key, value in previous.items() if key != "markdown_content"},
                 "document_id": doc_id,
                 "tenant_id": tenant_id,
-                "source_sha256": document_hash,
             }
-            artifact = build_legal_markdown(parsed_pdf, document_metadata)
-            needs_review = (
-                parsed_pdf.ocr_page_count > 0
-                and quality < self.settings.ingestion_ocr_min_confidence
-                and previous.get("review_status") != "approved"
-            )
-            await self._store_markdown(
-                doc_id,
-                tenant_id,
-                artifact,
-                review_status="needs_review" if needs_review else "approved",
-                parser_used=parsed_pdf.parser_used,
-                ocr_page_count=parsed_pdf.ocr_page_count,
-                ocr_confidence=parsed_pdf.ocr_confidence,
-                ocr_confidence_min=parsed_pdf.ocr_confidence_min,
-            )
-            if needs_review:
-                await self.update_status(
-                    doc_id, stage="needs_review", progress=50, tenant_id=tenant_id
+
+            if use_stored_markdown:
+                claimed = already_claimed or await self.claim_document(doc_id, tenant_id)
+                if not claimed:
+                    return {
+                        "status": "processing",
+                        "document_id": doc_id,
+                        "job_id": job_id,
+                        "skipped": True,
+                        "reason": "already_processing",
+                    }
+                await self.update_status(doc_id, stage="chunking", progress=25, tenant_id=tenant_id)
+                markdown_content = str(previous.get("markdown_content") or "")
+                if not markdown_content.strip():
+                    raise ValueError("Stored Markdown is empty")
+                parser_used = "admin_markdown"
+                artifact = MarkdownArtifact(
+                    content=markdown_content,
+                    sha256=hashlib.sha256(markdown_content.encode("utf-8")).hexdigest(),
+                    metadata=enrich_document_metadata(markdown_content, document_metadata),
                 )
-                record_ingestion(
-                    "needs_review",
-                    parsed_pdf.parser_used,
-                    time.perf_counter() - start_time,
+                document_hash = previous.get("content_sha256")
+                quality = float(previous.get("ingestion_quality") or 1.0)
+                total_characters = len(markdown_content)
+                ocr_page_count = int(previous.get("ocr_page_count") or 0)
+                ocr_confidence_min = previous.get("ocr_confidence_min")
+            else:
+                file_bytes = await self.download_file(file_url)
+                document_hash = hashlib.sha256(file_bytes).hexdigest()
+                if (
+                    previous.get("content_sha256") == document_hash
+                    and previous.get("embedding_model") == self.settings.embedding_model
+                    and previous.get("embedding_dimension") == self.settings.embedding_dimension
+                    and previous.get("chunking_version") == CHUNKING_VERSION
+                    and previous.get("markdown_sha256")
+                    and int(previous.get("chunk_count") or 0) > 0
+                ):
+                    if already_claimed:
+                        await self.update_status(
+                            doc_id, stage="ready", progress=100, is_active=True, tenant_id=tenant_id
+                        )
+                    record_ingestion("skipped", "content_hash", time.perf_counter() - start_time)
+                    return {
+                        "status": "ready",
+                        "document_id": doc_id,
+                        "job_id": job_id,
+                        "skipped": True,
+                        "reason": "content_hash_unchanged",
+                    }
+                claimed = already_claimed or await self.claim_document(doc_id, tenant_id)
+                if not claimed:
+                    return {
+                        "status": "processing",
+                        "document_id": doc_id,
+                        "job_id": job_id,
+                        "skipped": True,
+                        "reason": "already_processing",
+                    }
+                await self.update_status(doc_id, stage="chunking", progress=25, tenant_id=tenant_id)
+
+                parsed_pdf = await asyncio.to_thread(self.pdf_parser.parse, file_bytes)
+                parser_used = parsed_pdf.parser_used
+                if not parsed_pdf.pages or parsed_pdf.total_chars == 0:
+                    raise ValueError(f"PDF document {doc_id} contains no extractable text or is empty.")
+                quality = (
+                    parsed_pdf.ocr_confidence_min
+                    if parsed_pdf.ocr_confidence_min is not None
+                    else 1.0
                 )
-                return {
-                    "status": "needs_review",
-                    "document_id": doc_id,
-                    "job_id": job_id,
-                    "ocr_confidence": round(quality, 4),
-                    "markdown_sha256": artifact.sha256,
-                }
+                document_metadata["source_sha256"] = document_hash
+                artifact = build_legal_markdown(parsed_pdf, document_metadata)
+                needs_review = (
+                    parsed_pdf.ocr_page_count > 0
+                    and quality < self.settings.ingestion_ocr_min_confidence
+                    and previous.get("review_status") != "approved"
+                )
+                await self._store_markdown(
+                    doc_id,
+                    tenant_id,
+                    artifact,
+                    review_status="needs_review" if needs_review else "approved",
+                    parser_used=parsed_pdf.parser_used,
+                    ocr_page_count=parsed_pdf.ocr_page_count,
+                    ocr_confidence=parsed_pdf.ocr_confidence,
+                    ocr_confidence_min=parsed_pdf.ocr_confidence_min,
+                )
+                if needs_review:
+                    await self.update_status(
+                        doc_id, stage="needs_review", progress=50, tenant_id=tenant_id
+                    )
+                    record_ingestion(
+                        "needs_review",
+                        parsed_pdf.parser_used,
+                        time.perf_counter() - start_time,
+                    )
+                    return {
+                        "status": "needs_review",
+                        "document_id": doc_id,
+                        "job_id": job_id,
+                        "ocr_confidence": round(quality, 4),
+                        "markdown_sha256": artifact.sha256,
+                    }
+                total_characters = parsed_pdf.total_chars
+                ocr_page_count = parsed_pdf.ocr_page_count
+                ocr_confidence_min = parsed_pdf.ocr_confidence_min
             await self.update_status(doc_id, stage="chunking", progress=40, tenant_id=tenant_id)
 
             # 4. Chunk only from the canonical Markdown persisted above.
             chunks = self.chunker.chunk_markdown(artifact.content, artifact.metadata)
             if not chunks:
                 raise ValueError(f"Chunker produced 0 chunks for document {doc_id}.")
-            await self.update_status(doc_id, stage="embedding", progress=60, tenant_id=tenant_id)
+            total_pages = max(chunk.page_end for chunk in chunks)
+            await self.update_status(doc_id, stage="embedding", progress=0, tenant_id=tenant_id)
 
             # 5. Generate embeddings with Gemini Embedding 2 (85%)
             cached = await self._cached_embeddings(
@@ -651,11 +681,31 @@ class IngestionWorker:
                 expected_dimension,
                 len(missing_by_hash),
             )
+            last_reported_progress = -1
+
+            async def report_embedding_progress(completed: int, total: int) -> None:
+                nonlocal last_reported_progress
+                progress = max(1, min(99, completed * 100 // total))
+                if progress == last_reported_progress:
+                    return
+                await self.update_status(
+                    doc_id,
+                    stage="embedding",
+                    progress=progress,
+                    tenant_id=tenant_id,
+                )
+                last_reported_progress = progress
+
             if missing_by_hash:
                 generated = await self.embedding_service.embed_documents(
-                    list(missing_by_hash.values())
+                    list(missing_by_hash.values()),
+                    on_progress=report_embedding_progress,
                 )
                 cached.update(dict(zip(missing_by_hash.keys(), generated)))
+            if last_reported_progress != 99:
+                await self.update_status(
+                    doc_id, stage="embedding", progress=99, tenant_id=tenant_id
+                )
             embeddings = [cached[chunk.content_hash] for chunk in chunks]
 
             # Validate dimensions
@@ -665,8 +715,6 @@ class IngestionWorker:
                         "Embedding dimension mismatch at chunk "
                         f"{idx}: expected {expected_dimension}, got {len(emb)}"
                     )
-            await self.update_status(doc_id, stage="embedding", progress=85, tenant_id=tenant_id)
-
             # 6. Upsert chunks into PostgreSQL table
             await self.upsert_chunks_to_db(
                 doc_id,
@@ -674,19 +722,19 @@ class IngestionWorker:
                 embeddings,
                 tenant_id=tenant_id,
                 document_metadata=artifact.metadata,
-                parser_used=parsed_pdf.parser_used,
+                parser_used=parser_used,
                 document_hash=document_hash,
                 quality=quality,
             )
 
             duration_s = time.perf_counter() - start_time
-            record_ingestion("ready", parsed_pdf.parser_used, duration_s)
+            record_ingestion("ready", parser_used, duration_s)
             logger.info(
                 "Ingestion job [%s] completed successfully in %.2fs! Chunks: %d, Pages: %d.",
                 job_id,
                 duration_s,
                 len(chunks),
-                parsed_pdf.total_pages,
+                total_pages,
             )
 
             return {
@@ -694,11 +742,11 @@ class IngestionWorker:
                 "document_id": doc_id,
                 "job_id": job_id,
                 "chunks_count": len(chunks),
-                "total_pages": parsed_pdf.total_pages,
-                "total_characters": parsed_pdf.total_chars,
-                "parser_used": parsed_pdf.parser_used,
-                "ocr_page_count": parsed_pdf.ocr_page_count,
-                "ocr_confidence_min": parsed_pdf.ocr_confidence_min,
+                "total_pages": total_pages,
+                "total_characters": total_characters,
+                "parser_used": parser_used,
+                "ocr_page_count": ocr_page_count,
+                "ocr_confidence_min": ocr_confidence_min,
                 "markdown_sha256": artifact.sha256,
                 "duration_seconds": round(duration_s, 2),
                 "knowledge_version": self._knowledge_versions.pop(doc_id, None),

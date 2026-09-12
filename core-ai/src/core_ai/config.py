@@ -189,16 +189,16 @@ class Settings(BaseSettings):
         default=200, ge=50, le=1000, alias="INGESTION_CHUNK_MIN_TOKENS"
     )
     ingestion_chunk_target_tokens: int = Field(
-        default=600, ge=100, le=1500, alias="INGESTION_CHUNK_TARGET_TOKENS"
+        default=800, ge=100, le=1500, alias="INGESTION_CHUNK_TARGET_TOKENS"
     )
     ingestion_chunk_max_tokens: int = Field(
-        default=900, ge=200, le=2000, alias="INGESTION_CHUNK_MAX_TOKENS"
+        default=1000, ge=200, le=2000, alias="INGESTION_CHUNK_MAX_TOKENS"
     )
     ingestion_chunk_hard_max_tokens: int = Field(
-        default=1100, ge=300, le=3000, alias="INGESTION_CHUNK_HARD_MAX_TOKENS"
+        default=1000, ge=300, le=3000, alias="INGESTION_CHUNK_HARD_MAX_TOKENS"
     )
     ingestion_chunk_overlap_tokens: int = Field(
-        default=80, ge=0, le=300, alias="INGESTION_CHUNK_OVERLAP_TOKENS"
+        default=100, ge=0, le=300, alias="INGESTION_CHUNK_OVERLAP_TOKENS"
     )
 
     # Observability & Logging

@@ -39,6 +39,8 @@ export interface DocumentModel {
   markdown_path?: string | null;
   markdown_sha256?: string | null;
   markdown_content?: string | null;
+  markdown_generated_at?: string | null;
+  parser_used?: string | null;
   review_status?: string;
 }
 

@@ -43,7 +43,7 @@ async function request(url: string, options: RequestOptions = {}) {
   if (payload !== undefined && payload !== null && !(payload instanceof FormData) && typeof payload === 'object') {
     reqHeaders['Content-Type'] = reqHeaders['Content-Type'] || 'application/json';
     body = JSON.stringify(payload);
-  } else if (typeof payload === 'string') {
+  } else if (payload instanceof FormData || typeof payload === 'string') {
     body = payload;
   }
 
