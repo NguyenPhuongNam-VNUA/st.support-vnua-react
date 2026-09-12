@@ -38,7 +38,6 @@ async def readiness_probe(response: Response) -> Dict[str, Any]:
 
     embedding_service = get_component("embedding_service")
     prompt_guard = get_component("prompt_guard_model")
-    reranker = get_component("local_reranker")
     settings = get_settings()
 
     db_status = "unconfigured"
@@ -91,7 +90,7 @@ async def readiness_probe(response: Response) -> Dict[str, Any]:
             "prompt_guard": "ready"
             if getattr(prompt_guard, "available", False)
             else "regex_fallback",
-            "reranker": "ready" if getattr(reranker, "available", False) else "rrf_fallback",
+            "reranker": "disabled_deterministic_rrf",
         },
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }

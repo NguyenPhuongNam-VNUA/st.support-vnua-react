@@ -6,7 +6,7 @@ tenant predicates in every read/write query.
 
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -30,6 +30,15 @@ class DocumentRecord(BaseModel):
     file_path: str
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    document_number: Optional[str] = None
+    document_type: Optional[str] = None
+    issuer: Optional[str] = None
+    issued_date: Optional[Any] = None
+    valid_from: Optional[datetime] = None
+    valid_to: Optional[datetime] = None
+    validity_status: Optional[str] = "unknown"
+    markdown_path: Optional[str] = None
+    markdown_sha256: Optional[str] = None
 
 
 class ChunkRecord(BaseModel):
@@ -44,6 +53,9 @@ class ChunkRecord(BaseModel):
     similarity: Optional[float] = Field(default=None, description="Cosine similarity score (0.0 - 1.0)")
     fts_score: Optional[float] = Field(default=None, description="BM25/FTS rank score")
     created_at: Optional[datetime] = None
+    page_end: Optional[int] = None
+    source_type: str = "document"
+    source_metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ChunkCreate(BaseModel):
@@ -68,6 +80,49 @@ class DocumentRepository:
         if isinstance(allowed, str):
             allowed = [t.strip() for t in allowed.split(",")]
         return tenant_id in allowed or tenant_id == self.settings.default_tenant
+
+    @staticmethod
+    def _chunk_from_row(row: Any, *, similarity: Any = None, fts_score: Any = None) -> ChunkRecord:
+        get = row.get
+        source_metadata = {
+            "document_number": get("document_number"),
+            "version": get("version"),
+            "document_type": get("document_type"),
+            "issuer": get("issuer"),
+            "issued_date": get("issued_date"),
+            "effective_from": get("valid_from"),
+            "effective_to": get("valid_to"),
+            "validity_status": get("validity_status") or "unknown",
+            "source_trust": float(get("source_trust") or 0.8),
+            "page_start": get("page_start") or get("page"),
+            "page_end": get("page_end") or get("page"),
+            "part": get("part"),
+            "chapter": get("chapter"),
+            "section": get("section"),
+            "article": get("article"),
+            "clause": get("clause"),
+            "point": get("point"),
+            "semantic_topics": get("semantic_topics") or [],
+            "keywords": get("keywords") or [],
+            "contains_ocr": bool(get("contains_ocr") or False),
+            "ocr_confidence_min": get("ocr_confidence_min"),
+            "markdown_start_offset": get("markdown_start_offset"),
+            "markdown_end_offset": get("markdown_end_offset"),
+        }
+        return ChunkRecord(
+            id=row["id"],
+            document_id=row["document_id"],
+            chunk_index=row["chunk_index"],
+            page=get("page_start") or get("page"),
+            page_end=get("page_end") or get("page"),
+            tokens=get("tokens"),
+            content=row["content"],
+            document_title=get("document_title"),
+            similarity=float(similarity) if similarity is not None else None,
+            fts_score=float(fts_score) if fts_score is not None else None,
+            created_at=get("created_at"),
+            source_metadata=source_metadata,
+        )
 
     async def search_chunks_by_vector(
         self,
@@ -97,13 +152,36 @@ class DocumentRepository:
                 dc.document_id,
                 dc.chunk_index,
                 dc.page,
+                dc.page_start,
+                dc.page_end,
                 dc.tokens,
                 dc.content,
                 d.title AS document_title,
+                d.document_number,
+                d.version,
+                d.document_type,
+                d.issuer,
+                d.issued_date,
+                d.valid_from,
+                d.valid_to,
+                d.validity_status,
+                d.source_trust,
+                dc.part,
+                dc.chapter,
+                dc.section,
+                dc.article,
+                dc.clause,
+                dc.point,
+                dc.semantic_topics,
+                dc.keywords,
+                dc.contains_ocr,
+                dc.ocr_confidence_min,
+                dc.markdown_start_offset,
+                dc.markdown_end_offset,
                 1.0 - (dc.embedding <=> $1::vector) AS similarity,
                 dc.created_at
             FROM public.document_chunks dc
-            JOIN public.documents d ON d.id = dc.document_id
+            JOIN public.documents d ON d.id = dc.document_id AND d.tenant_id = dc.tenant_id
             WHERE d.is_active = true
               AND d.pipeline_stage = 'ready'
               AND d.tenant_id = $3
@@ -131,19 +209,7 @@ class DocumentRepository:
                     # Clamp similarity to [0.0, 1.0]
                     sim = max(0.0, min(1.0, sim))
                     if sim >= min_similarity:
-                        results.append(
-                            ChunkRecord(
-                                id=row["id"],
-                                document_id=row["document_id"],
-                                chunk_index=row["chunk_index"],
-                                page=row["page"],
-                                tokens=row["tokens"],
-                                content=row["content"],
-                                document_title=row["document_title"],
-                                similarity=sim,
-                                created_at=row["created_at"],
-                            )
-                        )
+                        results.append(self._chunk_from_row(row, similarity=sim))
                 return results
         except Exception as exc:
             logger.error("Error executing vector search: %s", exc, exc_info=True)
@@ -181,18 +247,45 @@ class DocumentRepository:
                 dc.document_id,
                 dc.chunk_index,
                 dc.page,
+                dc.page_start,
+                dc.page_end,
                 dc.tokens,
                 dc.content,
                 d.title AS document_title,
-                ts_rank_cd(to_tsvector('simple', dc.content), plainto_tsquery('simple', $1)) AS fts_score,
+                d.document_number,
+                d.version,
+                d.document_type,
+                d.issuer,
+                d.issued_date,
+                d.valid_from,
+                d.valid_to,
+                d.validity_status,
+                d.source_trust,
+                dc.part,
+                dc.chapter,
+                dc.section,
+                dc.article,
+                dc.clause,
+                dc.point,
+                dc.semantic_topics,
+                dc.keywords,
+                dc.contains_ocr,
+                dc.ocr_confidence_min,
+                dc.markdown_start_offset,
+                dc.markdown_end_offset,
+                ts_rank_cd(
+                    to_tsvector('simple', coalesce(dc.search_text, dc.content)),
+                    plainto_tsquery('simple', $1)
+                ) AS fts_score,
                 dc.created_at
             FROM public.document_chunks dc
-            JOIN public.documents d ON d.id = dc.document_id
+            JOIN public.documents d ON d.id = dc.document_id AND d.tenant_id = dc.tenant_id
             WHERE d.is_active = true
               AND d.pipeline_stage = 'ready'
               AND d.tenant_id = $3
               AND dc.tenant_id = $3
-              AND to_tsvector('simple', dc.content) @@ plainto_tsquery('simple', $1)
+              AND to_tsvector('simple', coalesce(dc.search_text, dc.content))
+                  @@ plainto_tsquery('simple', $1)
             ORDER BY fts_score DESC
             LIMIT $2;
         """
@@ -208,18 +301,45 @@ class DocumentRepository:
                             dc.document_id,
                             dc.chunk_index,
                             dc.page,
+                            dc.page_start,
+                            dc.page_end,
                             dc.tokens,
                             dc.content,
                             d.title AS document_title,
+                            d.document_number,
+                            d.version,
+                            d.document_type,
+                            d.issuer,
+                            d.issued_date,
+                            d.valid_from,
+                            d.valid_to,
+                            d.validity_status,
+                            d.source_trust,
+                            dc.part,
+                            dc.chapter,
+                            dc.section,
+                            dc.article,
+                            dc.clause,
+                            dc.point,
+                            dc.semantic_topics,
+                            dc.keywords,
+                            dc.contains_ocr,
+                            dc.ocr_confidence_min,
+                            dc.markdown_start_offset,
+                            dc.markdown_end_offset,
                             0.5 AS fts_score,
                             dc.created_at
                         FROM public.document_chunks dc
-                        JOIN public.documents d ON d.id = dc.document_id
+                        JOIN public.documents d ON d.id = dc.document_id AND d.tenant_id = dc.tenant_id
                         WHERE d.is_active = true
                           AND d.pipeline_stage = 'ready'
                           AND d.tenant_id = $3
                           AND dc.tenant_id = $3
-                          AND (dc.content ILIKE $1 OR d.title ILIKE $1)
+                          AND (
+                            coalesce(dc.search_text, dc.content) ILIKE $1
+                            OR d.title ILIKE $1
+                            OR coalesce(d.document_number, '') ILIKE $1
+                          )
                         LIMIT $2;
                     """
                     pattern = f"%{cleaned_text[:50]}%"
@@ -228,19 +348,7 @@ class DocumentRepository:
                 results: List[ChunkRecord] = []
                 for row in rows:
                     score = float(row["fts_score"]) if row["fts_score"] is not None else 0.0
-                    results.append(
-                        ChunkRecord(
-                            id=row["id"],
-                            document_id=row["document_id"],
-                            chunk_index=row["chunk_index"],
-                            page=row["page"],
-                            tokens=row["tokens"],
-                            content=row["content"],
-                            document_title=row["document_title"],
-                            fts_score=score,
-                            created_at=row["created_at"],
-                        )
-                    )
+                    results.append(self._chunk_from_row(row, fts_score=score))
                 return results
         except Exception as exc:
             logger.error("Error executing BM25/FTS search: %s", exc, exc_info=True)

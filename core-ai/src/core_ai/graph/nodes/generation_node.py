@@ -49,7 +49,23 @@ def build_evidence_context(chunks: List[Dict[str, Any]]) -> str:
         c_id = chunk.get("citation_id", "src_?")
         title = chunk.get("title", "Tài liệu đào tạo")
         snippet = chunk.get("snippet", "").strip()
-        lines.append(f"[{c_id}] Tiêu đề: {title}\nNội dung: {snippet}")
+        provenance = [
+            f"loại nguồn={chunk.get('source_type', 'document')}",
+            f"số văn bản={chunk['document_number']}" if chunk.get("document_number") else "",
+            f"ngày ban hành={chunk['issued_date']}" if chunk.get("issued_date") else "",
+            f"hiệu lực từ={chunk['effective_from']}" if chunk.get("effective_from") else "",
+            f"Điều={chunk['article']}" if chunk.get("article") else "",
+            f"Khoản={chunk['clause']}" if chunk.get("clause") else "",
+            f"trang={chunk.get('page')}-{chunk.get('page_end')}"
+            if chunk.get("page") and chunk.get("page_end") != chunk.get("page")
+            else f"trang={chunk['page']}"
+            if chunk.get("page")
+            else "",
+        ]
+        source_details = "; ".join(value for value in provenance if value)
+        lines.append(
+            f"[{c_id}] Tiêu đề: {title}\nNguồn: {source_details}\nNội dung: {snippet}"
+        )
     return "\n\n".join(lines)
 
 
@@ -215,7 +231,8 @@ QUY TẮC BẢO MẬT & ĐẦU RA:
 
                 # Count tokens and record cost for streaming generation
                 import litellm
-                from core_ai.observability.metrics import record_llm_tokens, record_estimated_cost
+
+                from core_ai.observability.metrics import record_estimated_cost, record_llm_tokens
                 try:
                     p_text = " ".join([m.content for m in gen_request.messages if m.content])
                     p_tokens = litellm.token_counter(model=model_name, text=p_text)

@@ -1,5 +1,6 @@
 """Unit tests for the Gemini Embedding 2 adapter (no live API calls)."""
 
+import asyncio
 import json
 
 import httpx
@@ -74,3 +75,55 @@ async def test_surfaces_gemini_api_errors_without_fake_vector_fallback(mock_sett
         )
         with pytest.raises(RuntimeError, match="Gemini embedding request failed"):
             await service.embed_query("test")
+
+
+@pytest.mark.asyncio
+async def test_document_embedding_requests_are_serialized_by_configured_interval(
+    mock_settings, monkeypatch
+) -> None:
+    requested_at: list[float] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        requested_at.append(asyncio.get_running_loop().time())
+        return httpx.Response(200, json={"embedding": {"values": [1.0] * 128}})
+
+    settings = mock_settings.model_copy(
+        update={"embedding_min_interval_seconds": 0.1, "embedding_max_retries": 0}
+    )
+    monkeypatch.setattr("core_ai.retrieval.embeddings.get_redis_client", lambda: None)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        service = GeminiEmbedding2Embeddings(
+            dimension=128,
+            api_key="test-embedding-key",
+            settings=settings,
+            client=client,
+        )
+        await service.embed_documents(["chunk one", "chunk two"])
+
+    assert len(requested_at) == 2
+    assert requested_at[1] - requested_at[0] >= 0.08
+
+
+@pytest.mark.asyncio
+async def test_embedding_retries_rate_limit_without_fake_vector(mock_settings) -> None:
+    attempts = 0
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            return httpx.Response(429, headers={"Retry-After": "0"})
+        return httpx.Response(200, json={"embedding": {"values": [1.0] * 128}})
+
+    settings = mock_settings.model_copy(update={"embedding_max_retries": 1})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        service = GeminiEmbedding2Embeddings(
+            dimension=128,
+            api_key="test-embedding-key",
+            settings=settings,
+            client=client,
+        )
+        vector = await service.embed_query("test")
+
+    assert attempts == 2
+    assert len(vector) == 128

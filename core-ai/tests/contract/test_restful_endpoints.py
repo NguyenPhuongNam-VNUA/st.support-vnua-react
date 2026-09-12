@@ -105,6 +105,25 @@ class TestRestfulEndpoints:
         assert data["document_id"] == 42
         assert "job_id" in data
 
+    def test_document_embedding_legacy_bff_alias(self, client: TestClient) -> None:
+        """The existing Next.js BFF path remains accepted."""
+        mock_worker = MagicMock()
+        mock_worker.process_document = AsyncMock()
+        register_component("ingestion_worker", mock_worker)
+
+        response = client.post(
+            "/documents/embed",
+            json={
+                "document_id": 42,
+                "file_url": "https://supabase.co/storage/v1/object/signed/test.pdf",
+            },
+            headers={"Authorization": "Bearer test-secret-token-123"},
+        )
+
+        assert response.status_code == 202
+        assert response.json()["document_id"] == 42
+        mock_worker.process_document.assert_awaited_once()
+
     def test_get_job_status_success_and_not_found(self, client: TestClient) -> None:
         """GET /api/v1/jobs/{job_id} returns 200 OK for valid jobs and 404 for unknown jobs."""
         from core_ai.api.routes.jobs import register_job

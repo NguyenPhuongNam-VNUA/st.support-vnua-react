@@ -414,6 +414,7 @@ def test_app(
         register_component("embedding_service", mock_embedding_service)
         vector_retriever = MagicMock()
         vector_retriever.embedding_service = mock_embedding_service
+        vector_retriever.search_faq = AsyncMock(return_value=[])
         hybrid_retriever = MagicMock()
         hybrid_retriever.vector_retriever = vector_retriever
         hybrid_retriever.retrieve_parallel = AsyncMock(

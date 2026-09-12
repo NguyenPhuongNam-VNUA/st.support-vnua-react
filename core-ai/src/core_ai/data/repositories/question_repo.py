@@ -5,7 +5,7 @@ Interacts with public.questions and applies an explicit tenant predicate to ever
 
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -28,6 +28,12 @@ class QuestionRecord(BaseModel):
     source_document_id: Optional[int] = None
     similarity: Optional[float] = Field(default=None, description="Cosine similarity (0.0 - 1.0)")
     created_at: Optional[datetime] = None
+    source_article: Optional[str] = None
+    source_clause: Optional[str] = None
+    verified_at: Optional[datetime] = None
+    valid_from: Optional[datetime] = None
+    valid_to: Optional[datetime] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class QuestionRepository:
@@ -73,6 +79,12 @@ class QuestionRepository:
                 duplicate_score,
                 duplicate_of_question_id,
                 source_document_id,
+                source_article,
+                source_clause,
+                verified_at,
+                valid_from,
+                valid_to,
+                metadata,
                 1.0 - (embedding <=> $1::vector) AS similarity,
                 created_at
             FROM public.questions
@@ -110,6 +122,12 @@ class QuestionRepository:
                                 duplicate_score=float(row["duplicate_score"] or 0.0),
                                 duplicate_of_question_id=row["duplicate_of_question_id"],
                                 source_document_id=row["source_document_id"],
+                                source_article=row["source_article"],
+                                source_clause=row["source_clause"],
+                                verified_at=row["verified_at"],
+                                valid_from=row["valid_from"],
+                                valid_to=row["valid_to"],
+                                metadata=dict(row["metadata"] or {}),
                                 similarity=sim,
                                 created_at=row["created_at"],
                             )

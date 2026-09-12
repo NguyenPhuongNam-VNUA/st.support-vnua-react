@@ -66,6 +66,8 @@ class VectorRetriever:
                     similarity=chunk.similarity,
                     rank=rank_pos,
                     retrieval_source="dense",
+                    source_type=chunk.source_type,
+                    source_metadata=chunk.source_metadata,
                 )
             )
         return ranked
@@ -218,6 +220,7 @@ def get_hybrid_retriever() -> ParallelHybridRetriever:
         get_component,
         get_document_repository,
         get_embedding_service,
+        get_question_repository,
         register_component,
     )
 
@@ -230,7 +233,11 @@ def get_hybrid_retriever() -> ParallelHybridRetriever:
     emb_service = get_embedding_service()
     from core_ai.retrieval.bm25 import BM25Retriever
 
-    v_retriever = VectorRetriever(embedding_service=emb_service, document_repo=doc_repo)
+    v_retriever = VectorRetriever(
+        embedding_service=emb_service,
+        document_repo=doc_repo,
+        question_repo=get_question_repository(),
+    )
     b_retriever = BM25Retriever(document_repo=doc_repo)
     _global_hybrid_retriever = ParallelHybridRetriever(
         vector_retriever=v_retriever,

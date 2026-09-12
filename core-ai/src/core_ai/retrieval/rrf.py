@@ -8,7 +8,7 @@ and ranking normalization.
 
 import logging
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from core_ai.retrieval.bm25 import RankedChunk
 
@@ -39,9 +39,9 @@ def reciprocal_rank_fusion(
         List of deduplicated, source-capped RankedChunk objects sorted by descending rrf_score.
     """
     # Key: chunk_id -> dict with accumulated rrf score and best chunk metadata
-    rrf_scores: Dict[int, float] = defaultdict(float)
-    merged_chunks: Dict[int, RankedChunk] = {}
-    sources_seen: Dict[int, set[str]] = defaultdict(set)
+    rrf_scores: Dict[Union[int, str], float] = defaultdict(float)
+    merged_chunks: Dict[Union[int, str], RankedChunk] = {}
+    sources_seen: Dict[Union[int, str], set[str]] = defaultdict(set)
 
     # 1. Process dense candidates
     for chunk in dense_candidates:
@@ -104,7 +104,7 @@ def reciprocal_rank_fusion(
 
     # 6. Apply source cap per document (to ensure diversity across different regulations/handbooks)
     final_ranked: List[RankedChunk] = []
-    doc_chunk_count: Dict[int, int] = defaultdict(int)
+    doc_chunk_count: Dict[Union[int, str], int] = defaultdict(int)
 
     for chunk in scored_candidates:
         doc_id = chunk.document_id

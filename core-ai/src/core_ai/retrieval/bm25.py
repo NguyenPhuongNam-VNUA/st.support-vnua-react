@@ -7,7 +7,7 @@ and an in-memory BM25Okapi engine for candidate re-scoring.
 import math
 import re
 from collections import Counter
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -26,8 +26,8 @@ def tokenize_vietnamese(text: str) -> List[str]:
 
 class RankedChunk(BaseModel):
     """Normalized retrieval candidate snippet representation used across retrieval stages."""
-    chunk_id: int
-    document_id: int
+    chunk_id: Union[int, str]
+    document_id: Union[int, str]
     chunk_index: int
     page: Optional[int] = None
     document_title: str = "Tài liệu không tiêu đề"
@@ -38,6 +38,9 @@ class RankedChunk(BaseModel):
     rerank_score: Optional[float] = Field(default=None, description="Local reranker score")
     rank: int = Field(default=1, description="1-based ranking position from retrieval method")
     retrieval_source: str = Field(default="sparse", description="'dense', 'sparse', or 'hybrid'")
+    source_type: str = "document"
+    source_metadata: Dict[str, Any] = Field(default_factory=dict)
+    final_score: Optional[float] = None
 
 
 class BM25Okapi:
@@ -135,6 +138,8 @@ class BM25Retriever:
                     fts_score=chunk.fts_score,
                     rank=rank_pos,
                     retrieval_source="sparse",
+                    source_type=chunk.source_type,
+                    source_metadata=chunk.source_metadata,
                 )
             )
         return ranked

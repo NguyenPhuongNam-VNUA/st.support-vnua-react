@@ -81,7 +81,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         "semantic_cache",
         "input_guardrail",
         "prompt_guard_model",
-        "local_reranker",
         "output_guardrail",
         "ingestion_worker",
         "graph_runner",
@@ -97,7 +96,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             logger.warning("Safe fallback: could not eagerly wire '%s': %s", comp_name, exc)
 
     # Load optional local weights before readiness. Missing weights keep deterministic fallbacks active.
-    for model_name in ("prompt_guard_model", "local_reranker"):
+    for model_name in ("prompt_guard_model",):
         model_component = get_component(model_name)
         if model_component is not None and hasattr(model_component, "load"):
             try:

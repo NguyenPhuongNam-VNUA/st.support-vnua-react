@@ -7,6 +7,7 @@ Provides endpoints to trigger background document ingestion from signed URLs:
 - Legacy:  POST /documents/embed (backwards compatibility with Next.js BFF)
 """
 
+import inspect
 import uuid
 from typing import Any, Dict
 
@@ -46,15 +47,27 @@ async def handle_document_embed(
     if worker is None or not hasattr(worker, "process_document"):
         raise HTTPException(status_code=503, detail="Ingestion worker is unavailable")
 
+    claim_document = getattr(worker, "claim_document", None)
+    already_claimed = inspect.iscoroutinefunction(claim_document)
+    if already_claimed:
+        claimed = await claim_document(doc_id, tenant_id)
+        if not claimed:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Document ingestion is already in progress",
+            )
+
     register_job(job_id=job_id, document_id=doc_id, tenant_id=tenant_id)
 
-    background_tasks.add_task(
-        worker.process_document,
-        document_id=doc_id,
-        file_url=request.file_url,
-        job_id=job_id,
-        tenant_id=tenant_id,
-    )
+    task_arguments = {
+        "document_id": doc_id,
+        "file_url": request.file_url,
+        "job_id": job_id,
+        "tenant_id": tenant_id,
+    }
+    if already_claimed:
+        task_arguments["already_claimed"] = True
+    background_tasks.add_task(worker.process_document, **task_arguments)
 
     return DocumentEmbedResponse(
         document_id=doc_id,
@@ -140,6 +153,23 @@ async def embed_document_v1(
     background_tasks: BackgroundTasks,
 ) -> DocumentEmbedResponse:
     """Trigger background document embedding via v1 endpoint."""
+    return await handle_document_embed(
+        request, background_tasks, http_request.state.context.tenant_id
+    )
+
+
+@router.post(
+    "/documents/embed",
+    response_model=DocumentEmbedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Enqueue document embedding (legacy BFF alias)",
+    dependencies=[Depends(verify_internal_token)],
+)
+async def embed_document_legacy(
+    http_request: Request,
+    request: DocumentEmbedRequest,
+    background_tasks: BackgroundTasks,
+) -> DocumentEmbedResponse:
     return await handle_document_embed(
         request, background_tasks, http_request.state.context.tenant_id
     )

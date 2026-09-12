@@ -9,6 +9,7 @@ import {
   Button,
   Box,
   Typography,
+  MenuItem,
 } from '@mui/material';
 import { UploadCloud, FileText, X } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
@@ -26,11 +27,42 @@ const schema = yup.object().shape({
     .required('Phải chọn file PDF'),
 });
 
+const metadataFields = [
+  { name: 'document_number', label: 'Số/ký hiệu văn bản', placeholder: 'VD: 123/QĐ-HVN' },
+  { name: 'issuer', label: 'Cơ quan ban hành', placeholder: 'VD: Học viện Nông nghiệp Việt Nam' },
+  { name: 'issuing_unit', label: 'Đơn vị ban hành', placeholder: 'VD: Ban Quản lý đào tạo' },
+  { name: 'academic_year', label: 'Năm học', placeholder: 'VD: 2026-2027' },
+  { name: 'semester', label: 'Học kỳ', placeholder: 'VD: Học kỳ 1' },
+  { name: 'audiences', label: 'Đối tượng áp dụng', placeholder: 'Phân cách bằng dấu phẩy' },
+  { name: 'education_levels', label: 'Bậc đào tạo', placeholder: 'Đại học, Sau đại học' },
+  { name: 'study_modes', label: 'Hình thức đào tạo', placeholder: 'Chính quy, Vừa làm vừa học' },
+  { name: 'faculties', label: 'Khoa áp dụng', placeholder: 'Phân cách bằng dấu phẩy' },
+  { name: 'programs', label: 'Chương trình áp dụng', placeholder: 'Phân cách bằng dấu phẩy' },
+  { name: 'campuses', label: 'Cơ sở áp dụng', placeholder: 'Phân cách bằng dấu phẩy' },
+  { name: 'cohorts', label: 'Khóa áp dụng', placeholder: 'VD: K66, K67' },
+] as const;
+
 export default function UploadPdfDialog({ open, onClose, onSubmit }: any) {
-  const { control, handleSubmit, watch, reset, setValue } = useForm({
+  const { control, handleSubmit, watch, reset, setValue } = useForm<any>({
     defaultValues: {
       title: '',
       description: '',
+      document_type: 'other',
+      document_number: '',
+      issuer: '',
+      issuing_unit: '',
+      issued_date: '',
+      valid_from: '',
+      valid_to: '',
+      academic_year: '',
+      semester: '',
+      audiences: '',
+      education_levels: '',
+      study_modes: '',
+      faculties: '',
+      programs: '',
+      campuses: '',
+      cohorts: '',
       file: null,
     },
     resolver: yupResolver(schema),
@@ -47,6 +79,26 @@ export default function UploadPdfDialog({ open, onClose, onSubmit }: any) {
     const formData = new FormData();
     formData.append('title', data.title);
     formData.append('description', data.description);
+    [
+      'document_type',
+      'document_number',
+      'issuer',
+      'issuing_unit',
+      'issued_date',
+      'valid_from',
+      'valid_to',
+      'academic_year',
+      'semester',
+      'audiences',
+      'education_levels',
+      'study_modes',
+      'faculties',
+      'programs',
+      'campuses',
+      'cohorts',
+    ].forEach((field) => {
+      if (data[field]) formData.append(field, data[field]);
+    });
     formData.append('file', data.file);
 
     onSubmit(formData);
@@ -137,6 +189,66 @@ export default function UploadPdfDialog({ open, onClose, onSubmit }: any) {
               />
             )}
           />
+
+          <Typography variant="subtitle2" fontWeight={800} color="#334155">
+            Metadata tra cứu
+          </Typography>
+
+          <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr' }} gap={2}>
+            <Controller
+              name="document_type"
+              control={control}
+              render={({ field }) => (
+                <TextField {...field} select size="small" label="Loại văn bản" fullWidth>
+                  <MenuItem value="quy_che">Quy chế</MenuItem>
+                  <MenuItem value="quyet_dinh">Quyết định</MenuItem>
+                  <MenuItem value="thong_bao">Thông báo</MenuItem>
+                  <MenuItem value="huong_dan">Hướng dẫn</MenuItem>
+                  <MenuItem value="quy_trinh">Quy trình</MenuItem>
+                  <MenuItem value="phu_luc">Phụ lục</MenuItem>
+                  <MenuItem value="other">Khác / tự nhận diện</MenuItem>
+                </TextField>
+              )}
+            />
+            <Controller
+              name="issued_date"
+              control={control}
+              render={({ field }) => (
+                <TextField {...field} type="date" size="small" label="Ngày ban hành" fullWidth InputLabelProps={{ shrink: true }} />
+              )}
+            />
+            <Controller
+              name="valid_from"
+              control={control}
+              render={({ field }) => (
+                <TextField {...field} type="date" size="small" label="Hiệu lực từ" fullWidth InputLabelProps={{ shrink: true }} />
+              )}
+            />
+            <Controller
+              name="valid_to"
+              control={control}
+              render={({ field }) => (
+                <TextField {...field} type="date" size="small" label="Hiệu lực đến" fullWidth InputLabelProps={{ shrink: true }} />
+              )}
+            />
+            {metadataFields.map((metadataField) => (
+              <Controller
+                key={metadataField.name}
+                name={metadataField.name}
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    size="small"
+                    label={metadataField.label}
+                    placeholder={metadataField.placeholder}
+                    fullWidth
+                    inputProps={{ maxLength: 250 }}
+                  />
+                )}
+              />
+            ))}
+          </Box>
 
           {/* Upload Area */}
           <Button
@@ -239,4 +351,3 @@ export default function UploadPdfDialog({ open, onClose, onSubmit }: any) {
     </Dialog>
   );
 }
-

@@ -276,7 +276,11 @@ def get_hybrid_retriever() -> Any:
         from core_ai.retrieval.vector_search import ParallelHybridRetriever, VectorRetriever
         doc_repo = get_document_repository()
         emb_service = get_embedding_service()
-        v_retriever = VectorRetriever(embedding_service=emb_service, document_repo=doc_repo)
+        v_retriever = VectorRetriever(
+            embedding_service=emb_service,
+            document_repo=doc_repo,
+            question_repo=get_question_repository(),
+        )
         b_retriever = BM25Retriever(document_repo=doc_repo)
         retriever = ParallelHybridRetriever(vector_retriever=v_retriever, bm25_retriever=b_retriever)
         register_component("hybrid_retriever", retriever)

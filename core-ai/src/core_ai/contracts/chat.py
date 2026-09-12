@@ -65,6 +65,24 @@ class Citation(BaseModel):
         description="Consolidated RRF or reranker similarity score",
         examples=[0.892],
     )
+    source_type: Literal["document", "faq", "tool"] = "document"
+    page_end: Optional[int] = Field(default=None, ge=1)
+    document_number: Optional[str] = None
+    document_type: Optional[str] = None
+    version: Optional[str] = None
+    issuer: Optional[str] = None
+    issued_date: Optional[str] = None
+    effective_from: Optional[str] = None
+    effective_to: Optional[str] = None
+    validity_status: Optional[str] = None
+    article: Optional[str] = None
+    clause: Optional[str] = None
+    point: Optional[str] = None
+    dense_similarity: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    sparse_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    fusion_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    final_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    selection_reason: List[str] = Field(default_factory=list)
 
 
 class ExecutionTraceStep(BaseModel):

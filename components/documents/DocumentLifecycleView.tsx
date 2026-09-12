@@ -22,6 +22,8 @@ import {
   Sparkles,
   CheckCircle2,
   Cpu,
+  AlertTriangle,
+  Download,
 } from 'lucide-react';
 import { LibraryShelfIcon } from '@/components/icons/SidebarIcons';
 import DocChunkInspectorDrawer from './DocChunkInspectorDrawer';
@@ -86,6 +88,15 @@ export default function DocumentLifecycleView() {
       setApiError(null);
     } catch (error: any) {
       setApiError(error?.response?.data?.message || 'Không thể khởi chạy pipeline AI');
+    }
+  };
+
+  const handleApproveOcr = async (id: number) => {
+    try {
+      await documentApi.update(id, { review_status: 'approved', pipeline_stage: 'uploading' });
+      await handleEmbed(id);
+    } catch (error: any) {
+      setApiError(error?.response?.data?.message || 'Không thể duyệt kết quả OCR');
     }
   };
 
@@ -189,6 +200,11 @@ export default function DocumentLifecycleView() {
                       <Typography variant="caption" color="text.secondary" fontWeight={500}>
                         Ngày tải: {new Date(doc.created_at).toLocaleString('vi-VN')}
                       </Typography>
+                      {(doc.document_number || doc.issued_date) && (
+                        <Typography variant="caption" display="block" color="text.secondary">
+                          {[doc.document_number, doc.issued_date && `Ban hành ${new Date(doc.issued_date).toLocaleDateString('vi-VN')}`].filter(Boolean).join(' • ')}
+                        </Typography>
+                      )}
                     </Box>
                   </Box>
 
@@ -239,6 +255,8 @@ export default function DocumentLifecycleView() {
                   <span className="text-xs font-bold flex items-center gap-1">
                     {doc.pipeline_stage === 'ready' && <span className="text-emerald-700 font-black flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-[#10b981]" /> Sẵn sàng RAG</span>}
                     {doc.pipeline_stage === 'embedding' && <span className="text-[#0d8a4f] font-black flex items-center gap-1"><Cpu className="w-4 h-4 text-[#10b981] animate-spin" /> Đang embedding ({doc.progress}%)</span>}
+                    {doc.pipeline_stage === 'chunking' && <span className="text-[#0d8a4f] font-black flex items-center gap-1"><Cpu className="w-4 h-4 text-[#10b981] animate-spin" /> Đang OCR/chia chunk ({doc.progress}%)</span>}
+                    {doc.pipeline_stage === 'needs_review' && <span className="text-amber-700 font-black flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> OCR cần duyệt</span>}
                   </span>
                 </Box>
 
@@ -272,8 +290,30 @@ export default function DocumentLifecycleView() {
                     Xem PDF
                   </Button>
 
+                  {doc.markdown_sha256 && (
+                    <Button
+                      size="small"
+                      variant="text"
+                      startIcon={<Download className="w-4 h-4" />}
+                      href={`/api/admin/documents/${doc.id}/markdown`}
+                      sx={{ borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'none', color: '#0d8a4f' }}
+                    >
+                      Tải MD
+                    </Button>
+                  )}
+
                   <Box display="flex" gap={1}>
-                    {doc.pipeline_stage !== 'ready' && (
+                    {doc.pipeline_stage === 'needs_review' ? (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<CheckCircle2 className="w-4 h-4" />}
+                        onClick={() => handleApproveOcr(doc.id)}
+                        sx={{ borderRadius: '10px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'none' }}
+                      >
+                        Duyệt OCR & tiếp tục
+                      </Button>
+                    ) : doc.pipeline_stage !== 'ready' && (
                       <Button
                         size="small"
                         variant="outlined"
@@ -282,7 +322,7 @@ export default function DocumentLifecycleView() {
                         disabled={doc.pipeline_stage === 'embedding' || doc.pipeline_stage === 'chunking'}
                         sx={{ borderRadius: '10px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'none' }}
                       >
-                        Xử lý AI
+                        OCR & Embedding
                       </Button>
                     )}
                     <Button
