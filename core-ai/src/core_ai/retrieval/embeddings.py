@@ -8,9 +8,25 @@ from typing import List, Optional, Protocol, runtime_checkable
 import httpx
 
 from core_ai.config import Settings, get_settings
+from core_ai.data.redis import get_redis_client
 from core_ai.observability.metrics import record_external_call
 
 logger = logging.getLogger("core_ai.retrieval.embeddings")
+
+_LOCAL_RATE_LOCK = asyncio.Lock()
+_LOCAL_NEXT_ALLOWED_AT = 0.0
+
+_RESERVE_EMBEDDING_SLOT_LUA = """
+local redis_time = redis.call('TIME')
+local now_ms = tonumber(redis_time[1]) * 1000 + math.floor(tonumber(redis_time[2]) / 1000)
+local interval_ms = tonumber(ARGV[1])
+local next_ms = tonumber(redis.call('GET', KEYS[1]) or '0')
+local slot_ms = math.max(now_ms, next_ms)
+local reserved_until = slot_ms + interval_ms
+local ttl_ms = math.max(interval_ms * 2, reserved_until - now_ms + interval_ms)
+redis.call('SET', KEYS[1], reserved_until, 'PX', ttl_ms)
+return slot_ms - now_ms
+"""
 
 
 @runtime_checkable
@@ -75,6 +91,8 @@ class GeminiEmbedding2Embeddings:
         self.endpoint = f"{base_url}/models/{self.model_name}:embedContent"
         self.timeout = httpx.Timeout(self.settings.embedding_timeout_seconds)
         self.max_concurrency = self.settings.embedding_max_concurrency
+        self.min_interval_seconds = self.settings.embedding_min_interval_seconds
+        self.max_retries = self.settings.embedding_max_retries
         self._client = client
 
     @property
@@ -86,26 +104,57 @@ class GeminiEmbedding2Embeddings:
         """Signals call-budget accounting in the orchestration layer."""
         return True
 
-    async def _request_embedding(self, client: httpx.AsyncClient, text: str) -> List[float]:
+    async def _wait_for_rate_slot(self) -> None:
+        """Reserve one global embedding slot, falling back to an in-process limiter."""
+        if self.min_interval_seconds <= 0:
+            return
+
+        interval_ms = max(1, int(self.min_interval_seconds * 1000))
+        redis_client = get_redis_client()
+        if redis_client is not None:
+            try:
+                wait_ms = int(
+                    await redis_client.eval(
+                        _RESERVE_EMBEDDING_SLOT_LUA,
+                        1,
+                        "core-ai:embedding:next-allowed-at",
+                        interval_ms,
+                    )
+                )
+                if wait_ms > 0:
+                    await asyncio.sleep(wait_ms / 1000)
+                return
+            except Exception as exc:
+                logger.warning(
+                    "Redis embedding limiter unavailable; using local limiter: %s",
+                    type(exc).__name__,
+                )
+
+        global _LOCAL_NEXT_ALLOWED_AT
+        loop = asyncio.get_running_loop()
+        async with _LOCAL_RATE_LOCK:
+            wait_seconds = max(0.0, _LOCAL_NEXT_ALLOWED_AT - loop.time())
+            if wait_seconds:
+                await asyncio.sleep(wait_seconds)
+            _LOCAL_NEXT_ALLOWED_AT = loop.time() + self.min_interval_seconds
+
+    async def _request_embedding_once(
+        self, client: httpx.AsyncClient, text: str
+    ) -> List[float]:
         payload = {
             "model": f"models/{self.model_name}",
             "content": {"parts": [{"text": text}]},
             "outputDimensionality": self._dimension,
         }
-        try:
-            record_external_call("gemini", self.model_name, "embedding")
-            response = await client.post(
-                self.endpoint,
-                headers={"x-goog-api-key": self.api_key or ""},
-                json=payload,
-            )
-            response.raise_for_status()
-            raw_values = response.json()["embedding"]["values"]
-            vector = [float(value) for value in raw_values]
-        except (httpx.HTTPError, KeyError, TypeError, ValueError) as exc:
-            raise RuntimeError(
-                f"Gemini embedding request failed for model '{self.model_name}'"
-            ) from exc
+        record_external_call("gemini", self.model_name, "embedding")
+        response = await client.post(
+            self.endpoint,
+            headers={"x-goog-api-key": self.api_key or ""},
+            json=payload,
+        )
+        response.raise_for_status()
+        raw_values = response.json()["embedding"]["values"]
+        vector = [float(value) for value in raw_values]
 
         if len(vector) != self._dimension:
             raise RuntimeError(
@@ -116,18 +165,49 @@ class GeminiEmbedding2Embeddings:
             raise RuntimeError("Gemini embedding response contains non-finite values")
         return _l2_normalize(vector)
 
+    async def _request_embedding(self, client: httpx.AsyncClient, text: str) -> List[float]:
+        last_error: Optional[Exception] = None
+        for attempt in range(self.max_retries + 1):
+            await self._wait_for_rate_slot()
+            try:
+                return await self._request_embedding_once(client, text)
+            except (httpx.HTTPError, KeyError, TypeError, ValueError) as exc:
+                last_error = exc
+                response = exc.response if isinstance(exc, httpx.HTTPStatusError) else None
+                status_code = response.status_code if response is not None else None
+                retryable = status_code is None or status_code == 429 or status_code >= 500
+                if not retryable or attempt >= self.max_retries:
+                    break
+
+                retry_after = response.headers.get("retry-after") if response is not None else None
+                try:
+                    retry_delay = float(retry_after) if retry_after else 0.0
+                except ValueError:
+                    retry_delay = 0.0
+                retry_delay = max(
+                    retry_delay,
+                    self.min_interval_seconds * (2**attempt),
+                )
+                logger.warning(
+                    "Retrying Gemini embedding after %s (attempt %d/%d, wait %.1fs)",
+                    status_code or type(exc).__name__,
+                    attempt + 1,
+                    self.max_retries,
+                    retry_delay,
+                )
+                if retry_delay > 0:
+                    await asyncio.sleep(retry_delay)
+
+        raise RuntimeError(
+            f"Gemini embedding request failed for model '{self.model_name}'"
+        ) from last_error
+
     async def _embed_prepared(self, texts: List[str]) -> List[List[float]]:
-        semaphore = asyncio.Semaphore(self.max_concurrency)
-
-        async def request_one(client: httpx.AsyncClient, text: str) -> List[float]:
-            async with semaphore:
-                return await self._request_embedding(client, text)
-
         if self._client is not None:
-            return await asyncio.gather(*(request_one(self._client, text) for text in texts))
+            return [await self._request_embedding(self._client, text) for text in texts]
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            return await asyncio.gather(*(request_one(client, text) for text in texts))
+            return [await self._request_embedding(client, text) for text in texts]
 
     async def embed_query(self, text: str) -> List[float]:
         if not text or not text.strip():

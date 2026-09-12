@@ -73,7 +73,11 @@ class Settings(BaseSettings):
         alias="EMBEDDING_BASE_URL",
     )
     embedding_timeout_seconds: float = Field(default=20.0, ge=1.0, le=60.0, alias="EMBEDDING_TIMEOUT_SECONDS")
-    embedding_max_concurrency: int = Field(default=5, ge=1, le=20, alias="EMBEDDING_MAX_CONCURRENCY")
+    embedding_max_concurrency: int = Field(default=1, ge=1, le=20, alias="EMBEDDING_MAX_CONCURRENCY")
+    embedding_min_interval_seconds: float = Field(
+        default=5.0, ge=0.0, le=60.0, alias="EMBEDDING_MIN_INTERVAL_SECONDS"
+    )
+    embedding_max_retries: int = Field(default=3, ge=0, le=5, alias="EMBEDDING_MAX_RETRIES")
     reranker_timeout_seconds: float = Field(
         default=1.5, ge=0.05, le=10.0, alias="RERANKER_TIMEOUT_SECONDS"
     )
@@ -173,13 +177,28 @@ class Settings(BaseSettings):
         default=200, ge=1, le=1000, alias="INGESTION_MAX_PDF_PAGES"
     )
     ingestion_ocr_min_confidence: float = Field(
-        default=0.55, ge=0.0, le=1.0, alias="INGESTION_OCR_MIN_CONFIDENCE"
+        default=0.85, ge=0.0, le=1.0, alias="INGESTION_OCR_MIN_CONFIDENCE"
+    )
+    ingestion_ocr_timeout_seconds: float = Field(
+        default=45.0, ge=5.0, le=120.0, alias="INGESTION_OCR_TIMEOUT_SECONDS"
+    )
+    ingestion_native_text_min_chars: int = Field(
+        default=80, ge=0, le=2000, alias="INGESTION_NATIVE_TEXT_MIN_CHARS"
     )
     ingestion_chunk_min_tokens: int = Field(
-        default=300, ge=100, le=1000, alias="INGESTION_CHUNK_MIN_TOKENS"
+        default=200, ge=50, le=1000, alias="INGESTION_CHUNK_MIN_TOKENS"
+    )
+    ingestion_chunk_target_tokens: int = Field(
+        default=600, ge=100, le=1500, alias="INGESTION_CHUNK_TARGET_TOKENS"
     )
     ingestion_chunk_max_tokens: int = Field(
-        default=600, ge=200, le=1500, alias="INGESTION_CHUNK_MAX_TOKENS"
+        default=900, ge=200, le=2000, alias="INGESTION_CHUNK_MAX_TOKENS"
+    )
+    ingestion_chunk_hard_max_tokens: int = Field(
+        default=1100, ge=300, le=3000, alias="INGESTION_CHUNK_HARD_MAX_TOKENS"
+    )
+    ingestion_chunk_overlap_tokens: int = Field(
+        default=80, ge=0, le=300, alias="INGESTION_CHUNK_OVERLAP_TOKENS"
     )
 
     # Observability & Logging
@@ -233,6 +252,17 @@ class Settings(BaseSettings):
             raise ValueError("EVIDENCE_LOW_THRESHOLD must be below EVIDENCE_HIGH_THRESHOLD")
         if self.ingestion_chunk_min_tokens >= self.ingestion_chunk_max_tokens:
             raise ValueError("INGESTION_CHUNK_MIN_TOKENS must be below INGESTION_CHUNK_MAX_TOKENS")
+        if not (
+            self.ingestion_chunk_min_tokens
+            <= self.ingestion_chunk_target_tokens
+            <= self.ingestion_chunk_max_tokens
+            <= self.ingestion_chunk_hard_max_tokens
+        ):
+            raise ValueError(
+                "Ingestion chunk limits must satisfy min <= target <= max <= hard max"
+            )
+        if self.ingestion_chunk_overlap_tokens >= self.ingestion_chunk_target_tokens:
+            raise ValueError("INGESTION_CHUNK_OVERLAP_TOKENS must be below target tokens")
         allowed = self.allowed_tenants
         if isinstance(allowed, str):
             allowed = [item.strip() for item in allowed.split(",") if item.strip()]

@@ -48,6 +48,7 @@ def mock_settings() -> Settings:
         embedding_provider="gemini",
         embedding_model="gemini-embedding-2",
         embedding_dimension=1024,
+        embedding_min_interval_seconds=0.0,
         database_url="postgresql://test:test@localhost:6543/postgres",
         db_statement_cache_size=0,
         redis_url="redis://localhost:6379/0",
