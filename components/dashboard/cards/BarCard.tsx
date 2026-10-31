@@ -42,10 +42,10 @@ export default function BarCard() {
       <CardHeader
         title={
           <Box display="flex" alignItems="center" gap={1.5}>
-            <div className="w-8 h-8 rounded-xl bg-[#f0f8f4] text-[#0d8a4f] flex items-center justify-center border border-[#a7f3d0]/60">
+            <div className="w-8 h-8 rounded-xl bg-[#f3f4f6] text-[#1f2937] flex items-center justify-center border border-[#e5e7eb]/60">
               <BarChart3 className="w-4 h-4" />
             </div>
-            <Typography variant="h6" fontWeight={800} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em', fontSize: { xs: '1rem', sm: '1.05rem' } }}>
+            <Typography variant="h6" fontWeight={600} sx={{ color: '#1f2937', letterSpacing: '-0.025em', fontSize: { xs: '1rem', sm: '1.05rem' } }}>
               Top 5 câu hỏi được quan tâm nhất
             </Typography>
           </Box>
@@ -55,7 +55,7 @@ export default function BarCard() {
       <CardContent sx={{ pt: 1, px: { xs: 1.5, sm: 2.5 }, pb: 2.5 }}>
         {(loading || !mounted) ? (
           <Box display="flex" justifyContent="center" alignItems="center" py={6}>
-            <CircularProgress size={32} sx={{ color: '#0d8a4f' }} />
+            <CircularProgress size={32} sx={{ color: '#1f2937' }} />
           </Box>
         ) : (
           <Box sx={{ width: '100%', overflowX: 'auto' }}>
@@ -64,7 +64,7 @@ export default function BarCard() {
                 yAxis={[{
                   scaleType: "band",
                   data: topQuestions.map((q) => q.question.length > 14 ? q.question.substring(0, 14) + '...' : q.question),
-                  tickLabelStyle: { fontSize: 11, fontWeight: 700, fill: '#334155' },
+                  tickLabelStyle: { fontSize: 11, fontWeight: 500, fill: '#374151' },
                 }]}
                 xAxis={[
                   {
@@ -75,7 +75,7 @@ export default function BarCard() {
                   },
                 ]}
                 series={[
-                  { data: topQuestions.map((q) => q.ask_count), label: "Lượt hỏi", color: "#0d8a4f" },
+                  { data: topQuestions.map((q) => q.ask_count), label: "Lượt hỏi", color: "#1f2937" },
                 ]}
                 layout="horizontal"
                 height={240}

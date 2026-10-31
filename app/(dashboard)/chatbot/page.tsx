@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 
 // MUI
 import TextField from '@mui/material/TextField';
@@ -171,16 +172,16 @@ export default function ChatBotPage() {
       { role: 'user', text: userMessage, timestamp: timeNow },
     ];
 
-    setMessages(newMessages);
-    setIsThinking(true);
-    setLiveAnswer('');
-    setLiveTrace([]);
-    setLiveStatus(undefined);
-    setLiveConfidence(undefined);
+    flushSync(() => {
+      setMessages(newMessages);
+      setIsThinking(true);
+      setLiveAnswer('');
+      setLiveTrace([]);
+      setLiveStatus(undefined);
+      setLiveConfidence(undefined);
+      setSidebarOpen(false);
+    });
     stopRequestedRef.current = false;
-
-    // Auto close mobile drawer if open
-    setSidebarOpen(false);
 
     let streamedAnswer = '';
     let streamedTrace: ChatTraceStep[] = [];
@@ -365,7 +366,7 @@ export default function ChatBotPage() {
 
   useEffect(() => {
     if (isAtBottom) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      bottomRef.current?.scrollIntoView({ behavior: isThinking ? 'instant' : 'smooth' });
     }
   }, [messages, isThinking, liveAnswer, isAtBottom]);
 

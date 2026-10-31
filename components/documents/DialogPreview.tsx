@@ -42,25 +42,25 @@ export default function DialogPreview({ open, onClose, filePath }: any) {
           slotProps={{
             backdrop: {
               sx: {
-                backgroundColor: 'rgba(15, 23, 42, 0.35)',
+                backgroundColor: 'rgba(0, 0, 0, 0.2)',
                 backdropFilter: 'blur(8px)',
               }
             }
           }}
           PaperProps={{
             sx: {
-              borderRadius: '24px',
+              borderRadius: '12px',
               p: 1.5,
               backgroundColor: '#ffffff',
-              boxShadow: '0 30px 60px -15px rgba(13, 138, 79, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.95) inset',
-              border: '1px solid rgba(13, 138, 79, 0.15)',
+              boxShadow: '0 30px 60px -15px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.95) inset',
+              border: '1px solid rgba(0, 0, 0, 0.12)',
             }
           }}
         >
             <DialogTitle sx={{ p: 2.5, pb: 1.5 }}>
               <Box display="flex" alignItems="center" gap={1.5}>
-                <FileText className="w-6 h-6 text-[#0d8a4f]" />
-                <Typography variant="h6" fontWeight={900} sx={{ color: '#0d8a4f', fontSize: '1.25rem', letterSpacing: '-0.02em' }}>
+                <FileText className="w-6 h-6 text-[#1f2937]" />
+                <Typography variant="h6" fontWeight={600} sx={{ color: '#1f2937', fontSize: '1.25rem', letterSpacing: '-0.02em' }}>
                   Xem trước tài liệu PDF
                 </Typography>
               </Box>
@@ -72,16 +72,16 @@ export default function DialogPreview({ open, onClose, filePath }: any) {
                 <Button 
                   onClick={ onClose }
                   sx={{
-                    borderRadius: '9999px',
+                    borderRadius: '8px',
                     px: 3.5,
                     py: 1,
                     textTransform: 'none',
-                    fontWeight: 800,
-                    color: '#475569',
+                    fontWeight: 600,
+                    color: '#4b5563',
                     bgcolor: '#ffffff',
                     border: '1px solid rgba(0,0,0,0.08)',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                    '&:hover': { bgcolor: '#f0f8f4', color: '#0d8a4f' },
+                    '&:hover': { bgcolor: '#f3f4f6', color: '#1f2937' },
                   }}
                 >
                   Đóng

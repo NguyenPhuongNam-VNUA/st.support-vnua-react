@@ -29,9 +29,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy package metadata and source required by the build backend.
+# Copy package metadata plus a stub package for the build backend, so source edits
+# keep this layer cached. The real code runs from /app/src via PYTHONPATH.
 COPY pyproject.toml README.md ./
-COPY src/ ./src/
+RUN mkdir -p src/core_ai && touch src/core_ai/__init__.py
 
 # Install runtime dependencies and the optional local-model stack. The extra
 # PyTorch index provides CPU-only wheels; PyPI remains available for its deps.

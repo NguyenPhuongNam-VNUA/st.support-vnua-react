@@ -3,6 +3,6 @@ models
 .pytest_cache
 .ruff_cache
 tests
-__pycache__
-*.pyc
+**/__pycache__
+**/*.pyc
 .env

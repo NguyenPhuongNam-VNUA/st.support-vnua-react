@@ -90,16 +90,16 @@ function AnimatedProgressBar({ selfPercent }: { selfPercent: number }) {
 
   return (
     <Box sx={{ width: '100%', mt: 2, mb: 1 }}>
-      <div className="h-3 w-full bg-rose-50/80 rounded-full overflow-hidden flex border border-rose-100/60 p-0.5">
+      <div className="flex h-2 w-full gap-1 overflow-hidden rounded-full">
         <div
-          className="bg-emerald-600 h-full rounded-full shadow-xs"
+          className="h-full rounded-full bg-[linear-gradient(180deg,#37475d_0%,#1f2937_64.697%)]"
           style={{
             width: `${Math.min(100, Math.max(0, width))}%`,
             transition: 'width 1200ms cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         />
         <div
-          className="bg-rose-500 h-full rounded-r-full flex-1"
+          className="h-full flex-1 rounded-full bg-[#e6e6e6] shadow-[inset_0_0_0_0.444px_#d8d8d8]"
           style={{
             transition: 'width 1200ms cubic-bezier(0.16, 1, 0.3, 1)',
           }}
@@ -196,7 +196,7 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
   }, [logs]);
 
   return (
-    <Grid container spacing={3} mb={4}>
+    <Grid container spacing={2}>
       {/* Left Column: Quality & Satisfaction Cards */}
       <Grid size={{ xs: 12, lg: 5 }}>
         <Box display="flex" flexDirection="column" gap={3} height="100%">
@@ -212,17 +212,17 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
               title={
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                   <Box display="flex" alignItems="center" gap={1.5}>
-                    <div className="w-8 h-8 rounded-xl bg-[#f0f8f4] border border-[#a7f3d0]/60 flex items-center justify-center text-[#0d8a4f]">
+                    <div className="w-8 h-8 rounded-xl bg-[#f3f4f6] border border-[#e5e7eb]/60 flex items-center justify-center text-[#1f2937]">
                       <CheckCircle2 className="w-4 h-4" />
                     </div>
-                    <Typography variant="h6" fontWeight={800} sx={{ color: '#0d8a4f', fontSize: '1.05rem' }}>
+                    <Typography variant="h6" fontWeight={600} sx={{ color: '#1f2937', fontSize: '1.05rem' }}>
                       Tỷ lệ tự trả lời vs Fallback
                     </Typography>
                   </Box>
                   <Button
                     size="small"
                     onClick={onDrillDownFallback}
-                    sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.75rem', color: '#0d8a4f', borderRadius: '8px', '&:hover': { bgcolor: '#f0f8f4' } }}
+                    sx={{ textTransform: 'none', fontWeight: 500, fontSize: '0.75rem', color: '#1f2937', borderRadius: '8px', '&:hover': { bgcolor: '#f3f4f6' } }}
                   >
                     Xem hội thoại →
                   </Button>
@@ -234,10 +234,10 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
               {/* Stat percentages */}
               <Box display="flex" justifyContent="space-between" alignItems="baseline" mb={1}>
                 <Box>
-                  <Typography variant="caption" fontWeight={800} color="#0d8a4f" sx={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    AGENT TỰ TRẢ LỜI ĐƯỢC
+                  <Typography variant="caption" fontWeight={500} color="#4b5563" display="block" mb={1}>
+                    Agent tự trả lời được
                   </Typography>
-                  <Typography variant="h4" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em' }}>
+                  <Typography variant="h4" fontWeight={500} sx={{ color: '#1f2937' }}>
                     <AnimatedNumber value={selfPercent} />
                   </Typography>
                   <Typography variant="caption" color="text.secondary" fontWeight={500}>
@@ -245,10 +245,10 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
                   </Typography>
                 </Box>
                 <Box textAlign="right">
-                  <Typography variant="caption" fontWeight={800} color="#be123c" sx={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    CHUYỂN NGƯỜI THẬT (FALLBACK)
+                  <Typography variant="caption" fontWeight={500} color="#4b5563" display="block" mb={1}>
+                    Chuyển người thật (fallback)
                   </Typography>
-                  <Typography variant="h4" fontWeight={900} sx={{ color: '#e11d48', letterSpacing: '-0.025em' }}>
+                  <Typography variant="h4" fontWeight={500} sx={{ color: '#1f2937' }}>
                     <AnimatedNumber value={fallbackPercent} />
                   </Typography>
                   <Typography variant="caption" color="text.secondary" fontWeight={500}>
@@ -261,11 +261,11 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
               <AnimatedProgressBar selfPercent={selfPercent} />
 
               <Box display="flex" justifyContent="space-between" mt={1}>
-                <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#10b981] inline-block" /> Agent tự động giải quyết tốt
+                <span className="text-xs text-[#6b7280] flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#1f2937] inline-block" /> Agent tự động giải quyết tốt
                 </span>
-                <span className="text-[11px] font-bold text-rose-800 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" /> Cần bổ sung tri thức
+                <span className="text-xs text-[#6b7280] flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#e6e6e6] border border-[#d8d8d8] inline-block" /> Cần bổ sung tri thức
                 </span>
               </Box>
             </CardContent>
@@ -283,10 +283,10 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
             <CardHeader
               title={
                 <Box display="flex" alignItems="center" gap={1.5}>
-                  <div className="w-8 h-8 rounded-xl bg-[#fffbeb] border border-[#fde68a]/80 flex items-center justify-center text-[#d97706]">
+                  <div className="w-8 h-8 rounded-xl bg-[#f7f7f7] border border-[#e5e7eb]/80 flex items-center justify-center text-[#4b5563]">
                     <ThumbsUp className="w-4 h-4" />
                   </div>
-                  <Typography variant="h6" fontWeight={800} sx={{ color: '#0d8a4f', fontSize: '1.05rem' }}>
+                  <Typography variant="h6" fontWeight={600} sx={{ color: '#1f2937', fontSize: '1.05rem' }}>
                     Mức độ hài lòng sinh viên
                   </Typography>
                 </Box>
@@ -295,22 +295,22 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
             />
             <CardContent sx={{ pt: 0, px: 2.5, pb: 2.5 }}>
               <Box display="flex" alignItems="center" gap={3}>
-                <Box textAlign="center" py={1.5} px={1.5} minWidth={105} bgcolor="#fafdfb" borderRadius="14px" border="1px solid rgba(13, 138, 79, 0.08)" boxShadow="0 0 0 1px rgba(255,255,255,0.8) inset">
-                  <Typography variant="h3" fontWeight={900} sx={{ color: '#0d8a4f', lineHeight: 1, letterSpacing: '-0.03em' }}>
+                <Box textAlign="center" py={1.5} px={1.5} minWidth={105} bgcolor="#f8f8f8" borderRadius="14px" border="1px solid rgba(0, 0, 0, 0.08)" boxShadow="0 0 0 1px rgba(255,255,255,0.8) inset">
+                  <Typography variant="h3" fontWeight={600} sx={{ color: '#1f2937', lineHeight: 1, letterSpacing: '-0.03em' }}>
                     <AnimatedNumber value={avgRating} decimals={1} suffix="" />
                   </Typography>
-                  <Typography variant="caption" fontWeight={700} color="text.secondary" display="flex" alignItems="center" justifyContent="center" gap={0.5} mt={0.5}>
-                    trên 5.0 <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 inline-block" />
+                  <Typography variant="caption" fontWeight={500} color="text.secondary" display="flex" alignItems="center" justifyContent="center" gap={0.5} mt={0.5}>
+                    trên 5.0 <Star className="w-3.5 h-3.5 text-[#9ca3af] fill-[#9ca3af] inline-block" />
                   </Typography>
                 </Box>
 
                 <Box flex={1}>
                   <Box mb={1.5}>
                     <Box display="flex" justifyContent="space-between" mb={0.5}>
-                      <Typography variant="caption" fontWeight={700} color="text.secondary">
+                      <Typography variant="caption" fontWeight={500} color="text.secondary">
                         Đánh giá Tích cực (Hài lòng / Like 👍)
                       </Typography>
-                      <Typography variant="caption" fontWeight={800} color="#10b981">
+                      <Typography variant="caption" fontWeight={500} color="#059669">
                         <AnimatedNumber value={posPercent} />
                       </Typography>
                     </Box>
@@ -318,12 +318,12 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
                       variant="determinate"
                       value={posPercent}
                       sx={{
-                        height: 7,
-                        borderRadius: '9999px',
-                        bgcolor: 'rgba(13, 138, 79, 0.05)',
+                        height: 6,
+                        borderRadius: '8px',
+                        bgcolor: 'rgba(0, 0, 0, 0.05)',
                         '& .MuiLinearProgress-bar': {
-                          bgcolor: '#10b981',
-                          borderRadius: '9999px',
+                          background: 'linear-gradient(180deg,#37475d 0%,#1f2937 64.697%)',
+                          borderRadius: '8px',
                           transition: 'transform 1200ms cubic-bezier(0.16, 1, 0.3, 1)',
                         },
                       }}
@@ -332,10 +332,10 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
 
                   <Box>
                     <Box display="flex" justifyContent="space-between" mb={0.5}>
-                      <Typography variant="caption" fontWeight={700} color="text.secondary">
+                      <Typography variant="caption" fontWeight={500} color="text.secondary">
                         Đánh giá Tiêu cực (Chưa hài lòng 👎)
                       </Typography>
-                      <Typography variant="caption" fontWeight={800} color="#e11d48">
+                      <Typography variant="caption" fontWeight={500} color="#ef4444">
                         <AnimatedNumber value={negPercent} />
                       </Typography>
                     </Box>
@@ -343,12 +343,12 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
                       variant="determinate"
                       value={negPercent}
                       sx={{
-                        height: 7,
-                        borderRadius: '9999px',
-                        bgcolor: 'rgba(0, 60, 30, 0.05)',
+                        height: 6,
+                        borderRadius: '8px',
+                        bgcolor: 'rgba(0, 0, 0, 0.05)',
                         '& .MuiLinearProgress-bar': {
-                          bgcolor: '#e11d48',
-                          borderRadius: '9999px',
+                          bgcolor: '#9ca3af',
+                          borderRadius: '8px',
                           transition: 'transform 1200ms cubic-bezier(0.16, 1, 0.3, 1)',
                         },
                       }}
@@ -375,11 +375,11 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
             title={
               <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" gap={1.5}>
                 <Box display="flex" alignItems="center" gap={1.5}>
-                  <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-200/80 flex items-center justify-center text-rose-600">
+                  <div className="w-8 h-8 rounded-xl bg-[#f7f7f7] border border-[#e5e7eb] flex items-center justify-center text-[#ef4444]">
                     <ShieldAlert className="w-4 h-4" />
                   </div>
                   <Box>
-                    <Typography variant="h6" fontWeight={800} sx={{ color: '#be123c', fontSize: { xs: '0.95rem', sm: '1.05rem' }, lineHeight: 1.2 }}>
+                    <Typography variant="h6" fontWeight={600} sx={{ color: '#4b5563', fontSize: '0.875rem', lineHeight: 1.2 }}>
                       Top câu hỏi không trả lời được (Fallback Data)
                     </Typography>
                     <Typography variant="caption" color="text.secondary" fontWeight={500}>
@@ -394,15 +394,15 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
                     startIcon={<PlusCircle className="w-4 h-4" />}
                     sx={{
                       borderRadius: '10px',
-                      backgroundColor: '#0d8a4f',
-                      fontWeight: 700,
+                      backgroundColor: '#1f2937',
+                      fontWeight: 500,
                       fontSize: '0.75rem',
                       textTransform: 'none',
                       whiteSpace: 'nowrap',
                       px: 2,
                       py: 0.7,
-                      boxShadow: '0 4px 12px rgba(13, 138, 79, 0.2)',
-                      '&:hover': { backgroundColor: '#0a7543' },
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
+                      '&:hover': { backgroundColor: '#111827' },
                     }}
                   >
                     Bổ sung tri thức
@@ -415,47 +415,47 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
 
           <CardContent sx={{ pt: 0, px: { xs: 1.5, sm: 2.5 }, pb: 2.5 }}>
             <Box sx={{ width: '100%', overflowX: 'auto' }}>
-              <Table size="small" sx={{ minWidth: 520, border: '1px solid rgba(13, 138, 79, 0.08)', borderRadius: '14px', overflow: 'hidden' }}>
-                <TableHead sx={{ backgroundColor: '#fafdfb' }}>
+              <Table size="small" sx={{ minWidth: 520, border: '1px solid rgba(0, 0, 0, 0.08)', borderRadius: '12px', overflow: 'hidden' }}>
+                <TableHead sx={{ backgroundColor: '#f8f8f8' }}>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#0d8a4f', borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>CÂU HỎI BỊ CHỜ / FALLBACK</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#0d8a4f', width: 100, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>CHỦ ĐỀ</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#0d8a4f', width: 90, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>LẦN HỎI</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#0d8a4f', width: 120, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>HÀNH ĐỘNG</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#1f2937', borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>CÂU HỎI BỊ CHỜ / FALLBACK</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#1f2937', width: 100, borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>CHỦ ĐỀ</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#1f2937', width: 90, borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>LẦN HỎI</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#1f2937', width: 120, borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>HÀNH ĐỘNG</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {fallbackQuestions.map((row) => (
-                    <TableRow key={row.id} hover sx={{ transition: 'background-color 0.15s ease', '&:hover': { bgcolor: '#f0f8f4 !important' }, '&:last-child td': { borderBottom: 0 } }}>
-                      <TableCell sx={{ py: 1.5, borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
-                        <Typography variant="body2" fontWeight={700} color="#0f291e" sx={{ fontSize: '0.825rem' }}>
+                    <TableRow key={row.id} hover sx={{ transition: 'background-color 0.15s ease', '&:hover': { bgcolor: '#f3f4f6 !important' }, '&:last-child td': { borderBottom: 0 } }}>
+                      <TableCell sx={{ py: 1.5, borderBottom: '1px solid rgba(0, 0, 0, 0.04)' }}>
+                        <Typography variant="body2" fontWeight={500} color="#1f2937" sx={{ fontSize: '0.825rem' }}>
                           {row.question}
                         </Typography>
-                        <span className="text-[11px] text-slate-400 font-medium">Lần hỏi gần nhất: {row.last_asked}</span>
+                        <span className="text-[11px] text-gray-400 font-medium">Lần hỏi gần nhất: {row.last_asked}</span>
                       </TableCell>
 
-                      <TableCell align="center" sx={{ borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
+                      <TableCell align="center" sx={{ borderBottom: '1px solid rgba(0, 0, 0, 0.04)' }}>
                         <Chip
                           label={row.category}
                           size="small"
                           sx={{
-                            borderRadius: '9999px',
-                            fontWeight: 800,
+                            borderRadius: '8px',
+                            fontWeight: 600,
                             fontSize: '0.7rem',
-                            backgroundColor: '#f0f8f4',
-                            color: '#0d8a4f',
-                            border: '1px solid rgba(16, 185, 129, 0.25)',
+                            backgroundColor: '#f3f4f6',
+                            color: '#1f2937',
+                            border: '1px solid rgba(0, 0, 0, 0.12)',
                           }}
                         />
                       </TableCell>
 
-                      <TableCell align="center" sx={{ borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
-                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-black text-rose-700 bg-rose-50 border border-rose-200/80 rounded-full">
+                      <TableCell align="center" sx={{ borderBottom: '1px solid rgba(0, 0, 0, 0.04)' }}>
+                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-semibold text-[#4b5563] bg-[#f7f7f7] border-[0.8px] border-[#e5e7eb] rounded-md">
                           {row.count}
                         </span>
                       </TableCell>
 
-                      <TableCell align="right" sx={{ borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
+                      <TableCell align="right" sx={{ borderBottom: '1px solid rgba(0, 0, 0, 0.04)' }}>
                         <Link href={`/admin/questions?add=${encodeURIComponent(row.question)}`}>
                           <Button
                             size="small"
@@ -463,14 +463,14 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
                             sx={{
                               borderRadius: '8px',
                               fontSize: '0.725rem',
-                              fontWeight: 700,
+                              fontWeight: 500,
                               py: 0.4,
                               px: 1.5,
-                              borderColor: 'rgba(13, 138, 79, 0.25)',
-                              color: '#0d8a4f',
+                              borderColor: 'rgba(0, 0, 0, 0.12)',
+                              color: '#1f2937',
                               textTransform: 'none',
                               whiteSpace: 'nowrap',
-                              '&:hover': { bgcolor: '#f0f8f4', borderColor: '#0d8a4f' }
+                              '&:hover': { bgcolor: '#f3f4f6', borderColor: '#1f2937' }
                             }}
                           >
                             Tạo đáp án
@@ -484,8 +484,8 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
                     <TableRow>
                       <TableCell colSpan={4} align="center" sx={{ py: 6 }}>
                         <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
-                          <CheckCircle2 className="w-8 h-8 text-emerald-600" />
-                          <Typography variant="body2" fontWeight={700} sx={{ color: '#0d8a4f' }}>
+                          <CheckCircle2 className="w-8 h-8 text-[#9ca3af]" />
+                          <Typography variant="body2" fontWeight={500} sx={{ color: '#1f2937' }}>
                             Không có câu hỏi fallback nào tồn đọng!
                           </Typography>
                           <Typography variant="caption" color="text.secondary">

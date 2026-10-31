@@ -184,23 +184,23 @@ export default function AdminAccountsPage() {
       </Snackbar>
 
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-[rgba(13,138,79,0.08)] shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-xl border border-[rgba(0, 0, 0, 0.08)] shadow-xs">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#0d8a4f] uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#1f2937] uppercase tracking-wider mb-1">
             <Shield className="w-4 h-4" />
             Quản trị phân quyền hệ thống
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-medium text-gray-800 tracking-tight">
             Quản Lý Tài Khoản
           </h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-1">
+          <p className="text-gray-500 text-xs sm:text-sm mt-1">
             Thêm mới, phân quyền và quản lý tài khoản người dùng kết nối trực tiếp với Supabase Database
           </p>
         </div>
 
         <button
           onClick={handleOpenCreate}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#0d8a4f] hover:bg-[#0a7543] text-white font-medium text-sm transition-all shadow-sm hover:shadow-md cursor-pointer shrink-0"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#1f2937] hover:bg-[#111827] text-white font-medium text-sm transition-all shadow-sm hover:shadow-md cursor-pointer shrink-0"
         >
           <UserPlus className="w-4 h-4" />
           Thêm tài khoản mới
@@ -209,81 +209,81 @@ export default function AdminAccountsPage() {
 
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white p-4 rounded-xl border border-[rgba(13,138,79,0.08)] shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-[rgba(0, 0, 0, 0.08)] shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Tổng tài khoản</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#0d8a4f] flex items-center justify-center">
+            <span className="text-xs font-medium text-gray-500">Tổng tài khoản</span>
+            <div className="w-8 h-8 rounded-lg bg-[#f7f7f7] text-[#1f2937] flex items-center justify-center">
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-slate-800 mt-2">{total}</p>
-          <span className="text-[11px] text-slate-400">Trên hệ thống</span>
+          <p className="text-xl sm:text-2xl font-medium text-gray-800 mt-2">{total}</p>
+          <span className="text-[11px] text-gray-400">Trên hệ thống</span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-[rgba(13,138,79,0.08)] shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-[rgba(0, 0, 0, 0.08)] shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Quản trị viên (Admin)</span>
-            <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+            <span className="text-xs font-medium text-gray-500">Quản trị viên (Admin)</span>
+            <div className="w-8 h-8 rounded-lg bg-[#f7f7f7] text-[#4b5563] flex items-center justify-center">
               <Shield className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-slate-800 mt-2">{adminCount}</p>
-          <span className="text-[11px] text-purple-600 font-medium">Toàn quyền hệ thống</span>
+          <p className="text-xl sm:text-2xl font-medium text-gray-800 mt-2">{adminCount}</p>
+          <span className="text-[11px] text-[#4b5563] font-medium">Toàn quyền hệ thống</span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-[rgba(13,138,79,0.08)] shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-[rgba(0, 0, 0, 0.08)] shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Sinh viên (Student)</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+            <span className="text-xs font-medium text-gray-500">Sinh viên (Student)</span>
+            <div className="w-8 h-8 rounded-lg bg-[#f7f7f7] text-[#4b5563] flex items-center justify-center">
               <GraduationCap className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-slate-800 mt-2">{studentCount}</p>
-          <span className="text-[11px] text-blue-600 font-medium">Người dùng Chatbot</span>
+          <p className="text-xl sm:text-2xl font-medium text-gray-800 mt-2">{studentCount}</p>
+          <span className="text-[11px] text-[#4b5563] font-medium">Người dùng Chatbot</span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-[rgba(13,138,79,0.08)] shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-[rgba(0, 0, 0, 0.08)] shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Đang hoạt động</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <span className="text-xs font-medium text-gray-500">Đang hoạt động</span>
+            <div className="w-8 h-8 rounded-lg bg-[#f7f7f7] text-[#059669] flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-emerald-700 mt-2">{activeCount}</p>
-          <span className="text-[11px] text-emerald-600">Trạng thái Active</span>
+          <p className="text-xl sm:text-2xl font-medium text-[#059669] mt-2">{activeCount}</p>
+          <span className="text-[11px] text-[#059669]">Trạng thái Active</span>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-[rgba(13,138,79,0.08)] shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-white p-4 rounded-xl border border-[rgba(0, 0, 0, 0.08)] shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <form onSubmit={onSearchSubmit} className="flex-1 w-full flex items-center gap-2">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Tìm kiếm theo email, họ tên..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9.5 pr-4 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0d8a4f] focus:bg-white transition"
+              className="w-full pl-9.5 pr-4 py-2 text-xs sm:text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#1f2937] focus:bg-white transition"
             />
           </div>
 
           <button
             type="submit"
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium transition shrink-0 cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-gray-800 hover:bg-gray-900 text-white text-xs font-medium transition shrink-0 cursor-pointer"
           >
             Tìm kiếm
           </button>
         </form>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs">
-            <Filter className="w-3.5 h-3.5 text-slate-500" />
-            <span className="text-slate-500 font-medium">Vai trò:</span>
+          <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 text-xs">
+            <Filter className="w-3.5 h-3.5 text-gray-500" />
+            <span className="text-gray-500 font-medium">Vai trò:</span>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="bg-transparent border-none text-slate-800 font-semibold focus:outline-none cursor-pointer"
+              className="bg-transparent border-none text-gray-800 font-semibold focus:outline-none cursor-pointer"
             >
               <option value="all">Tất cả vai trò</option>
               <option value="admin">Quản trị viên (Admin)</option>
@@ -294,19 +294,19 @@ export default function AdminAccountsPage() {
           <button
             onClick={() => fetchAccounts()}
             title="Làm mới danh sách"
-            className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition cursor-pointer"
+            className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600 transition cursor-pointer"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-[#0d8a4f]' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-[#1f2937]' : ''}`} />
           </button>
         </div>
       </div>
 
       {/* Accounts Table */}
-      <div className="bg-white rounded-2xl border border-[rgba(13,138,79,0.08)] shadow-xs overflow-hidden">
+      <div className="bg-white rounded-xl border border-[rgba(0, 0, 0, 0.08)] shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <tr className="border-b border-gray-100 bg-gray-50/70 text-[11px] font-medium text-gray-500 uppercase tracking-wider">
                 <th className="py-3.5 px-4 sm:px-6">ID</th>
                 <th className="py-3.5 px-4 sm:px-6">Người dùng / Email</th>
                 <th className="py-3.5 px-4 sm:px-6">Vai trò</th>
@@ -315,44 +315,44 @@ export default function AdminAccountsPage() {
                 <th className="py-3.5 px-4 sm:px-6 text-right">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs sm:text-sm text-slate-700">
+            <tbody className="divide-y divide-gray-100 text-xs sm:text-sm text-gray-700">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
-                    <CircularProgress size={28} sx={{ color: '#0d8a4f' }} />
+                  <td colSpan={6} className="py-12 text-center text-gray-400">
+                    <CircularProgress size={28} sx={{ color: '#1f2937' }} />
                     <p className="mt-2 text-xs">Đang tải danh sách tài khoản từ Supabase...</p>
                   </td>
                 </tr>
               ) : accounts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
-                    <Users className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                    <p className="font-semibold text-slate-600">Không tìm thấy tài khoản nào</p>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                  <td colSpan={6} className="py-12 text-center text-gray-400">
+                    <Users className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                    <p className="font-semibold text-gray-600">Không tìm thấy tài khoản nào</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
                       Thử tìm kiếm từ khóa khác hoặc bấm nút &quot;Thêm tài khoản mới&quot;
                     </p>
                   </td>
                 </tr>
               ) : (
                 accounts.map((acc) => (
-                  <tr key={acc.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4 sm:px-6 font-mono text-xs text-slate-400">
+                  <tr key={acc.id} className="hover:bg-gray-50/80 transition-colors">
+                    <td className="py-3.5 px-4 sm:px-6 font-mono text-xs text-gray-400">
                       #{acc.id}
                     </td>
 
                     <td className="py-3.5 px-4 sm:px-6">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-emerald-100/70 text-[#0d8a4f] flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-[#f7f7f7] text-[#1f2937] flex items-center justify-center font-medium text-xs uppercase shrink-0">
                           {acc.full_name
                             ? acc.full_name.charAt(0)
                             : acc.email.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-800 text-xs sm:text-sm">
+                          <p className="font-semibold text-gray-800 text-xs sm:text-sm">
                             {acc.full_name || 'Chưa đặt tên'}
                           </p>
-                          <p className="text-xs text-slate-500 font-mono flex items-center gap-1">
-                            <Mail className="w-3 h-3 text-slate-400" />
+                          <p className="text-xs text-gray-500 font-mono flex items-center gap-1">
+                            <Mail className="w-3 h-3 text-gray-400" />
                             {acc.email}
                           </p>
                         </div>
@@ -361,12 +361,12 @@ export default function AdminAccountsPage() {
 
                     <td className="py-3.5 px-4 sm:px-6">
                       {acc.role === 'admin' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#f7f7f7] text-[#4b5563] border border-[#e5e7eb]">
                           <Shield className="w-3 h-3" />
                           Quản trị viên
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#f7f7f7] text-[#4b5563] border border-[#e5e7eb]">
                           <GraduationCap className="w-3 h-3" />
                           Sinh viên
                         </span>
@@ -375,19 +375,19 @@ export default function AdminAccountsPage() {
 
                     <td className="py-3.5 px-4 sm:px-6">
                       {acc.is_active ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f7f7f7] text-[#059669] border border-[#e5e7eb]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" />
                           Hoạt động
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f7f7f7] text-[#ef4444] border border-[#e5e7eb]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />
                           Tạm khóa
                         </span>
                       )}
                     </td>
 
-                    <td className="py-3.5 px-4 sm:px-6 text-xs text-slate-500 font-mono">
+                    <td className="py-3.5 px-4 sm:px-6 text-xs text-gray-500 font-mono">
                       {acc.created_at
                         ? new Date(acc.created_at).toLocaleDateString('vi-VN', {
                             year: 'numeric',
@@ -402,14 +402,14 @@ export default function AdminAccountsPage() {
                         <button
                           onClick={() => handleOpenEdit(acc)}
                           title="Chỉnh sửa"
-                          className="p-1.5 text-slate-500 hover:text-[#0d8a4f] hover:bg-emerald-50 rounded-lg transition cursor-pointer"
+                          className="p-1.5 text-gray-500 hover:text-[#1f2937] hover:bg-[#f7f7f7] rounded-lg transition cursor-pointer"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleOpenDelete(acc)}
                           title="Xóa tài khoản"
-                          className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                          className="p-1.5 text-gray-500 hover:text-[#ef4444] hover:bg-[#f7f7f7] rounded-lg transition cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -424,7 +424,7 @@ export default function AdminAccountsPage() {
 
         {/* Pagination Bar */}
         {totalPages > 1 && (
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <div className="p-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
             <span>
               Trang <strong>{page}</strong> / <strong>{totalPages}</strong> (Tổng cộng {total} tài khoản)
             </span>
@@ -432,14 +432,14 @@ export default function AdminAccountsPage() {
               <button
                 disabled={page <= 1}
                 onClick={() => setPage(page - 1)}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-medium transition cursor-pointer"
+                className="px-3 py-1.5 rounded-lg border border-gray-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 font-medium transition cursor-pointer"
               >
                 Trước
               </button>
               <button
                 disabled={page >= totalPages}
                 onClick={() => setPage(page + 1)}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-medium transition cursor-pointer"
+                className="px-3 py-1.5 rounded-lg border border-gray-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 font-medium transition cursor-pointer"
               >
                 Sau
               </button>
@@ -457,16 +457,16 @@ export default function AdminAccountsPage() {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: '20px', padding: '8px' },
+          sx: { borderRadius: '12px', padding: '8px' },
         }}
       >
         <form onSubmit={createForm.handleSubmit(handleCreateAccount)}>
           <DialogTitle sx={{ pb: 1 }}>
-            <div className="flex items-center gap-2 text-[#0d8a4f]">
+            <div className="flex items-center gap-2 text-[#1f2937]">
               <UserPlus className="w-5 h-5" />
-              <span className="font-bold text-lg text-slate-800">Thêm Tài Khoản Mới</span>
+              <span className="font-medium text-lg text-gray-800">Thêm Tài Khoản Mới</span>
             </div>
-            <p className="text-xs text-slate-500 mt-1 font-normal">
+            <p className="text-xs text-gray-500 mt-1 font-normal">
               Tài khoản sẽ được mã hóa mật khẩu bằng pgcrypto và lưu vào bảng accounts trong Supabase.
             </p>
           </DialogTitle>
@@ -474,20 +474,20 @@ export default function AdminAccountsPage() {
           <DialogContent className="space-y-4 pt-3">
             {/* Họ và tên */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                 Họ và tên
               </label>
               <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <User className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Ví dụ: Nguyễn Văn An"
                   {...createForm.register('full_name')}
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0d8a4f] transition"
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#1f2937] transition"
                 />
               </div>
               {createForm.formState.errors.full_name && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-[#ef4444] mt-1">
                   {createForm.formState.errors.full_name.message}
                 </p>
               )}
@@ -495,20 +495,20 @@ export default function AdminAccountsPage() {
 
             {/* Email */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Email đăng nhập <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                Email đăng nhập <span className="text-[#ef4444]">*</span>
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
                   placeholder="admin@vnua.edu.vn hoặc user@vnua.edu.vn"
                   {...createForm.register('email')}
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0d8a4f] transition"
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#1f2937] transition"
                 />
               </div>
               {createForm.formState.errors.email && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-[#ef4444] mt-1">
                   {createForm.formState.errors.email.message}
                 </p>
               )}
@@ -516,27 +516,27 @@ export default function AdminAccountsPage() {
 
             {/* Mật khẩu */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Mật khẩu khởi tạo <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                Mật khẩu khởi tạo <span className="text-[#ef4444]">*</span>
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Tối thiểu 6 ký tự"
                   {...createForm.register('password')}
-                  className="w-full pl-9 pr-10 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0d8a4f] transition font-mono"
+                  className="w-full pl-9 pr-10 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#1f2937] transition font-mono"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               {createForm.formState.errors.password && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-[#ef4444] mt-1">
                   {createForm.formState.errors.password.message}
                 </p>
               )}
@@ -544,33 +544,33 @@ export default function AdminAccountsPage() {
 
             {/* Vai trò */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Vai trò phân quyền <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                Vai trò phân quyền <span className="text-[#ef4444]">*</span>
               </label>
               <div className="grid grid-cols-2 gap-3">
-                <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 hover:border-[#0d8a4f] cursor-pointer transition">
+                <label className="flex items-center gap-2.5 p-3 rounded-xl border border-gray-200 hover:border-[#1f2937] cursor-pointer transition">
                   <input
                     type="radio"
                     value="student"
                     {...createForm.register('role')}
-                    className="accent-[#0d8a4f]"
+                    className="accent-[#1f2937]"
                   />
                   <div>
-                    <p className="text-xs font-bold text-slate-800">Sinh viên</p>
-                    <p className="text-[10px] text-slate-400">Quyền hỏi đáp Chatbot</p>
+                    <p className="text-xs font-medium text-gray-800">Sinh viên</p>
+                    <p className="text-[10px] text-gray-400">Quyền hỏi đáp Chatbot</p>
                   </div>
                 </label>
 
-                <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 hover:border-[#0d8a4f] cursor-pointer transition">
+                <label className="flex items-center gap-2.5 p-3 rounded-xl border border-gray-200 hover:border-[#1f2937] cursor-pointer transition">
                   <input
                     type="radio"
                     value="admin"
                     {...createForm.register('role')}
-                    className="accent-[#0d8a4f]"
+                    className="accent-[#1f2937]"
                   />
                   <div>
-                    <p className="text-xs font-bold text-slate-800">Quản trị viên</p>
-                    <p className="text-[10px] text-slate-400">Toàn quyền hệ thống Admin</p>
+                    <p className="text-xs font-medium text-gray-800">Quản trị viên</p>
+                    <p className="text-[10px] text-gray-400">Toàn quyền hệ thống Admin</p>
                   </div>
                 </label>
               </div>
@@ -582,9 +582,9 @@ export default function AdminAccountsPage() {
                 <input
                   type="checkbox"
                   {...createForm.register('is_active')}
-                  className="w-4 h-4 rounded text-[#0d8a4f] accent-[#0d8a4f]"
+                  className="w-4 h-4 rounded text-[#1f2937] accent-[#1f2937]"
                 />
-                <span className="text-xs font-semibold text-slate-700">
+                <span className="text-xs font-semibold text-gray-700">
                   Kích hoạt tài khoản ngay sau khi tạo
                 </span>
               </label>
@@ -595,7 +595,7 @@ export default function AdminAccountsPage() {
             <Button
               onClick={() => setIsCreateModalOpen(false)}
               disabled={isSubmitting}
-              sx={{ color: '#64748b', textTransform: 'none', fontWeight: 600 }}
+              sx={{ color: '#6b7280', textTransform: 'none', fontWeight: 600 }}
             >
               Hủy bỏ
             </Button>
@@ -604,8 +604,8 @@ export default function AdminAccountsPage() {
               disabled={isSubmitting}
               variant="contained"
               sx={{
-                bgcolor: '#0d8a4f',
-                '&:hover': { bgcolor: '#0a7543' },
+                bgcolor: '#1f2937',
+                '&:hover': { bgcolor: '#111827' },
                 textTransform: 'none',
                 fontWeight: 600,
                 borderRadius: '10px',
@@ -634,7 +634,7 @@ export default function AdminAccountsPage() {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: '20px', padding: '8px' },
+          sx: { borderRadius: '12px', padding: '8px' },
         }}
       >
         <form
@@ -643,11 +643,11 @@ export default function AdminAccountsPage() {
           )}
         >
           <DialogTitle sx={{ pb: 1 }}>
-            <div className="flex items-center gap-2 text-[#0d8a4f]">
+            <div className="flex items-center gap-2 text-[#1f2937]">
               <Edit className="w-5 h-5" />
-              <span className="font-bold text-lg text-slate-800">Chỉnh Sửa Tài Khoản</span>
+              <span className="font-medium text-lg text-gray-800">Chỉnh Sửa Tài Khoản</span>
             </div>
-            <p className="text-xs text-slate-500 mt-1 font-normal">
+            <p className="text-xs text-gray-500 mt-1 font-normal">
               Cập nhật thông tin tài khoản #{selectedAccount?.id}
             </p>
           </DialogTitle>
@@ -655,43 +655,43 @@ export default function AdminAccountsPage() {
           <DialogContent className="space-y-4 pt-3">
             {/* Họ và tên */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Họ và tên</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Họ và tên</label>
               <input
                 type="text"
                 {...editForm.register('full_name')}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0d8a4f] transition"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#1f2937] transition"
               />
             </div>
 
             {/* Email */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Email</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Email</label>
               <input
                 type="email"
                 {...editForm.register('email')}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0d8a4f] transition"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#1f2937] transition"
               />
             </div>
 
             {/* Mật khẩu mới (Tùy chọn) */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                 Mật khẩu mới (Để trống nếu không muốn đổi)
               </label>
               <input
                 type="password"
                 placeholder="Nhập mật khẩu mới nếu muốn thay đổi"
                 {...editForm.register('password')}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0d8a4f] transition font-mono"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#1f2937] transition font-mono"
               />
             </div>
 
             {/* Vai trò */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Vai trò</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Vai trò</label>
               <select
                 {...editForm.register('role')}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0d8a4f] transition bg-white"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#1f2937] transition bg-white"
               >
                 <option value="student">Sinh viên (Student)</option>
                 <option value="admin">Quản trị viên (Admin)</option>
@@ -704,9 +704,9 @@ export default function AdminAccountsPage() {
                 <input
                   type="checkbox"
                   {...editForm.register('is_active')}
-                  className="w-4 h-4 rounded text-[#0d8a4f] accent-[#0d8a4f]"
+                  className="w-4 h-4 rounded text-[#1f2937] accent-[#1f2937]"
                 />
-                <span className="text-xs font-semibold text-slate-700">Tài khoản đang hoạt động</span>
+                <span className="text-xs font-semibold text-gray-700">Tài khoản đang hoạt động</span>
               </label>
             </div>
           </DialogContent>
@@ -715,7 +715,7 @@ export default function AdminAccountsPage() {
             <Button
               onClick={() => setIsEditModalOpen(false)}
               disabled={isSubmitting}
-              sx={{ color: '#64748b', textTransform: 'none', fontWeight: 600 }}
+              sx={{ color: '#6b7280', textTransform: 'none', fontWeight: 600 }}
             >
               Hủy bỏ
             </Button>
@@ -724,8 +724,8 @@ export default function AdminAccountsPage() {
               disabled={isSubmitting}
               variant="contained"
               sx={{
-                bgcolor: '#0d8a4f',
-                '&:hover': { bgcolor: '#0a7543' },
+                bgcolor: '#1f2937',
+                '&:hover': { bgcolor: '#111827' },
                 textTransform: 'none',
                 fontWeight: 600,
                 borderRadius: '10px',
@@ -747,18 +747,18 @@ export default function AdminAccountsPage() {
         maxWidth="xs"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: '20px', padding: '8px' },
+          sx: { borderRadius: '12px', padding: '8px' },
         }}
       >
         <DialogTitle sx={{ pb: 1 }}>
-          <div className="flex items-center gap-2 text-red-600">
+          <div className="flex items-center gap-2 text-[#ef4444]">
             <AlertCircle className="w-5 h-5" />
-            <span className="font-bold text-lg text-slate-800">Xóa Tài Khoản?</span>
+            <span className="font-medium text-lg text-gray-800">Xóa Tài Khoản?</span>
           </div>
         </DialogTitle>
 
         <DialogContent>
-          <p className="text-xs sm:text-sm text-slate-600">
+          <p className="text-xs sm:text-sm text-gray-600">
             Bạn có chắc chắn muốn xóa tài khoản <strong>{selectedAccount?.email}</strong> (
             {selectedAccount?.full_name || 'Chưa đặt tên'}) không? Hành động này không thể hoàn tác.
           </p>
@@ -768,7 +768,7 @@ export default function AdminAccountsPage() {
           <Button
             onClick={() => setIsDeleteModalOpen(false)}
             disabled={isSubmitting}
-            sx={{ color: '#64748b', textTransform: 'none', fontWeight: 600 }}
+            sx={{ color: '#6b7280', textTransform: 'none', fontWeight: 600 }}
           >
             Hủy
           </Button>

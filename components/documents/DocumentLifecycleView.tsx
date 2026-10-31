@@ -127,14 +127,14 @@ export default function DocumentLifecycleView() {
   return (
     <Box>
       {loading && <Typography mb={2} color="text.secondary">Đang tải tài liệu từ Supabase...</Typography>}
-      {apiError && <Typography mb={2} color="error.main" fontWeight={700}>{apiError}</Typography>}
+      {apiError && <Typography mb={2} color="error.main" fontWeight={500}>{apiError}</Typography>}
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3.5} flexWrap="wrap" gap={2}>
         <Box display="flex" alignItems="center" gap={2}>
           {/* Custom SVG Icon Placed Directly without Div Wrapper */}
-          <LibraryShelfIcon size={42} className="text-[#0d8a4f] flex-shrink-0 transition-transform hover:scale-105" />
+          <LibraryShelfIcon size={42} className="text-[#1f2937] flex-shrink-0 transition-transform hover:scale-105" />
           <Box>
-            <Typography variant="h5" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.02em', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+            <Typography variant="h5" component="h1" fontWeight={500} sx={{ color: '#1f2937', fontSize: '1.5rem', lineHeight: 1 }}>
               Thư Viện Tài Liệu & Vòng Đời RAG Knowledge Base
             </Typography>
             <Typography variant="body2" color="text.secondary" fontWeight={500}>
@@ -149,16 +149,16 @@ export default function DocumentLifecycleView() {
             startIcon={<Sparkles className="w-4 h-4" />}
             onClick={() => setTestRetrievalOpen(true)}
             sx={{ 
-              borderRadius: '9999px', 
-              fontWeight: 800, 
+              borderRadius: '8px', 
+              fontWeight: 600, 
               textTransform: 'none', 
-              border: '1.5px solid rgba(13, 138, 79, 0.28)', 
-              color: '#0d8a4f',
+              border: '1.5px solid rgba(0, 0, 0, 0.12)', 
+              color: '#1f2937',
               backgroundColor: '#ffffff',
-              boxShadow: '0 2px 8px rgba(13, 138, 79, 0.08)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
               px: 2.2,
               py: 0.8,
-              '&:hover': { bgcolor: '#f0f8f4', borderColor: '#0d8a4f', transform: 'translateY(-1px)' }
+              '&:hover': { bgcolor: '#f3f4f6', borderColor: '#1f2937', transform: 'translateY(-1px)' }
             }}
           >
             Thử nghiệm RAG Retrieval
@@ -169,15 +169,15 @@ export default function DocumentLifecycleView() {
             startIcon={<Upload className="w-4 h-4" />}
             onClick={() => setUploadOpen(true)}
             sx={{ 
-              borderRadius: '9999px', 
-              backgroundColor: '#0d8a4f', 
+              borderRadius: '8px', 
+              backgroundColor: '#1f2937', 
               color: '#ffffff',
-              fontWeight: 800, 
+              fontWeight: 600, 
               textTransform: 'none', 
               px: 2.8,
               py: 0.8,
-              boxShadow: '0 4px 14px -2px rgba(13, 138, 79, 0.35)',
-              '&:hover': { backgroundColor: '#0a7543', transform: 'translateY(-1px)' }
+              boxShadow: '0 4px 14px -2px rgba(0, 0, 0, 0.12)',
+              '&:hover': { backgroundColor: '#111827', transform: 'translateY(-1px)' }
             }}
           >
             Tải lên tài liệu PDF mới
@@ -196,24 +196,24 @@ export default function DocumentLifecycleView() {
                 sx={{
                   p: 2.8,
                   position: 'relative',
-                  backgroundColor: doc.is_active ? '#ffffff' : '#fafdfb',
+                  backgroundColor: doc.is_active ? '#ffffff' : '#f8f8f8',
                   opacity: doc.is_active ? 1 : 0.88,
-                  borderColor: doc.is_active ? 'rgba(13, 138, 79, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                  boxShadow: '0 0 0 1px rgba(255,255,255,0.9) inset, 0 2px 8px -2px rgba(13, 138, 79, 0.03)',
+                  borderColor: doc.is_active ? 'rgba(0, 0, 0, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                  boxShadow: '0 0 0 1px rgba(255,255,255,0.9) inset, 0 2px 8px -2px rgba(0, 0, 0, 0.03)',
                 }}
               >
                 {/* Top Row: File icon + Title + Version + Active Toggle */}
                 <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
                   <Box display="flex" gap={1.5} alignItems="center">
-                    <div className="w-11 h-11 rounded-2xl bg-rose-50 border border-rose-100/80 flex items-center justify-center text-rose-600 flex-shrink-0 shadow-2xs">
+                    <div className="w-11 h-11 rounded-xl bg-[#f7f7f7] border border-[#e5e7eb] flex items-center justify-center text-[#ef4444] flex-shrink-0 shadow-2xs">
                       <FileText className="w-5 h-5" />
                     </div>
                     <Box>
                       <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                        <Typography variant="subtitle1" fontWeight={800} color="#0f291e" sx={{ lineHeight: 1.2 }}>
+                        <Typography variant="subtitle1" fontWeight={600} color="#1f2937" sx={{ lineHeight: 1.2 }}>
                           {doc.title}
                         </Typography>
-                        <Chip label={doc.version} size="small" sx={{ borderRadius: '9999px', fontWeight: 800, fontSize: '0.7rem', bgcolor: '#f0f8f4', color: '#0d8a4f', border: '1px solid rgba(16, 185, 129, 0.25)' }} />
+                        <Chip label={doc.version} size="small" sx={{ borderRadius: '8px', fontWeight: 600, fontSize: '0.7rem', bgcolor: '#f3f4f6', color: '#1f2937', border: '1px solid rgba(0, 0, 0, 0.12)' }} />
                       </Box>
                       <Typography variant="caption" color="text.secondary" fontWeight={500}>
                         Ngày tải: {new Date(doc.created_at).toLocaleString('vi-VN')}
@@ -236,15 +236,15 @@ export default function DocumentLifecycleView() {
                           size="small"
                           sx={{
                             '& .MuiSwitch-switchBase.Mui-checked': {
-                              color: '#0d8a4f',
+                              color: '#1f2937',
                             },
                             '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                              backgroundColor: '#10b981',
+                              backgroundColor: '#059669',
                             },
                           }}
                         />
                       }
-                      label={<span className="text-[11px] font-black text-slate-700">{doc.is_active ? 'ACTIVE' : 'OFF'}</span>}
+                      label={<span className="text-[11px] font-semibold text-gray-700">{doc.is_active ? 'ACTIVE' : 'OFF'}</span>}
                       sx={{ m: 0 }}
                     />
                   </Tooltip>
@@ -260,21 +260,21 @@ export default function DocumentLifecycleView() {
                     label={`Hiệu lực: ${doc.validity || 'Chưa xác định'}`}
                     size="small"
                     sx={{
-                      borderRadius: '9999px',
-                      fontWeight: 700,
+                      borderRadius: '8px',
+                      fontWeight: 500,
                       fontSize: '0.725rem',
-                      backgroundColor: doc.validity?.includes('Hết') ? '#fff1f2' : '#f0f8f4',
-                      color: doc.validity?.includes('Hết') ? '#be123c' : '#0d8a4f',
-                      border: `1px solid ${doc.validity?.includes('Hết') ? 'rgba(244, 63, 94, 0.25)' : 'rgba(16, 185, 129, 0.25)'}`,
+                      backgroundColor: doc.validity?.includes('Hết') ? '#f7f7f7' : '#f3f4f6',
+                      color: doc.validity?.includes('Hết') ? '#ef4444' : '#1f2937',
+                      border: `1px solid ${doc.validity?.includes('Hết') ? 'rgba(0, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.12)'}`,
                     }}
                   />
 
                   {/* Pipeline Stage Badge */}
-                  <span className="text-xs font-bold flex items-center gap-1">
-                    {doc.pipeline_stage === 'ready' && <span className="text-emerald-700 font-black flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-[#10b981]" /> Sẵn sàng RAG</span>}
-                    {doc.pipeline_stage === 'embedding' && <span className="text-[#0d8a4f] font-black flex items-center gap-1"><Cpu className="w-4 h-4 text-[#10b981] animate-spin" /> Đang embedding ({doc.progress}%)</span>}
-                    {doc.pipeline_stage === 'chunking' && <span className="text-[#0d8a4f] font-black flex items-center gap-1"><Cpu className="w-4 h-4 text-[#10b981] animate-spin" /> Đang OCR/chia chunk ({doc.progress}%)</span>}
-                    {doc.pipeline_stage === 'needs_review' && <span className="text-amber-700 font-black flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> OCR cần duyệt</span>}
+                  <span className="text-xs font-medium flex items-center gap-1">
+                    {doc.pipeline_stage === 'ready' && <span className="text-[#059669] font-semibold flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-[#059669]" /> Sẵn sàng RAG</span>}
+                    {doc.pipeline_stage === 'embedding' && <span className="text-[#1f2937] font-semibold flex items-center gap-1"><Cpu className="w-4 h-4 text-[#059669] animate-spin" /> Đang embedding ({doc.progress}%)</span>}
+                    {doc.pipeline_stage === 'chunking' && <span className="text-[#1f2937] font-semibold flex items-center gap-1"><Cpu className="w-4 h-4 text-[#059669] animate-spin" /> Đang OCR/chia chunk ({doc.progress}%)</span>}
+                    {doc.pipeline_stage === 'needs_review' && <span className="text-[#4b5563] font-semibold flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> OCR cần duyệt</span>}
                   </span>
                 </Box>
 
@@ -286,15 +286,15 @@ export default function DocumentLifecycleView() {
                       value={doc.progress} 
                       sx={{ 
                         height: 6, 
-                        borderRadius: '9999px',
-                        bgcolor: 'rgba(13, 138, 79, 0.05)',
-                        '& .MuiLinearProgress-bar': { bgcolor: '#0d8a4f', borderRadius: '9999px' }
+                        borderRadius: '8px',
+                        bgcolor: 'rgba(0, 0, 0, 0.05)',
+                        '& .MuiLinearProgress-bar': { bgcolor: '#1f2937', borderRadius: '8px' }
                       }} 
                     />
                   </Box>
                 )}
 
-                <Divider sx={{ my: 1.5, borderColor: 'rgba(13, 138, 79, 0.06)' }} />
+                <Divider sx={{ my: 1.5, borderColor: 'rgba(0, 0, 0, 0.06)' }} />
 
                 {/* Footer Buttons */}
                 <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -303,7 +303,7 @@ export default function DocumentLifecycleView() {
                     variant="text"
                     startIcon={<Eye className="w-4 h-4" />}
                     onClick={() => handlePreview(doc.id)}
-                    sx={{ borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'none', color: '#0d8a4f', px: 1.2, '&:hover': { bgcolor: '#f0f8f4' } }}
+                    sx={{ borderRadius: '8px', fontSize: '0.75rem', fontWeight: 500, textTransform: 'none', color: '#1f2937', px: 1.2, '&:hover': { bgcolor: '#f3f4f6' } }}
                   >
                     Xem PDF
                   </Button>
@@ -315,7 +315,7 @@ export default function DocumentLifecycleView() {
                       startIcon={<FilePenLine className="w-4 h-4" />}
                       onClick={() => openMarkdownEditor(doc.id, doc.title)}
                       disabled={isProcessing}
-                      sx={{ borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'none', color: '#0d8a4f' }}
+                      sx={{ borderRadius: '8px', fontSize: '0.75rem', fontWeight: 500, textTransform: 'none', color: '#1f2937' }}
                     >
                       Xem / sửa MD
                     </Button>
@@ -328,7 +328,7 @@ export default function DocumentLifecycleView() {
                         variant="outlined"
                         startIcon={<CheckCircle2 className="w-4 h-4" />}
                         onClick={() => handleApproveOcr(doc.id)}
-                        sx={{ borderRadius: '10px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'none' }}
+                        sx={{ borderRadius: '10px', fontSize: '0.75rem', fontWeight: 500, textTransform: 'none' }}
                       >
                         Duyệt OCR & tiếp tục
                       </Button>
@@ -339,7 +339,7 @@ export default function DocumentLifecycleView() {
                         startIcon={<Cpu className="w-4 h-4" />}
                         onClick={() => handleEmbed(doc.id)}
                         disabled={doc.pipeline_stage === 'embedding' || doc.pipeline_stage === 'chunking'}
-                        sx={{ borderRadius: '10px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'none' }}
+                        sx={{ borderRadius: '10px', fontSize: '0.75rem', fontWeight: 500, textTransform: 'none' }}
                       >
                         OCR & Embedding
                       </Button>
@@ -352,12 +352,12 @@ export default function DocumentLifecycleView() {
                       sx={{ 
                         borderRadius: '10px', 
                         fontSize: '0.75rem', 
-                        fontWeight: 700, 
+                        fontWeight: 500, 
                         textTransform: 'none', 
-                        backgroundColor: '#0d8a4f',
+                        backgroundColor: '#1f2937',
                         px: 1.8,
-                        boxShadow: '0 2px 8px rgba(13, 138, 79, 0.2)',
-                        '&:hover': { backgroundColor: '#0a7543' }
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+                        '&:hover': { backgroundColor: '#111827' }
                       }}
                     >
                       Xem Chunks & Vector

@@ -4,9 +4,9 @@ node_modules
 .git
 .github
 .agents
-core-ai/.venv
-core-ai/models
-core-ai/__pycache__
+.venv
+core-ai
+tsconfig.tsbuildinfo
 
 # Logs
 logs

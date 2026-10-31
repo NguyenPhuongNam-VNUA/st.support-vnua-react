@@ -39,6 +39,7 @@ mocks/
 core-ai/models/
 core-ai/data/bm25/*.json
 core-ai/data/topic_anchors.json
+core-ai/data/session_*.json
 
 # Python runtime/build caches
 __pycache__/

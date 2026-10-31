@@ -1,28 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  Button,
-  ButtonGroup,
-  TextField,
-  CircularProgress,
-} from '@mui/material';
-import Grid from '@mui/material/Grid2';
-import {
-  Activity,
-  Zap,
-  Users,
-  Server,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  ArrowUpRight,
-  AlertTriangle,
-  WifiOff,
-} from 'lucide-react';
-import { CartoonAgentRobotIcon } from '@/components/icons/SidebarIcons';
+import { Calendar } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import statsApi, { SystemStats } from '@/api/admin/statsApi';
 
 interface AgentStatusHeaderProps {
@@ -33,6 +11,58 @@ interface AgentStatusHeaderProps {
   endDate: string;
   setEndDate: (val: string) => void;
   onDrillDown?: (filter: string) => void;
+  /** Rendered under the KPI row in the left column. */
+  children?: React.ReactNode;
+  /** Right column (e.g. latest updates), beside KPIs on wide screens. */
+  aside?: React.ReactNode;
+}
+
+const RANGES = [
+  { id: 'today', label: 'Hôm nay' },
+  { id: '7d', label: '7 ngày' },
+  { id: '30d', label: '30 ngày' },
+  { id: 'custom', label: 'Tuỳ chọn' },
+];
+
+const hoverShadow =
+  'group-hover/kpi:-translate-y-px group-hover/kpi:shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)]';
+
+interface KpiProps {
+  title: string;
+  value: React.ReactNode;
+  note: React.ReactNode;
+  noteTone?: 'success' | 'destructive' | 'muted';
+  hint: string;
+  delay: number;
+  onClick?: () => void;
+}
+
+// Kravio KPI tile: muted shell + title, white panel with value and a toned note line.
+function Kpi({ title, value, note, noteTone = 'success', hint, delay, onClick }: KpiProps) {
+  const tone = noteTone === 'success' ? 'text-[#059669]' : noteTone === 'destructive' ? 'text-[#ef4444]' : 'text-[#6b7280]';
+  const Tag = onClick ? 'button' : 'section';
+  return (
+    <Tag
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      aria-label={title}
+      className="group/kpi k-rise relative flex h-[140px] min-w-0 flex-1 flex-col items-start overflow-clip rounded-xl bg-[#f6f6f6] p-1 text-left shadow-[inset_0_0_0_0.8px_#e5e7eb] outline-none focus-visible:ring-[3px] focus-visible:ring-[#9ca3af]/40"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className="relative flex w-full shrink-0 items-center justify-between p-2">
+        <h2 className="truncate whitespace-nowrap text-sm font-medium leading-none text-[#4b5563]">{title}</h2>
+      </div>
+      <div className={`relative flex min-h-px w-full flex-1 items-end justify-between rounded-[10px] border-[0.8px] border-[#e5e7eb] bg-white px-3 pb-3 transition-[box-shadow,transform] duration-300 ease-[cubic-bezier(.16,1,.3,1)] ${hoverShadow}`}>
+        <div className="flex min-w-0 flex-col items-start gap-3 whitespace-nowrap leading-none">
+          <p className="text-2xl font-medium text-[#1f2937]">{value}</p>
+          <p className="flex min-w-0 items-center gap-1.5">
+            <span className={`text-xs font-medium ${tone}`}>{note}</span>
+            <span className="truncate text-[13px] text-[#6b7280]">{hint}</span>
+          </p>
+        </div>
+      </div>
+    </Tag>
+  );
 }
 
 export default function AgentStatusHeader({
@@ -43,8 +73,10 @@ export default function AgentStatusHeader({
   endDate,
   setEndDate,
   onDrillDown,
+  children,
+  aside,
 }: AgentStatusHeaderProps) {
-  const [customOpen, setCustomOpen] = useState(timeRange === 'custom');
+  const { user } = useAuth();
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
 
@@ -71,405 +103,108 @@ export default function AgentStatusHeader({
     };
   }, []);
 
-  const handleRangeClick = (range: string) => {
-    setTimeRange(range);
-    if (range === 'custom') {
-      setCustomOpen(true);
-    } else {
-      setCustomOpen(false);
-    }
-  };
+  const status = stats?.agent_status;
+  const dash = loadingStats ? '—' : null;
+  const activeIndex = Math.max(0, RANGES.findIndex((r) => r.id === timeRange));
 
   return (
-    <Box mb={4}>
-      {/* 1. ACADEMIC EMERALD HERO BANNER (White Background with Green Border) */}
-      <Box 
-        sx={{
-          borderRadius: '22px',
-          p: { xs: 3, sm: 3.5, md: 4 },
-          mb: 3.5,
-          bgcolor: '#ffffff',
-          boxShadow: '0 8px 30px -6px rgba(13, 138, 79, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.95) inset',
-          border: '1px solid rgba(13, 138, 79, 0.2)',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        <Box 
-          display="flex" 
-          flexDirection={{ xs: 'column', lg: 'row' }} 
-          justifyContent="space-between" 
-          alignItems={{ xs: 'flex-start', lg: 'center' }} 
-          gap={3}
-          position="relative"
-          zIndex={1}
-        >
-          {/* Left Hero Content */}
-          <Box display="flex" alignItems="flex-start" gap={2.5}>
-            {/* Robot Icon Placed Directly */}
-            <CartoonAgentRobotIcon size={44} className="text-[#0d8a4f] flex-shrink-0 transition-transform hover:scale-105" />
-            <Box>
-              <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap" mb={0.5}>
-                <Typography
-                  variant="h4"
-                  fontWeight={900}
-                  sx={{ 
-                    color: '#0d8a4f', 
-                    letterSpacing: '-0.025em', 
-                    fontSize: { xs: '1.35rem', sm: '1.75rem', md: '2rem' },
-                    lineHeight: 1.2
-                  }}
+    <div className="flex w-full flex-col gap-6">
+      <div className="flex w-full flex-wrap items-start justify-between gap-4">
+        <div className="k-rise flex flex-col items-start gap-4 leading-none">
+          <h1 className="flex min-h-6 flex-wrap items-center gap-[0.25em] text-2xl font-medium text-[#1f2937]">
+            Xin chào, {user?.full_name || 'Admin VNUA'}
+            <span aria-hidden="true" className="k-wave">👋</span>
+          </h1>
+          <p className="text-[13px] text-[#4b5563]">Đây là tổng quan mới nhất về hoạt động hỏi đáp của AI Agent khoa CNTT.</p>
+        </div>
+
+        <div className="k-rise flex flex-col items-end gap-2" style={{ animationDelay: '60ms' }}>
+          <div role="radiogroup" aria-label="Khoảng thời gian" className="relative flex items-start gap-2">
+            <span
+              aria-hidden="true"
+              className="absolute top-0 h-8 w-[76px] rounded-lg border border-[#1f2937] bg-[linear-gradient(180deg,#37475d_0%,#1f2937_64.697%)] transition-[left] duration-300 ease-[cubic-bezier(.16,1,.3,1)]"
+              style={{ left: activeIndex * 84 }}
+            />
+            {RANGES.map((r) => {
+              const on = r.id === timeRange;
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => setTimeRange(r.id)}
+                  className={`relative z-10 flex h-8 w-[76px] items-center justify-center rounded-lg border-[0.8px] text-xs font-medium leading-none outline-none transition-[color,background-color,border-color,transform] duration-200 active:scale-[0.97] focus-visible:ring-[3px] focus-visible:ring-[#9ca3af]/40 ${
+                    on ? 'border-transparent bg-transparent text-white' : 'border-[#e5e7eb] bg-white text-[#4b5563] hover:border-[#d1d5db] hover:bg-[#fcfcfc]'
+                  }`}
                 >
-                  Trung Tâm Điều Hành AI Agent
-                </Typography>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#f0f8f4] text-[#0d8a4f] border border-[rgba(16,185,129,0.3)] shadow-xs">
-                  <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" />
-                  REAL-TIME OPERATIONAL
-                </span>
-              </Box>
-              <Typography variant="body2" sx={{ color: '#475569', fontWeight: 500, maxWidth: 620, fontSize: { xs: '0.825rem', sm: '0.875rem' }, lineHeight: 1.5 }}>
-                Hệ thống giám sát hiệu năng, luồng hội thoại sinh viên, tỷ lệ RAG retrieval và chất lượng giải đáp của AI Agent khoa CNTT.
-              </Typography>
-            </Box>
-          </Box>
+                  {r.label}
+                </button>
+              );
+            })}
+          </div>
 
-          {/* Right Global Time Filter Controls */}
-          <Box 
-            display="flex" 
-            flexDirection="column" 
-            alignItems={{ xs: 'flex-start', lg: 'flex-end' }} 
-            gap={1.5}
-            className="w-full lg:w-auto"
-          >
-            <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                Khoảng thời gian:
-              </span>
-              <ButtonGroup 
-                size="small" 
-                sx={{ 
-                  borderRadius: '12px', 
-                  overflow: 'hidden',
-                  bgcolor: '#f8fafc',
-                  border: '1px solid rgba(13, 138, 79, 0.15)',
-                  p: '3px'
-                }}
-              >
-                {[
-                  { id: 'today', label: 'Hôm nay' },
-                  { id: '7d', label: '7 ngày' },
-                  { id: '30d', label: '30 ngày' },
-                  { id: 'custom', label: 'Tuỳ chọn' },
-                ].map((item) => (
-                  <Button
-                    key={item.id}
-                    onClick={() => handleRangeClick(item.id)}
-                    sx={{
-                      borderRadius: '9px',
-                      fontWeight: 800,
-                      fontSize: '0.75rem',
-                      textTransform: 'none',
-                      px: { xs: 1.4, sm: 1.8 },
-                      py: 0.6,
-                      border: 'none !important',
-                      backgroundColor: timeRange === item.id ? '#0d8a4f' : 'transparent',
-                      color: timeRange === item.id ? '#ffffff' : '#64748b',
-                      boxShadow: timeRange === item.id ? '0 2px 8px rgba(13, 138, 79, 0.25)' : 'none',
-                      '&:hover': {
-                        backgroundColor: timeRange === item.id ? '#0a7543' : '#f0f8f4',
-                        color: timeRange === item.id ? '#ffffff' : '#0d8a4f',
-                      },
-                      transition: 'all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
-                    }}
-                  >
-                    {item.label}
-                  </Button>
-                ))}
-              </ButtonGroup>
-            </Box>
+          {timeRange === 'custom' && (
+            <div className="flex flex-wrap items-center gap-2 text-[13px] text-[#4b5563]">
+              <Calendar size={16} strokeWidth={1.5} className="text-[#4b5563]" />
+              {[startDate, endDate].map((val, i) => (
+                <React.Fragment key={i}>
+                  {i === 1 && <span>đến</span>}
+                  <input
+                    type="date"
+                    value={val}
+                    aria-label={i === 0 ? 'Từ ngày' : 'Đến ngày'}
+                    onChange={(e) => (i === 0 ? setStartDate(e.target.value) : setEndDate(e.target.value))}
+                    className="h-8 rounded-lg border-[0.8px] border-[#e5e7eb] bg-white px-2.5 text-[13px] text-[#1f2937] outline-none transition-[border-color,box-shadow] hover:border-[#d1d5db] focus:border-[#9ca3af] focus:shadow-[0_0_0_3px_rgba(156,163,175,0.18)]"
+                  />
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
-            {/* Custom Date Picker Dropdown */}
-            {customOpen && (
-              <Box 
-                display="flex" 
-                alignItems="center" 
-                gap={1} 
-                flexWrap="wrap" 
-                sx={{ 
-                  bgcolor: '#ffffff', 
-                  p: 1.2, 
-                  borderRadius: '12px',
-                  boxShadow: '0 8px 24px rgba(13, 138, 79, 0.08)',
-                  border: '1px solid rgba(13, 138, 79, 0.15)'
-                }}
-              >
-                <Calendar className="w-4 h-4 text-[#0d8a4f]" />
-                <TextField
-                  type="date"
-                  size="small"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  sx={{
-                    width: { xs: 120, sm: 135 },
-                    '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, color: '#0f172a', fontWeight: 600 },
-                    '& .MuiOutlinedInput-root': { borderRadius: '8px', bgcolor: '#f8fafc', borderColor: 'rgba(13, 138, 79, 0.2)' },
-                  }}
-                />
-                <span className="text-xs font-bold text-slate-600">đến</span>
-                <TextField
-                  type="date"
-                  size="small"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  sx={{
-                    width: { xs: 120, sm: 135 },
-                    '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, color: '#0f172a', fontWeight: 600 },
-                    '& .MuiOutlinedInput-root': { borderRadius: '8px', bgcolor: '#f8fafc', borderColor: 'rgba(13, 138, 79, 0.2)' },
-                  }}
-                />
-              </Box>
-            )}
-          </Box>
-        </Box>
-      </Box>
-
-      {/* 4 Real-time KPI Cards - Equal Height & Width */}
-      <Grid container spacing={2.5} alignItems="stretch">
-        {/* Card 1: Agent Status */}
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }} sx={{ display: 'flex' }}>
-          <Card
-            className="emerald-card"
-            sx={{
-              p: 0,
-              bgcolor: '#ffffff',
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              borderRadius: '20px',
-              border: '1px solid rgba(13, 138, 79, 0.12)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', '&:last-child': { pb: 2.5 } }}>
-              {/* Top Section */}
-              <Box>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.2}>
-                  <Typography variant="caption" fontWeight={800} color="#0d8a4f" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Trạng thái AI Agent
-                  </Typography>
-                  <Activity className="w-5 h-5 text-[#0d8a4f]" />
-                </Box>
-                {loadingStats ? (
-                  <Box py={1}><CircularProgress size={24} sx={{ color: '#0d8a4f' }} /></Box>
-                ) : (
-                  <>
-                    <Box display="flex" alignItems="center" gap={1.2} mb={0.5}>
-                      <div className="relative flex h-3 w-3">
-                        <span
-                          className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                            stats?.agent_status === 'online'
-                              ? 'bg-emerald-400'
-                              : stats?.agent_status === 'degraded'
-                              ? 'bg-amber-400'
-                              : 'bg-rose-400'
-                          }`}
-                        />
-                        <span
-                          className={`relative inline-flex rounded-full h-3 w-3 ${
-                            stats?.agent_status === 'online'
-                              ? 'bg-emerald-500'
-                              : stats?.agent_status === 'degraded'
-                              ? 'bg-amber-500'
-                              : 'bg-rose-500'
-                          }`}
-                        />
-                      </div>
-                      <Typography
-                        variant="h5"
-                        fontWeight={900}
-                        sx={{
-                          color:
-                            stats?.agent_status === 'online'
-                              ? '#0d8a4f'
-                              : stats?.agent_status === 'degraded'
-                              ? '#d97706'
-                              : '#e11d48',
-                          letterSpacing: '-0.025em',
-                        }}
-                      >
-                        {stats?.agent_status === 'online'
-                          ? 'Trực tuyến'
-                          : stats?.agent_status === 'degraded'
-                          ? 'Dự phòng'
-                          : 'Ngoại tuyến'}
-                      </Typography>
-                    </Box>
-                    <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                      {stats?.agent_status === 'online'
-                        ? 'RAG Pipeline & Model Online'
-                        : stats?.agent_status === 'degraded'
-                        ? 'Hệ thống hoạt động ở chế độ degraded'
-                        : 'Không kết nối được Core AI'}
-                    </Typography>
-                  </>
-                )}
-              </Box>
-
-              {/* Bottom Section - Consistent Baseline */}
-              <Box display="flex" alignItems="center" justifyContent="space-between" mt={2} pt={1.5} borderTop="1px solid rgba(13, 138, 79, 0.06)">
-                <span className="text-[11px] text-emerald-800 font-bold bg-[#f0f8f4] px-2.5 py-0.5 rounded-full border border-[#a7f3d0]/80">
-                  {stats?.agent_status === 'online' ? 'Core AI Healthy' : 'Core AI Offline'}
-                </span>
-                <ArrowUpRight className="w-4 h-4 text-slate-400" />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Card 2: Average Latency */}
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }} sx={{ display: 'flex' }}>
-          <Card
-            className="emerald-card"
-            sx={{
-              p: 0,
-              bgcolor: '#ffffff',
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              borderRadius: '20px',
-              border: '1px solid rgba(13, 138, 79, 0.12)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', '&:last-child': { pb: 2.5 } }}>
-              {/* Top Section */}
-              <Box>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.2}>
-                  <Typography variant="caption" fontWeight={800} color="#0d8a4f" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Độ trễ trung bình
-                  </Typography>
-                  <Zap className="w-5 h-5 text-[#0d8a4f]" />
-                </Box>
-                {loadingStats ? (
-                  <Box py={1}><CircularProgress size={24} sx={{ color: '#0d8a4f' }} /></Box>
-                ) : (
-                  <>
-                    <Typography variant="h5" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em', mb: 0.5 }}>
-                      {stats?.latency_ms && stats.latency_ms > 0 ? `${stats.latency_ms} ms` : 'N/A'}
-                    </Typography>
-                    <Typography variant="caption" fontWeight={700} display="block" sx={{ color: '#10b981' }}>
-                      {stats?.latency_ms && stats.latency_ms < 500 ? '⚡ Phản hồi Core AI siêu tốc' : '⏱️ Độ trễ phản hồi Core AI'}
-                    </Typography>
-                  </>
-                )}
-              </Box>
-
-              {/* Bottom Section - Consistent Baseline */}
-              <Box display="flex" alignItems="center" justifyContent="space-between" mt={2} pt={1.5} borderTop="1px solid rgba(13, 138, 79, 0.06)">
-                <span className="text-[11px] text-slate-500 font-semibold">Roundtrip Probe latency</span>
-                <Clock className="w-4 h-4 text-slate-400" />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Card 3: Active Sessions */}
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }} sx={{ display: 'flex' }}>
-          <Card
-            onClick={() => onDrillDown && onDrillDown('active')}
-            className="emerald-card cursor-pointer"
-            sx={{
-              p: 0,
-              bgcolor: '#ffffff',
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              borderRadius: '20px',
-              border: '1px solid rgba(13, 138, 79, 0.12)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', '&:last-child': { pb: 2.5 } }}>
-              {/* Top Section */}
-              <Box>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.2}>
-                  <Typography variant="caption" fontWeight={800} color="#0d8a4f" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Phiên đang hoạt động
-                  </Typography>
-                  <Users className="w-5 h-5 text-[#0d8a4f]" />
-                </Box>
-                {loadingStats ? (
-                  <Box py={1}><CircularProgress size={24} sx={{ color: '#0d8a4f' }} /></Box>
-                ) : (
-                  <>
-                    <Typography variant="h5" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em', mb: 0.5 }}>
-                      {stats?.active_sessions ?? 0} phiên
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                      Sinh viên hỏi đáp trong 24h
-                    </Typography>
-                  </>
-                )}
-              </Box>
-
-              {/* Bottom Section - Consistent Baseline */}
-              <Box display="flex" alignItems="center" justifyContent="space-between" mt={2} pt={1.5} borderTop="1px solid rgba(13, 138, 79, 0.06)">
-                <span className="text-[11px] text-slate-500 font-semibold">
-                  Tổng: {stats?.total_conversations ?? 0} hội thoại
-                </span>
-                <ArrowUpRight className="w-4 h-4 text-slate-400" />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Card 4: System Resource / RAG Memory */}
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }} sx={{ display: 'flex' }}>
-          <Card
-            className="emerald-card"
-            sx={{
-              p: 0,
-              bgcolor: '#ffffff',
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              borderRadius: '20px',
-              border: '1px solid rgba(13, 138, 79, 0.12)',
-            }}
-          >
-            <CardContent sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', '&:last-child': { pb: 2.5 } }}>
-              {/* Top Section */}
-              <Box>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.2}>
-                  <Typography variant="caption" fontWeight={800} color="#0d8a4f" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Bộ nhớ Vector DB
-                  </Typography>
-                  <Server className="w-5 h-5 text-[#0d8a4f]" />
-                </Box>
-                {loadingStats ? (
-                  <Box py={1}><CircularProgress size={24} sx={{ color: '#0d8a4f' }} /></Box>
-                ) : (
-                  <>
-                    <Typography variant="h5" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em', mb: 0.5 }}>
-                      {(stats?.vector_chunks ?? 0).toLocaleString('vi-VN')} Chunks
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                      Từ {stats?.active_documents ?? 0} tài liệu tri thức đã duyệt
-                    </Typography>
-                  </>
-                )}
-              </Box>
-
-              {/* Bottom Section - Consistent Baseline */}
-              <Box display="flex" alignItems="center" justifyContent="space-between" mt={2} pt={1.5} borderTop="1px solid rgba(13, 138, 79, 0.06)">
-                <span className="text-[11px] text-slate-500 font-semibold">PostgreSQL pgvector Engine</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
+      <div className="flex w-full flex-col gap-4 min-[1400px]:flex-row">
+      <div className="flex min-w-0 flex-1 flex-col gap-4">
+      <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Kpi
+          title="Trạng thái AI Agent"
+          delay={80}
+          value={dash ?? (status === 'online' ? 'Trực tuyến' : status === 'degraded' ? 'Dự phòng' : 'Ngoại tuyến')}
+          noteTone={status === 'online' ? 'success' : 'destructive'}
+          note={status === 'online' ? '● Healthy' : status === 'degraded' ? '● Degraded' : '● Offline'}
+          hint={status === 'online' ? 'RAG pipeline & model' : 'Core AI không ổn định'}
+        />
+        <Kpi
+          title="Độ trễ trung bình"
+          delay={150}
+          value={dash ?? (stats?.latency_ms && stats.latency_ms > 0 ? `${stats.latency_ms} ms` : 'N/A')}
+          noteTone={stats?.latency_ms && stats.latency_ms < 500 ? 'success' : 'destructive'}
+          note={stats?.latency_ms && stats.latency_ms < 500 ? 'Nhanh' : 'Chậm'}
+          hint="roundtrip tới Core AI"
+        />
+        <Kpi
+          title="Phiên đang hoạt động"
+          delay={220}
+          onClick={onDrillDown ? () => onDrillDown('active') : undefined}
+          value={dash ?? (stats?.active_sessions ?? 0).toLocaleString('vi-VN')}
+          noteTone="muted"
+          note={`${(stats?.total_conversations ?? 0).toLocaleString('vi-VN')}`}
+          hint="tổng hội thoại"
+        />
+        <Kpi
+          title="Bộ nhớ Vector DB"
+          delay={290}
+          value={dash ?? (stats?.vector_chunks ?? 0).toLocaleString('vi-VN')}
+          noteTone="muted"
+          note={`${stats?.active_documents ?? 0} tài liệu`}
+          hint="chunks đã embed"
+        />
+      </div>
+      {children}
+      </div>
+      {aside}
+      </div>
+    </div>
   );
 }

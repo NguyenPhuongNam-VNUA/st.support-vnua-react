@@ -82,9 +82,9 @@ export default function MarkdownEditorDialog({
     <Dialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="lg">
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={1.5}>
-          <FilePenLine className="w-5 h-5 text-[#0d8a4f]" />
+          <FilePenLine className="w-5 h-5 text-[#1f2937]" />
           <Box>
-            <Typography variant="h6" fontWeight={800}>Xem và chỉnh sửa Markdown</Typography>
+            <Typography variant="h6" fontWeight={600}>Xem và chỉnh sửa Markdown</Typography>
             <Typography variant="caption" color="text.secondary">{documentTitle}</Typography>
           </Box>
         </Box>
@@ -134,7 +134,7 @@ export default function MarkdownEditorDialog({
           variant="contained"
           onClick={handleSave}
           disabled={loading || saving || !content.trim() || !changed}
-          sx={{ bgcolor: '#0d8a4f', '&:hover': { bgcolor: '#0a7543' } }}
+          sx={{ bgcolor: '#1f2937', '&:hover': { bgcolor: '#111827' } }}
         >
           {saving ? 'Đang cập nhật...' : 'Cập nhật & embedding lại'}
         </Button>

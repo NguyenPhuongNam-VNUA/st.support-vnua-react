@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthorizationError, requireAuthenticatedUser } from '@/lib/auth/authorization';
 import { documentService, DocumentServiceError } from '@/services/admin/document.service';
 
 interface RouteContext {
@@ -8,15 +7,22 @@ interface RouteContext {
 
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
-    await requireAuthenticatedUser(request);
+    const documentId = Number((await context.params).id);
+    if (!Number.isSafeInteger(documentId) || documentId <= 0) {
+      return NextResponse.json(
+        { success: false, message: 'ID tài liệu không hợp lệ' },
+        { status: 400 }
+      );
+    }
+
     const url = new URL(
-      await documentService.getPublishedSignedFileUrl(Number((await context.params).id))
+      await documentService.getPublishedSignedFileUrl(documentId)
     );
     const page = Number(request.nextUrl.searchParams.get('page'));
     if (Number.isSafeInteger(page) && page > 0) url.hash = `page=${page}`;
     return NextResponse.redirect(url);
   } catch (error) {
-    if (error instanceof AuthorizationError || error instanceof DocumentServiceError) {
+    if (error instanceof DocumentServiceError) {
       return NextResponse.json(
         { success: false, message: error.message },
         { status: error.statusCode }

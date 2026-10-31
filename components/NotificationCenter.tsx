@@ -65,37 +65,23 @@ export default function NotificationCenter() {
       <IconButton
         onClick={handleClick}
         sx={{
-          color: '#475569',
-          borderRadius: '9999px',
-          p: 1.2,
-          border: '1px solid rgba(13, 138, 79, 0.1)',
-          bgcolor: '#ffffff',
-          boxShadow: '0 2px 8px -2px rgba(13, 138, 79, 0.08)',
-          transition: 'all 0.2s ease',
-          '&:hover': {
-            backgroundColor: '#f0f8f4',
-            color: '#0d8a4f',
-            borderColor: 'rgba(13, 138, 79, 0.25)',
-            transform: 'translateY(-1px)',
-            boxShadow: '0 4px 12px -2px rgba(13, 138, 79, 0.16)',
-          },
+          color: '#4b5563',
+          borderRadius: '6px',
+          p: 0.5,
+          m: -0.5,
+          transition: 'background-color .15s ease-out, transform .15s ease-out',
+          '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
+          '&:active': { transform: 'scale(0.97)' },
         }}
         aria-label="Thông báo hệ thống"
       >
-        <Badge 
-          badgeContent={unreadCount} 
-          sx={{
-            '& .MuiBadge-badge': {
-              backgroundColor: '#e11d48',
-              color: '#ffffff',
-              fontWeight: 900,
-              fontSize: '0.65rem',
-              boxShadow: '0 0 0 2px #ffffff',
-            }
-          }}
+        <Badge
+          variant="dot"
+          invisible={unreadCount === 0}
+          sx={{ '& .MuiBadge-badge': { backgroundColor: '#ef4444', boxShadow: '0 0 0 1.5px #ffffff' } }}
           overlap="circular"
         >
-          <Bell size={19} />
+          <Bell size={16} strokeWidth={1.6} />
         </Badge>
       </IconButton>
 
@@ -114,9 +100,9 @@ export default function NotificationCenter() {
         PaperProps={{
           sx: {
             width: { xs: 320, sm: 380 },
-            borderRadius: '22px',
-            boxShadow: '0 24px 50px -12px rgba(13, 138, 79, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.95) inset',
-            border: '1px solid rgba(13, 138, 79, 0.14)',
+            borderRadius: '12px',
+            boxShadow: '0 24px 50px -12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.95) inset',
+            border: '1px solid rgba(0, 0, 0, 0.12)',
             overflow: 'hidden',
             mt: 1.2,
             bgcolor: '#ffffff',
@@ -127,8 +113,8 @@ export default function NotificationCenter() {
         <Box 
           px={2.5}
           py={2}
-          bgcolor="#fbfdfc" 
-          borderBottom="1px solid rgba(13, 138, 79, 0.08)" 
+          bgcolor="#f8f8f8" 
+          borderBottom="1px solid rgba(0, 0, 0, 0.08)" 
           display="flex" 
           justifyContent="space-between" 
           alignItems="center"
@@ -137,9 +123,9 @@ export default function NotificationCenter() {
           <Box display="flex" alignItems="center" gap={1.2} sx={{ minWidth: 0 }}>
             <Typography 
               variant="subtitle2" 
-              fontWeight={900} 
+              fontWeight={600} 
               sx={{ 
-                color: '#0d8a4f', 
+                color: '#1f2937', 
                 fontSize: '0.95rem', 
                 letterSpacing: '-0.01em',
                 whiteSpace: 'nowrap',
@@ -148,7 +134,7 @@ export default function NotificationCenter() {
               Thông báo hệ thống
             </Typography>
             {unreadCount > 0 && (
-              <span className="text-[11px] font-black bg-[#ecfdf5] text-[#0d8a4f] px-2 py-0.5 rounded-full border border-[#a7f3d0] whitespace-nowrap">
+              <span className="text-[11px] font-semibold bg-[#f3f4f6] text-[#1f2937] px-2 py-0.5 rounded-full border border-[#e5e7eb] whitespace-nowrap">
                 {unreadCount} mới
               </span>
             )}
@@ -161,16 +147,16 @@ export default function NotificationCenter() {
               sx={{ 
                 textTransform: 'none', 
                 fontSize: '0.75rem', 
-                fontWeight: 800, 
-                color: '#0d8a4f', 
-                borderRadius: '9999px',
+                fontWeight: 600, 
+                color: '#1f2937', 
+                borderRadius: '8px',
                 px: 1.6,
                 py: 0.4,
-                bgcolor: '#f0f8f4',
-                border: '1px solid rgba(13, 138, 79, 0.15)',
+                bgcolor: '#f3f4f6',
+                border: '1px solid rgba(0, 0, 0, 0.12)',
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
-                '&:hover': { bgcolor: '#e2f4eb', borderColor: '#0d8a4f' } 
+                '&:hover': { bgcolor: '#f3f4f6', borderColor: '#1f2937' } 
               }}
             >
               Đã đọc
@@ -198,32 +184,32 @@ export default function NotificationCenter() {
               href={item.link}
               onClick={handleClose}
               className={`
-                group relative block p-3.5 rounded-2xl border transition-all duration-200 ${
+                group relative block p-3.5 rounded-xl border transition-all duration-200 ${
                   item.unread
-                    ? 'bg-[#f8fbf9] border-[rgba(13,138,79,0.18)] shadow-2xs hover:bg-[#eef8f2] hover:border-[#10b981]/40 hover:-translate-y-0.5'
-                    : 'bg-white border-slate-100 hover:bg-[#fbfdfc] hover:border-[rgba(13,138,79,0.15)] hover:-translate-y-0.5'
+                    ? 'bg-[#f8f8f8] border-[rgba(0, 0, 0, 0.12)] shadow-2xs hover:bg-[#f3f4f6] hover:border-[#059669]/40 hover:-translate-y-0.5'
+                    : 'bg-white border-gray-100 hover:bg-[#f8f8f8] hover:border-[rgba(0, 0, 0, 0.12)] hover:-translate-y-0.5'
                 }
               `}
             >
               {/* Header inside card: Title on single row + Unread dot */}
               <div className="flex items-center justify-between gap-2 mb-1.5">
-                <span className={`text-[13px] font-black truncate leading-tight ${item.unread ? 'text-slate-900' : 'text-slate-700'}`}>
+                <span className={`text-[13px] font-semibold truncate leading-tight ${item.unread ? 'text-gray-900' : 'text-gray-700'}`}>
                   {item.title}
                 </span>
                 {item.unread && (
-                  <span className="w-2 h-2 rounded-full bg-[#10b981] flex-shrink-0 shadow-[0_0_6px_rgba(16,185,129,0.7)]" />
+                  <span className="w-2 h-2 rounded-full bg-[#059669] flex-shrink-0 shadow-[0_0_6px_rgba(0, 0, 0, 0.12)]" />
                 )}
               </div>
 
               {/* Description */}
-              <p className="text-[11.5px] text-slate-500 font-medium leading-relaxed line-clamp-2 mb-2">
+              <p className="text-[11.5px] text-gray-500 font-medium leading-relaxed line-clamp-2 mb-2">
                 {item.desc}
               </p>
 
               {/* Footer inside card */}
-              <div className="flex items-center justify-between text-[10.5px] text-slate-400 font-semibold">
+              <div className="flex items-center justify-between text-[10.5px] text-gray-400 font-semibold">
                 <span>{item.time}</span>
-                <span className="text-[#0d8a4f] opacity-0 group-hover:opacity-100 transition-opacity font-bold">
+                <span className="text-[#1f2937] opacity-0 group-hover:opacity-100 transition-opacity font-medium">
                   Xem chi tiết →
                 </span>
               </div>
@@ -232,11 +218,11 @@ export default function NotificationCenter() {
         </Box>
 
         {/* Footer */}
-        <Box p={1.5} bgcolor="#fbfdfc" borderTop="1px solid rgba(13, 138, 79, 0.08)" textAlign="center">
+        <Box p={1.5} bgcolor="#f8f8f8" borderTop="1px solid rgba(0, 0, 0, 0.08)" textAlign="center">
           <Link
             href="/admin/conversations"
             onClick={handleClose}
-            className="inline-flex items-center justify-center w-full py-2 rounded-full text-xs font-black text-[#0d8a4f] bg-[#f0f8f4] hover:bg-[#e2f4eb] border border-[rgba(13,138,79,0.18)] shadow-2xs transition-all"
+            className="inline-flex items-center justify-center w-full py-2 rounded-full text-xs font-semibold text-[#1f2937] bg-[#f3f4f6] hover:bg-[#f3f4f6] border border-[rgba(0, 0, 0, 0.12)] shadow-2xs transition-all"
           >
             Xem trung tâm nhật ký & hội thoại
           </Link>

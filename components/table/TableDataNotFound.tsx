@@ -5,7 +5,7 @@ import FlexRowAlign from '@/components/flexbox/FlexRowAlign';
 export default function TableDataNotFound() {
   return <TableRow>
       <TableCell colSpan={7}>
-        <FlexRowAlign m={2} fontSize={18} minHeight={300} fontWeight={700} borderRadius={2} bgcolor="action.selected">
+        <FlexRowAlign m={2} fontSize={18} minHeight={300} fontWeight={500} borderRadius={2} bgcolor="action.selected">
           Chưa có dữ liệu!
         </FlexRowAlign>
       </TableCell>

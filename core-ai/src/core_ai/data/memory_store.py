@@ -63,11 +63,9 @@ class SessionMemoryStore:
     def __init__(self, ttl_seconds: float = SESSION_TTL_SECONDS, cache_file_path: Optional[str] = None) -> None:
         self.ttl_seconds = ttl_seconds
         self._sessions: Dict[str, SessionData] = {}
-        if cache_file_path:
-            self.cache_file = Path(cache_file_path)
-        else:
-            self.cache_file = Path(__file__).resolve().parent.parent.parent.parent / "data" / "session_memory_cache.json"
-        self._load_from_disk()
+        self.cache_file: Optional[Path] = Path(cache_file_path) if cache_file_path else None
+        if self.cache_file:
+            self._load_from_disk()
 
     def _load_from_disk(self) -> None:
         """Loads cached sessions from disk on startup."""

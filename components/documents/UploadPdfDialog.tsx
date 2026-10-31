@@ -114,26 +114,26 @@ export default function UploadPdfDialog({ open, onClose, onSubmit }: any) {
       slotProps={{
         backdrop: {
           sx: {
-            backgroundColor: 'rgba(15, 23, 42, 0.35)',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
             backdropFilter: 'blur(8px)',
           },
         },
       }}
       PaperProps={{
         sx: {
-          borderRadius: '24px',
+          borderRadius: '12px',
           p: 1.5,
           backgroundColor: '#ffffff',
-          boxShadow: '0 30px 60px -15px rgba(13, 138, 79, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.95) inset',
-          border: '1px solid rgba(13, 138, 79, 0.15)',
+          boxShadow: '0 30px 60px -15px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.95) inset',
+          border: '1px solid rgba(0, 0, 0, 0.12)',
         },
       }}
     >
       <DialogTitle sx={{ p: 2.5, pb: 1.5 }}>
         <Box display="flex" alignItems="center" gap={1.5}>
-          <UploadCloud className="w-6 h-6 text-[#0d8a4f]" />
+          <UploadCloud className="w-6 h-6 text-[#1f2937]" />
           <Box>
-            <Typography variant="h6" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.02em', fontSize: '1.25rem' }}>
+            <Typography variant="h6" fontWeight={600} sx={{ color: '#1f2937', letterSpacing: '-0.02em', fontSize: '1.25rem' }}>
               Tải lên tài liệu PDF
             </Typography>
             <Typography variant="caption" color="text.secondary" fontWeight={500}>
@@ -160,8 +160,8 @@ export default function UploadPdfDialog({ open, onClose, onSubmit }: any) {
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
-                    bgcolor: '#f8fbf9',
-                    '&.Mui-focused fieldset': { borderColor: '#0d8a4f' },
+                    bgcolor: '#f8f8f8',
+                    '&.Mui-focused fieldset': { borderColor: '#1f2937' },
                   },
                 }}
               />
@@ -182,15 +182,15 @@ export default function UploadPdfDialog({ open, onClose, onSubmit }: any) {
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
-                    bgcolor: '#f8fbf9',
-                    '&.Mui-focused fieldset': { borderColor: '#0d8a4f' },
+                    bgcolor: '#f8f8f8',
+                    '&.Mui-focused fieldset': { borderColor: '#1f2937' },
                   },
                 }}
               />
             )}
           />
 
-          <Typography variant="subtitle2" fontWeight={800} color="#334155">
+          <Typography variant="subtitle2" fontWeight={600} color="#374151">
             Metadata tra cứu
           </Typography>
 
@@ -257,17 +257,17 @@ export default function UploadPdfDialog({ open, onClose, onSubmit }: any) {
             startIcon={<UploadCloud className="w-5 h-5" />}
             sx={{
               py: 2.5,
-              borderRadius: '14px',
-              border: '2px dashed rgba(13, 138, 79, 0.35)',
-              backgroundColor: '#f0f8f4',
-              color: '#0d8a4f',
+              borderRadius: '12px',
+              border: '2px dashed rgba(0, 0, 0, 0.12)',
+              backgroundColor: '#f3f4f6',
+              color: '#1f2937',
               textTransform: 'none',
-              fontWeight: 800,
+              fontWeight: 600,
               fontSize: '0.9rem',
               transition: 'all 0.2s ease',
               '&:hover': {
-                backgroundColor: '#e2f4eb',
-                borderColor: '#0d8a4f',
+                backgroundColor: '#f3f4f6',
+                borderColor: '#1f2937',
               },
             }}
           >
@@ -292,12 +292,12 @@ export default function UploadPdfDialog({ open, onClose, onSubmit }: any) {
               gap={1.5}
               p={1.5}
               borderRadius="12px"
-              bgcolor="#f0f8f4"
-              border="1px solid rgba(13, 138, 79, 0.2)"
+              bgcolor="#f3f4f6"
+              border="1px solid rgba(0, 0, 0, 0.12)"
             >
-              <FileText className="w-5 h-5 text-[#0d8a4f] flex-shrink-0" />
+              <FileText className="w-5 h-5 text-[#1f2937] flex-shrink-0" />
               <Box flex={1} minWidth={0}>
-                <Typography variant="body2" fontWeight={800} color="#0d8a4f" noWrap>
+                <Typography variant="body2" fontWeight={600} color="#1f2937" noWrap>
                   {selectedFile.name}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
@@ -313,16 +313,16 @@ export default function UploadPdfDialog({ open, onClose, onSubmit }: any) {
         <Button
           onClick={handleClose}
           sx={{
-            borderRadius: '9999px',
+            borderRadius: '8px',
             px: 3,
             py: 1,
             textTransform: 'none',
-            fontWeight: 800,
-            color: '#475569',
+            fontWeight: 600,
+            color: '#4b5563',
             bgcolor: '#ffffff',
             border: '1px solid rgba(0,0,0,0.08)',
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            '&:hover': { bgcolor: '#f0f8f4', color: '#0d8a4f' },
+            '&:hover': { bgcolor: '#f3f4f6', color: '#1f2937' },
           }}
         >
           Hủy bỏ
@@ -331,17 +331,17 @@ export default function UploadPdfDialog({ open, onClose, onSubmit }: any) {
           variant="contained"
           onClick={handleSubmit(onFormSubmit)}
           sx={{
-            borderRadius: '9999px',
+            borderRadius: '8px',
             px: 3.5,
             py: 1,
             textTransform: 'none',
-            fontWeight: 800,
-            backgroundColor: '#0d8a4f',
+            fontWeight: 600,
+            backgroundColor: '#1f2937',
             color: '#ffffff',
-            boxShadow: '0 4px 14px -2px rgba(13, 138, 79, 0.35)',
+            boxShadow: '0 4px 14px -2px rgba(0, 0, 0, 0.12)',
             '&:hover': {
-              backgroundColor: '#0a7543',
-              boxShadow: '0 6px 18px -2px rgba(13, 138, 79, 0.45)',
+              backgroundColor: '#111827',
+              boxShadow: '0 6px 18px -2px rgba(0, 0, 0, 0.12)',
             },
           }}
         >

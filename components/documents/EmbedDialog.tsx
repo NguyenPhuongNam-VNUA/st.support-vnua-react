@@ -32,26 +32,26 @@ export default function EmbedDialog({ open, onClose, onConfirm, defaultValues }:
       slotProps={{
         backdrop: {
           sx: {
-            backgroundColor: 'rgba(15, 23, 42, 0.35)',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
             backdropFilter: 'blur(8px)',
           },
         },
       }}
       PaperProps={{
         sx: {
-          borderRadius: '24px',
+          borderRadius: '12px',
           p: 1.5,
           backgroundColor: '#ffffff',
-          boxShadow: '0 30px 60px -15px rgba(13, 138, 79, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.95) inset',
-          border: '1px solid rgba(13, 138, 79, 0.15)',
+          boxShadow: '0 30px 60px -15px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.95) inset',
+          border: '1px solid rgba(0, 0, 0, 0.12)',
         },
       }}
     >
       <DialogTitle sx={{ p: 2.5, pb: 1.5 }}>
         <Box display="flex" alignItems="center" gap={1.5}>
-          <Settings2 className="w-6 h-6 text-[#0d8a4f]" />
+          <Settings2 className="w-6 h-6 text-[#1f2937]" />
           <Box>
-            <Typography variant="h6" fontWeight={900} sx={{ color: '#0d8a4f', fontSize: '1.25rem', letterSpacing: '-0.02em' }}>
+            <Typography variant="h6" fontWeight={600} sx={{ color: '#1f2937', fontSize: '1.25rem', letterSpacing: '-0.02em' }}>
               Chọn tham số Embedding
             </Typography>
             <Typography variant="caption" color="text.secondary" fontWeight={500}>
@@ -63,8 +63,8 @@ export default function EmbedDialog({ open, onClose, onConfirm, defaultValues }:
 
       <DialogContent sx={{ p: 2.5, pt: 1 }}>
         <Box mt={2}>
-          <Typography gutterBottom fontWeight={700} sx={{ color: '#0f172a', fontSize: '0.875rem' }}>
-            Độ dài mỗi đoạn (Chunk Size): <span className="text-[#0d8a4f] font-black">{chunkSize} ký tự</span>
+          <Typography gutterBottom fontWeight={500} sx={{ color: '#1f2937', fontSize: '0.875rem' }}>
+            Độ dài mỗi đoạn (Chunk Size): <span className="text-[#1f2937] font-semibold">{chunkSize} ký tự</span>
           </Typography>
           <Slider
             value={chunkSize}
@@ -73,19 +73,19 @@ export default function EmbedDialog({ open, onClose, onConfirm, defaultValues }:
             step={100}
             onChange={(_, value) => setChunkSize(value as number)}
             sx={{
-              color: '#0d8a4f',
+              color: '#1f2937',
               '& .MuiSlider-thumb': {
-                boxShadow: '0 2px 8px rgba(13, 138, 79, 0.4)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
               },
             }}
           />
         </Box>
 
         <Box mt={3.5}>
-          <Typography gutterBottom fontWeight={700} sx={{ color: '#0f172a', fontSize: '0.875rem' }}>
-            Độ chồng lặp giữa các đoạn (Chunk Overlap): <span className="text-[#0d8a4f] font-black">{chunkOverlap} ký tự</span>
+          <Typography gutterBottom fontWeight={500} sx={{ color: '#1f2937', fontSize: '0.875rem' }}>
+            Độ chồng lặp giữa các đoạn (Chunk Overlap): <span className="text-[#1f2937] font-semibold">{chunkOverlap} ký tự</span>
             <Tooltip title="Giúp giữ ngữ cảnh liền mạch khi chia đoạn">
-              <Info className="w-4 h-4 ml-1 inline text-slate-400" />
+              <Info className="w-4 h-4 ml-1 inline text-gray-400" />
             </Tooltip>
           </Typography>
           <Slider
@@ -95,9 +95,9 @@ export default function EmbedDialog({ open, onClose, onConfirm, defaultValues }:
             step={50}
             onChange={(_, value) => setChunkOverlap(value as number)}
             sx={{
-              color: '#0d8a4f',
+              color: '#1f2937',
               '& .MuiSlider-thumb': {
-                boxShadow: '0 2px 8px rgba(13, 138, 79, 0.4)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
               },
             }}
           />
@@ -108,16 +108,16 @@ export default function EmbedDialog({ open, onClose, onConfirm, defaultValues }:
         <Button
           onClick={onClose}
           sx={{
-            borderRadius: '9999px',
+            borderRadius: '8px',
             px: 3,
             py: 1,
             textTransform: 'none',
-            fontWeight: 800,
-            color: '#475569',
+            fontWeight: 600,
+            color: '#4b5563',
             bgcolor: '#ffffff',
             border: '1px solid rgba(0,0,0,0.08)',
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            '&:hover': { bgcolor: '#f0f8f4', color: '#0d8a4f' },
+            '&:hover': { bgcolor: '#f3f4f6', color: '#1f2937' },
           }}
         >
           Hủy bỏ
@@ -126,17 +126,17 @@ export default function EmbedDialog({ open, onClose, onConfirm, defaultValues }:
           variant="contained"
           onClick={handleConfirm}
           sx={{
-            borderRadius: '9999px',
+            borderRadius: '8px',
             px: 3.5,
             py: 1,
             textTransform: 'none',
-            fontWeight: 800,
-            backgroundColor: '#0d8a4f',
+            fontWeight: 600,
+            backgroundColor: '#1f2937',
             color: '#ffffff',
-            boxShadow: '0 4px 14px -2px rgba(13, 138, 79, 0.35)',
+            boxShadow: '0 4px 14px -2px rgba(0, 0, 0, 0.12)',
             '&:hover': {
-              backgroundColor: '#0a7543',
-              boxShadow: '0 6px 18px -2px rgba(13, 138, 79, 0.45)',
+              backgroundColor: '#111827',
+              boxShadow: '0 6px 18px -2px rgba(0, 0, 0, 0.12)',
             },
           }}
         >

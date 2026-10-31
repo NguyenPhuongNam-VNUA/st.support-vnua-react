@@ -53,10 +53,10 @@ import questionsExcelApi from '@/api/admin/questionsExcelApi';
 export const TOPIC_TAGS = ['Học vụ', 'Học phí', 'Ký túc xá', 'Tuyển sinh', 'Bảo lưu', 'Đồ án', 'Khác'];
 
 export const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
-  pending: { label: 'Chờ duyệt', bg: '#fffbeb', text: '#b45309', border: '#fde68a' },
-  approved: { label: 'Đã duyệt', bg: '#ecfdf5', text: '#047857', border: '#a7f3d0' },
-  rejected: { label: 'Từ chối', bg: '#fff1f2', text: '#be123c', border: '#fecdd3' },
-  needs_edit: { label: 'Cần chỉnh sửa', bg: '#f0fdf4', text: '#006837', border: '#a7f3d0' },
+  pending: { label: 'Chờ duyệt', bg: '#f7f7f7', text: '#4b5563', border: '#e5e7eb' },
+  approved: { label: 'Đã duyệt', bg: '#f3f4f6', text: '#1f2937', border: '#e5e7eb' },
+  rejected: { label: 'Từ chối', bg: '#f7f7f7', text: '#ef4444', border: '#e5e7eb' },
+  needs_edit: { label: 'Cần chỉnh sửa', bg: '#f3f4f6', text: '#1f2937', border: '#e5e7eb' },
 };
 
 interface QuestionRow {
@@ -282,9 +282,9 @@ export default function QuestionsWorkflowView() {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
         <Box display="flex" alignItems="center" gap={2}>
           {/* Custom SVG Icon Placed Directly without Div Wrapper */}
-          <ConfigurationPlaybookIcon size={42} className="text-[#0d8a4f] flex-shrink-0 transition-transform hover:scale-105" />
+          <ConfigurationPlaybookIcon size={42} className="text-[#1f2937] flex-shrink-0 transition-transform hover:scale-105" />
           <Box>
-            <Typography variant="h5" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.02em', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+            <Typography variant="h5" component="h1" fontWeight={500} sx={{ color: '#1f2937', fontSize: '1.5rem', lineHeight: 1 }}>
               Quản Lý & Kiểm Duyệt Tri Thức Hỏi - Đáp
             </Typography>
             <Typography variant="body2" color="text.secondary" fontWeight={500}>
@@ -299,7 +299,7 @@ export default function QuestionsWorkflowView() {
           component="label"
           variant="outlined"
           startIcon={<FileSpreadsheet className="w-4 h-4" />}
-          sx={{ borderRadius: '10px', fontWeight: 700, textTransform: 'none', px: 2.2 }}
+          sx={{ borderRadius: '10px', fontWeight: 500, textTransform: 'none', px: 2.2 }}
         >
           Nhập Excel
           <input
@@ -321,13 +321,13 @@ export default function QuestionsWorkflowView() {
           }}
           sx={{
             borderRadius: '10px',
-            backgroundColor: '#0d8a4f',
-            fontWeight: 700,
+            backgroundColor: '#1f2937',
+            fontWeight: 500,
             textTransform: 'none',
             px: 2.5,
             py: 0.8,
-            boxShadow: '0 4px 14px rgba(13, 138, 79, 0.2)',
-            '&:hover': { backgroundColor: '#0a7543' },
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.12)',
+            '&:hover': { backgroundColor: '#111827' },
           }}
         >
           Thêm câu hỏi mới
@@ -337,7 +337,7 @@ export default function QuestionsWorkflowView() {
 
       {/* Tabs Filter Card */}
       <Card className="emerald-card" sx={{ p: 0, bgcolor: '#ffffff', mb: 3 }}>
-        {loading && <LinearProgress aria-label="Đang tải danh sách câu hỏi" sx={{ bgcolor: '#d1fae5', '& .MuiLinearProgress-bar': { bgcolor: '#0d8a4f' } }} />}
+        {loading && <LinearProgress aria-label="Đang tải danh sách câu hỏi" sx={{ bgcolor: '#f3f4f6', '& .MuiLinearProgress-bar': { bgcolor: '#1f2937' } }} />}
         <Tabs
           value={currentTab}
           onChange={(_, value) => {
@@ -350,21 +350,21 @@ export default function QuestionsWorkflowView() {
           allowScrollButtonsMobile
           sx={{
             px: { xs: 1, sm: 2 },
-            borderBottom: '1px solid rgba(13, 138, 79, 0.08)',
+            borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
             '& .MuiTab-root': {
               textTransform: 'none',
-              fontWeight: 800,
+              fontWeight: 600,
               fontSize: '0.875rem',
               py: 1.8,
-              color: '#475569',
+              color: '#4b5563',
               whiteSpace: 'nowrap',
               transition: 'all 0.15s ease',
               '&.Mui-selected': {
-                color: '#0d8a4f',
+                color: '#1f2937',
               },
             },
             '& .MuiTabs-indicator': {
-              backgroundColor: '#0d8a4f',
+              backgroundColor: '#1f2937',
               height: '3px',
               borderRadius: '3px 3px 0 0',
             },
@@ -388,7 +388,7 @@ export default function QuestionsWorkflowView() {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Search className="w-4 h-4 text-slate-400" />
+                    <Search className="w-4 h-4 text-gray-400" />
                   </InputAdornment>
                 ),
               }}
@@ -396,11 +396,11 @@ export default function QuestionsWorkflowView() {
                 flex: 1, 
                 '& .MuiOutlinedInput-root': { 
                   borderRadius: '12px', 
-                  bgcolor: '#fbfdfc',
-                  '& fieldset': { borderColor: 'rgba(0, 60, 30, 0.08)' },
-                  '&:hover fieldset': { borderColor: 'rgba(0, 104, 55, 0.25)' },
-                  '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(0, 104, 55, 0.12)' },
-                  '&.Mui-focused fieldset': { borderColor: '#006837' }
+                  bgcolor: '#f8f8f8',
+                  '& fieldset': { borderColor: 'rgba(0, 0, 0, 0.08)' },
+                  '&:hover fieldset': { borderColor: 'rgba(0, 0, 0, 0.12)' },
+                  '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(0, 0, 0, 0.12)' },
+                  '&.Mui-focused fieldset': { borderColor: '#1f2937' }
                 } 
               }}
             />
@@ -417,11 +417,11 @@ export default function QuestionsWorkflowView() {
                 sx={{ 
                   borderRadius: '12px', 
                   fontSize: '0.85rem',
-                  bgcolor: '#fbfdfc',
-                  '& fieldset': { borderColor: 'rgba(0, 60, 30, 0.08)' },
-                  '&:hover fieldset': { borderColor: 'rgba(0, 104, 55, 0.25)' },
-                  '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(0, 104, 55, 0.12)' },
-                  '&.Mui-focused fieldset': { borderColor: '#006837' }
+                  bgcolor: '#f8f8f8',
+                  '& fieldset': { borderColor: 'rgba(0, 0, 0, 0.08)' },
+                  '&:hover fieldset': { borderColor: 'rgba(0, 0, 0, 0.12)' },
+                  '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(0, 0, 0, 0.12)' },
+                  '&.Mui-focused fieldset': { borderColor: '#1f2937' }
                 }}
               >
                 <MenuItem value="">Tất cả chủ đề</MenuItem>
@@ -450,10 +450,10 @@ export default function QuestionsWorkflowView() {
                   px: 1.5,
                   textTransform: 'none',
                   fontSize: '0.75rem',
-                  fontWeight: 750,
+                  fontWeight: 600,
                   whiteSpace: 'nowrap',
-                  borderColor: 'rgba(0, 60, 30, 0.1)',
-                  '&.Mui-selected': { color: '#006837', bgcolor: '#ecfdf5' },
+                  borderColor: 'rgba(0, 0, 0, 0.1)',
+                  '&.Mui-selected': { color: '#1f2937', bgcolor: '#f3f4f6' },
                 },
               }}
             >
@@ -465,8 +465,8 @@ export default function QuestionsWorkflowView() {
 
           {/* Bulk Action Controls */}
           {selectedIds.length > 0 && (
-            <Box display="flex" alignItems="center" gap={1} bgcolor="#ecfdf5" p={1} border="1px solid rgba(16, 185, 129, 0.3)" sx={{ borderRadius: '12px', boxShadow: '0 0 0 1px rgba(255,255,255,0.8) inset' }}>
-              <span className="text-xs font-black text-[#006837]">Đã chọn {selectedIds.length} mục:</span>
+            <Box display="flex" alignItems="center" gap={1} bgcolor="#f3f4f6" p={1} border="1px solid rgba(0, 0, 0, 0.12)" sx={{ borderRadius: '12px', boxShadow: '0 0 0 1px rgba(255,255,255,0.8) inset' }}>
+              <span className="text-xs font-semibold text-[#1f2937]">Đã chọn {selectedIds.length} mục:</span>
               <Tooltip title={hasSelectedUnanswered ? 'Hãy thêm câu trả lời cho các câu hỏi đã chọn trước khi duyệt' : 'Duyệt các câu hỏi đã chọn'}>
                 <span>
                   <Button
@@ -474,7 +474,7 @@ export default function QuestionsWorkflowView() {
                     variant="contained"
                     disabled={bulkLoading || hasSelectedUnanswered}
                     onClick={() => handleBulkStatusChange('approved')}
-                    sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 800, fontSize: '0.75rem', py: 0.4, bgcolor: '#006837', '&:hover': { bgcolor: '#00562e' } }}
+                    sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 600, fontSize: '0.75rem', py: 0.4, bgcolor: '#1f2937', '&:hover': { bgcolor: '#1f2937' } }}
                   >
                     Duyệt hàng loạt
                   </Button>
@@ -485,7 +485,7 @@ export default function QuestionsWorkflowView() {
                 variant="contained"
                 disabled={bulkLoading}
                 onClick={() => handleBulkStatusChange('rejected')}
-                sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 800, fontSize: '0.75rem', py: 0.4, bgcolor: '#e11d48', '&:hover': { bgcolor: '#be123c' } }}
+                sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 600, fontSize: '0.75rem', py: 0.4, bgcolor: '#ef4444', '&:hover': { bgcolor: '#ef4444' } }}
               >
                 Từ chối hàng loạt
               </Button>
@@ -494,7 +494,7 @@ export default function QuestionsWorkflowView() {
                 variant="outlined"
                 disabled={bulkLoading}
                 onClick={handleBulkDelete}
-                sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 800, fontSize: '0.75rem', py: 0.4, borderColor: '#e11d48', color: '#e11d48', '&:hover': { bgcolor: '#fff1f2' } }}
+                sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 600, fontSize: '0.75rem', py: 0.4, borderColor: '#ef4444', color: '#ef4444', '&:hover': { bgcolor: '#f7f7f7' } }}
               >
                 Xoá
               </Button>
@@ -505,23 +505,23 @@ export default function QuestionsWorkflowView() {
         {/* Main Questions Table */}
         <TableContainer component={Paper} elevation={0} sx={{ overflowX: 'auto' }}>
           <Table size="small" sx={{ minWidth: 700 }}>
-            <TableHead sx={{ backgroundColor: '#fafdfb' }}>
+            <TableHead sx={{ backgroundColor: '#f8f8f8' }}>
               <TableRow>
-                <TableCell padding="checkbox" sx={{ borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>
+                <TableCell padding="checkbox" sx={{ borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>
                   <Checkbox
                     size="small"
                     checked={questions.length > 0 && selectedIds.length === questions.length}
                     indeterminate={selectedIds.length > 0 && selectedIds.length < questions.length}
                     onChange={handleSelectAll}
                     inputProps={{ 'aria-label': 'Chọn tất cả câu hỏi trên trang này' }}
-                    sx={{ color: '#0d8a4f', '&.Mui-checked': { color: '#0d8a4f' } }}
+                    sx={{ color: '#1f2937', '&.Mui-checked': { color: '#1f2937' } }}
                   />
                 </TableCell>
-                <TableCell sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#0d8a4f', borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>CÂU HỎI & CÂU TRẢ LỜI</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#0d8a4f', width: 110, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>CHỦ ĐỀ</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#0d8a4f', width: 120, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>TRẠNG THÁI</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#0d8a4f', width: 130, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>TRÙNG LẶP %</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#0d8a4f', width: 260, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>HÀNH ĐỘNG</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#1f2937', borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>CÂU HỎI & CÂU TRẢ LỜI</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#1f2937', width: 110, borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>CHỦ ĐỀ</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#1f2937', width: 120, borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>TRẠNG THÁI</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#1f2937', width: 130, borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>TRÙNG LẶP %</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#1f2937', width: 260, borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>HÀNH ĐỘNG</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -537,21 +537,21 @@ export default function QuestionsWorkflowView() {
                     selected={isSelected}
                     sx={{
                       transition: 'background-color 0.18s cubic-bezier(0.2, 0.8, 0.2, 1)',
-                      '&:hover': { bgcolor: '#f0f8f4 !important' },
+                      '&:hover': { bgcolor: '#f3f4f6 !important' },
                       '&:last-child td': { borderBottom: 0 },
                     }}
                   >
-                    <TableCell padding="checkbox" sx={{ borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
+                    <TableCell padding="checkbox" sx={{ borderBottom: '1px solid rgba(0, 0, 0, 0.04)' }}>
                       <Checkbox
                         size="small"
                         checked={isSelected}
                         onChange={() => handleSelectOne(row.id)}
                         inputProps={{ 'aria-label': `Chọn câu hỏi #${row.id}` }}
-                        sx={{ color: '#0d8a4f', '&.Mui-checked': { color: '#0d8a4f' } }}
+                        sx={{ color: '#1f2937', '&.Mui-checked': { color: '#1f2937' } }}
                       />
                     </TableCell>
-                    <TableCell sx={{ py: 1.5, borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
-                      <Typography variant="body2" fontWeight={800} color="#0f291e" sx={{ fontSize: '0.875rem' }}>
+                    <TableCell sx={{ py: 1.5, borderBottom: '1px solid rgba(0, 0, 0, 0.04)' }}>
+                      <Typography variant="body2" fontWeight={600} color="#1f2937" sx={{ fontSize: '0.875rem' }}>
                         {row.question}
                       </Typography>
                       {hasAnswer ? (
@@ -564,32 +564,32 @@ export default function QuestionsWorkflowView() {
                           label="Chưa có câu trả lời"
                           size="small"
                           onClick={() => openEdit(row)}
-                          sx={{ mt: 0.75, color: '#c2410c', bgcolor: '#fff7ed', border: '1px solid #fed7aa', fontWeight: 800, cursor: 'pointer' }}
+                          sx={{ mt: 0.75, color: '#4b5563', bgcolor: '#f7f7f7', border: '1px solid #e5e7eb', fontWeight: 600, cursor: 'pointer' }}
                         />
                       )}
-                      <Typography component="span" display="block" sx={{ mt: 0.5, fontSize: '0.6875rem', color: '#94a3b8', fontWeight: 500 }}>
+                      <Typography component="span" display="block" sx={{ mt: 0.5, fontSize: '0.6875rem', color: '#9ca3af', fontWeight: 500 }}>
                         Tạo lúc: {new Date(row.created_at).toLocaleString('vi-VN')}
                       </Typography>
                     </TableCell>
 
-                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
+                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(0, 0, 0, 0.04)' }}>
                       <Chip
                         label={row.topic}
                         size="small"
                         sx={{
-                          borderRadius: '9999px',
-                          fontWeight: 800,
+                          borderRadius: '8px',
+                          fontWeight: 600,
                           fontSize: '0.7rem',
-                          backgroundColor: '#f0f8f4',
-                          color: '#0d8a4f',
-                          border: '1px solid rgba(16, 185, 129, 0.25)',
+                          backgroundColor: '#f3f4f6',
+                          color: '#1f2937',
+                          border: '1px solid rgba(0, 0, 0, 0.12)',
                         }}
                       />
                     </TableCell>
 
-                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
+                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(0, 0, 0, 0.04)' }}>
                       <span
-                        className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full inline-block border shadow-2xs"
+                        className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full inline-block border shadow-2xs"
                         style={{
                           color: statusInfo.text,
                           backgroundColor: statusInfo.bg,
@@ -600,7 +600,7 @@ export default function QuestionsWorkflowView() {
                       </span>
                     </TableCell>
 
-                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
+                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(0, 0, 0, 0.04)' }}>
                       {row.duplicate_score > 0 ? (
                         <Tooltip title="Click để xem so sánh side-by-side">
                           <Chip
@@ -609,22 +609,22 @@ export default function QuestionsWorkflowView() {
                             onClick={() => openCompare(row)}
                             size="small"
                             sx={{
-                              borderRadius: '9999px',
-                              fontWeight: 800,
+                              borderRadius: '8px',
+                              fontWeight: 600,
                               fontSize: '0.7rem',
-                              backgroundColor: row.duplicate_score >= 85 ? '#fff1f2' : '#fffbeb',
-                              color: row.duplicate_score >= 85 ? '#be123c' : '#b45309',
-                              border: `1px solid ${row.duplicate_score >= 85 ? 'rgba(244, 63, 94, 0.25)' : 'rgba(245, 158, 11, 0.25)'}`,
+                              backgroundColor: row.duplicate_score >= 85 ? '#f7f7f7' : '#f7f7f7',
+                              color: row.duplicate_score >= 85 ? '#ef4444' : '#4b5563',
+                              border: `1px solid ${row.duplicate_score >= 85 ? 'rgba(0, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.12)'}`,
                               cursor: 'pointer',
                             }}
                           />
                         </Tooltip>
                       ) : (
-                        <span className="text-xs text-slate-400 font-medium">—</span>
+                        <span className="text-xs text-gray-400 font-medium">—</span>
                       )}
                     </TableCell>
 
-                    <TableCell align="right" sx={{ borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
+                    <TableCell align="right" sx={{ borderBottom: '1px solid rgba(0, 0, 0, 0.04)' }}>
                       <Box display="flex" justifyContent="flex-end" gap={0.5}>
                         <Tooltip title={hasAnswer ? 'Duyệt câu hỏi' : 'Chưa thể duyệt khi chưa có câu trả lời'}>
                           <span>
@@ -633,7 +633,7 @@ export default function QuestionsWorkflowView() {
                               aria-label={`Duyệt câu hỏi #${row.id}`}
                               disabled={!hasAnswer || row.status === 'approved' || actionLoading}
                               onClick={() => handleChangeStatus(row.id, 'approved')}
-                              sx={{ color: '#0d8a4f', borderRadius: '8px', '&:hover': { backgroundColor: '#f0f8f4' } }}
+                              sx={{ color: '#1f2937', borderRadius: '8px', '&:hover': { backgroundColor: '#f3f4f6' } }}
                             >
                               <CheckCircle className="w-4 h-4" aria-hidden="true" />
                             </IconButton>
@@ -647,7 +647,7 @@ export default function QuestionsWorkflowView() {
                               aria-label={`Từ chối câu hỏi #${row.id}`}
                               disabled={row.status === 'rejected' || actionLoading}
                               onClick={() => handleChangeStatus(row.id, 'rejected')}
-                              sx={{ color: '#be123c', borderRadius: '8px', '&:hover': { backgroundColor: '#fff1f2' } }}
+                              sx={{ color: '#ef4444', borderRadius: '8px', '&:hover': { backgroundColor: '#f7f7f7' } }}
                             >
                               <XCircle className="w-4 h-4" aria-hidden="true" />
                             </IconButton>
@@ -661,7 +661,7 @@ export default function QuestionsWorkflowView() {
                               aria-label={`Đánh dấu câu hỏi #${row.id} cần chỉnh sửa`}
                               disabled={row.status === 'needs_edit' || actionLoading}
                               onClick={() => handleChangeStatus(row.id, 'needs_edit')}
-                              sx={{ color: '#b45309', borderRadius: '8px', '&:hover': { backgroundColor: '#fffbeb' } }}
+                              sx={{ color: '#4b5563', borderRadius: '8px', '&:hover': { backgroundColor: '#f7f7f7' } }}
                             >
                               <CircleAlert className="w-4 h-4" aria-hidden="true" />
                             </IconButton>
@@ -673,7 +673,7 @@ export default function QuestionsWorkflowView() {
                             size="small"
                             aria-label={hasAnswer ? `Sửa câu hỏi #${row.id}` : `Thêm câu trả lời cho câu hỏi #${row.id}`}
                             onClick={() => openEdit(row)}
-                            sx={{ color: hasAnswer ? '#2563eb' : '#c2410c', borderRadius: '8px', '&:hover': { backgroundColor: hasAnswer ? '#eff6ff' : '#fff7ed' } }}
+                            sx={{ color: hasAnswer ? '#4b5563' : '#4b5563', borderRadius: '8px', '&:hover': { backgroundColor: hasAnswer ? '#f7f7f7' : '#f7f7f7' } }}
                           >
                             {hasAnswer ? <Edit3 className="w-4 h-4" aria-hidden="true" /> : <MessageSquarePlus className="w-4 h-4" aria-hidden="true" />}
                           </IconButton>
@@ -684,7 +684,7 @@ export default function QuestionsWorkflowView() {
                             size="small"
                             aria-label={`Xem lịch sử thay đổi câu hỏi #${row.id}`}
                             onClick={() => openAudit(row)}
-                            sx={{ color: '#64748b', borderRadius: '8px', '&:hover': { backgroundColor: '#f8fafc' } }}
+                            sx={{ color: '#6b7280', borderRadius: '8px', '&:hover': { backgroundColor: '#f8f8f8' } }}
                           >
                             <History className="w-4 h-4" aria-hidden="true" />
                           </IconButton>
@@ -698,7 +698,7 @@ export default function QuestionsWorkflowView() {
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 7, color: 'text.secondary' }}>
                     <MessageSquarePlus size={30} aria-hidden="true" />
-                    <Typography mt={1} fontWeight={700}>Không có câu hỏi phù hợp bộ lọc.</Typography>
+                    <Typography mt={1} fontWeight={500}>Không có câu hỏi phù hợp bộ lọc.</Typography>
                   </TableCell>
                 </TableRow>
               )}
@@ -722,13 +722,13 @@ export default function QuestionsWorkflowView() {
           rowsPerPageOptions={[10, 20, 50, 100]}
           labelRowsPerPage="Số dòng/trang:"
           labelDisplayedRows={({ from, to, count }) => `${from}–${to} / ${count}`}
-          sx={{ borderTop: '1px solid rgba(13, 138, 79, 0.08)' }}
+          sx={{ borderTop: '1px solid rgba(0, 0, 0, 0.08)' }}
         />
       </Card>
 
       {/* Quick Add Inline Card */}
       <Card id="add-new-question-box" className="emerald-card" sx={{ p: 3.5, bgcolor: '#ffffff', mt: 4 }}>
-        <Typography variant="h6" fontWeight={800} sx={{ color: '#0d8a4f', mb: 2 }}>
+        <Typography variant="h6" fontWeight={600} sx={{ color: '#1f2937', mb: 2 }}>
           Thêm câu hỏi mới vào quy trình duyệt tri thức
         </Typography>
         <Box display="flex" flexDirection="column" gap={2}>
@@ -742,11 +742,11 @@ export default function QuestionsWorkflowView() {
               sx={{ 
                 '& .MuiOutlinedInput-root': { 
                   borderRadius: '12px',
-                  bgcolor: '#fbfdfc',
-                  '& fieldset': { borderColor: 'rgba(13, 138, 79, 0.08)' },
-                  '&:hover fieldset': { borderColor: 'rgba(16, 185, 129, 0.28)' },
-                  '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.15)' },
-                  '&.Mui-focused fieldset': { borderColor: '#0d8a4f' }
+                  bgcolor: '#f8f8f8',
+                  '& fieldset': { borderColor: 'rgba(0, 0, 0, 0.08)' },
+                  '&:hover fieldset': { borderColor: 'rgba(0, 0, 0, 0.12)' },
+                  '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(0, 0, 0, 0.12)' },
+                  '&.Mui-focused fieldset': { borderColor: '#1f2937' }
                 } 
               }}
             />
@@ -756,11 +756,11 @@ export default function QuestionsWorkflowView() {
                 onChange={(e) => setNewTopic(e.target.value)}
                 sx={{ 
                   borderRadius: '12px',
-                  bgcolor: '#fbfdfc',
-                  '& fieldset': { borderColor: 'rgba(13, 138, 79, 0.08)' },
-                  '&:hover fieldset': { borderColor: 'rgba(16, 185, 129, 0.28)' },
-                  '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.15)' },
-                  '&.Mui-focused fieldset': { borderColor: '#0d8a4f' }
+                  bgcolor: '#f8f8f8',
+                  '& fieldset': { borderColor: 'rgba(0, 0, 0, 0.08)' },
+                  '&:hover fieldset': { borderColor: 'rgba(0, 0, 0, 0.12)' },
+                  '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(0, 0, 0, 0.12)' },
+                  '&.Mui-focused fieldset': { borderColor: '#1f2937' }
                 }}
               >
                 {TOPIC_TAGS.map((tag) => (
@@ -783,11 +783,11 @@ export default function QuestionsWorkflowView() {
             sx={{ 
               '& .MuiOutlinedInput-root': { 
                 borderRadius: '12px',
-                bgcolor: '#fbfdfc',
-                '& fieldset': { borderColor: 'rgba(13, 138, 79, 0.08)' },
-                '&:hover fieldset': { borderColor: 'rgba(16, 185, 129, 0.28)' },
-                '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.15)' },
-                '&.Mui-focused fieldset': { borderColor: '#0d8a4f' }
+                bgcolor: '#f8f8f8',
+                '& fieldset': { borderColor: 'rgba(0, 0, 0, 0.08)' },
+                '&:hover fieldset': { borderColor: 'rgba(0, 0, 0, 0.12)' },
+                '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(0, 0, 0, 0.12)' },
+                '&.Mui-focused fieldset': { borderColor: '#1f2937' }
               } 
             }}
           />
@@ -799,13 +799,13 @@ export default function QuestionsWorkflowView() {
               onClick={handleAddQuestion}
               sx={{ 
                 borderRadius: '10px', 
-                backgroundColor: '#0d8a4f', 
-                fontWeight: 700, 
+                backgroundColor: '#1f2937', 
+                fontWeight: 500, 
                 textTransform: 'none',
                 px: 3,
                 py: 0.9,
-                boxShadow: '0 4px 12px rgba(13, 138, 79, 0.2)',
-                '&:hover': { backgroundColor: '#0a7543' }
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
+                '&:hover': { backgroundColor: '#111827' }
               }}
             >
               Lưu vào danh sách chờ duyệt

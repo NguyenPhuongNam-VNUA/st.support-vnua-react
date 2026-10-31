@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import apiClient from '@/lib/http/api-client';
 
 export interface AuthUser {
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const pathname = usePathname();
 
   const refreshUser = useCallback(async () => {
     try {
@@ -41,8 +43,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    refreshUser();
-  }, [refreshUser]);
+    // Chỉ tự động kiểm tra phiên đăng nhập trên các route cần auth (admin, login)
+    // Các trang công khai như /chatbot sẽ không gọi /api/auth/me để tránh 401 thừa
+    if (pathname && (pathname.startsWith('/admin') || pathname.startsWith('/login'))) {
+      refreshUser();
+    } else {
+      setIsLoading(false);
+    }
+  }, [pathname, refreshUser]);
 
   const logout = useCallback(async () => {
     try {

@@ -1,7 +1,14 @@
 import React from "react";
 import "./globals.css";
 import ClientProviders from "./ClientProviders";
-import { Montserrat } from "next/font/google";
+import { Inter, Montserrat } from "next/font/google";
+
+// Admin (Kravio skin) font; only applied under .kravio
+const inter = Inter({
+  subsets: ["vietnamese", "latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 const montserrat = Montserrat({
   subsets: ["vietnamese", "latin"],
@@ -25,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi" className={montserrat.variable} suppressHydrationWarning>
+    <html lang="vi" className={`${montserrat.variable} ${inter.variable}`} suppressHydrationWarning>
       <body className={montserrat.className} suppressHydrationWarning>
         <ClientProviders>{children}</ClientProviders>
       </body>

@@ -94,13 +94,13 @@ export default function QuestionEditDialog({
             width={40}
             height={40}
             borderRadius={2}
-            bgcolor={wasUnanswered ? '#fff7ed' : '#ecfdf5'}
-            color={wasUnanswered ? '#c2410c' : '#047857'}
+            bgcolor={wasUnanswered ? '#f7f7f7' : '#f3f4f6'}
+            color={wasUnanswered ? '#4b5563' : '#1f2937'}
           >
             {wasUnanswered ? <MessageSquarePlus size={20} aria-hidden="true" /> : <SquarePen size={20} aria-hidden="true" />}
           </Box>
           <Box>
-            <Typography component="span" variant="h6" fontWeight={800}>
+            <Typography component="span" variant="h6" fontWeight={600}>
               {wasUnanswered ? 'Thêm câu trả lời' : 'Sửa câu hỏi và câu trả lời'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -147,7 +147,7 @@ export default function QuestionEditDialog({
       </DialogContent>
 
       <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={{ textTransform: 'none', fontWeight: 700 }}>
+        <Button onClick={onClose} disabled={saving} sx={{ textTransform: 'none', fontWeight: 500 }}>
           Hủy
         </Button>
         <Button
@@ -155,7 +155,7 @@ export default function QuestionEditDialog({
           disabled={saving || !questionText.trim()}
           variant="contained"
           startIcon={<Save size={17} aria-hidden="true" />}
-          sx={{ bgcolor: '#0d8a4f', textTransform: 'none', fontWeight: 800, '&:hover': { bgcolor: '#0a7543' } }}
+          sx={{ bgcolor: '#1f2937', textTransform: 'none', fontWeight: 600, '&:hover': { bgcolor: '#111827' } }}
         >
           {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
         </Button>

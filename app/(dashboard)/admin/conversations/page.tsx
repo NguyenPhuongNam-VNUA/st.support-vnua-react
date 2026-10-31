@@ -11,13 +11,13 @@ export default function DetailedConversationsPage() {
         <Box display="flex" alignItems="center" gap={2}>
           <CartoonHistoryClockArrowIcon
             size={42}
-            className="text-[#0d8a4f] flex-shrink-0 transition-transform hover:scale-105"
+            className="text-[#1f2937] flex-shrink-0 transition-transform hover:scale-105"
           />
           <Box>
             <Typography
               variant="h5"
-              fontWeight={900}
-              sx={{ color: '#0d8a4f', letterSpacing: '-0.02em', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}
+              fontWeight={600}
+              sx={{ color: '#1f2937', letterSpacing: '-0.02em', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}
             >
               Lịch sử hội thoại
             </Typography>

@@ -1,38 +1,44 @@
 'use client';
 
-import { useState } from 'react';
-import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid2';
-import Typography from '@mui/material/Typography';
+import { useEffect, useState } from 'react';
 
 import AgentStatusHeader from '@/components/dashboard/AgentStatusHeader';
 import AgentQualityMetrics from '@/components/dashboard/AgentQualityMetrics';
 import ConversationHeatmap from '@/components/dashboard/ConversationHeatmap';
 import ConversationCard from '@/components/dashboard/cards/ConversationCard';
 import BarCard from '@/components/dashboard/cards/BarCard';
-import LineCard from '@/components/dashboard/cards/LineCard';
+import VolumeTrendCard from '@/components/dashboard/VolumeTrendCard';
+import LatestUpdatesCard from '@/components/dashboard/LatestUpdatesCard';
+import conversationApi from '@/api/chatbot/conversationApi';
 
 export default function AdminDashboardPage() {
   const [timeRange, setTimeRange] = useState('7d');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [activeDrillDown, setActiveDrillDown] = useState<string | null>(null);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+
+  // One fetch shared by trend, latest updates and heatmap.
+  useEffect(() => {
+    let alive = true;
+    conversationApi
+      .getAll()
+      .then((res: any) => alive && setLogs(Array.isArray(res?.data) ? res.data : []))
+      .catch((err) => console.warn('Lỗi tải hội thoại cho dashboard:', err))
+      .finally(() => alive && setLogsLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const handleDrillDown = (filterType: string) => {
     setActiveDrillDown(filterType);
-    const element = document.getElementById('conversation-logs-table');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const handleHeatmapSlotSelect = (day: string, hour: number) => {
-    handleDrillDown(`slot_${day}_${hour}h`);
+    document.getElementById('conversation-logs-table')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
-    <Box>
-      {/* 2.1 Command Center Header with Global Time Filter & Server Health */}
+    <div className="flex w-full flex-col gap-4">
       <AgentStatusHeader
         timeRange={timeRange}
         setTimeRange={setTimeRange}
@@ -41,34 +47,20 @@ export default function AdminDashboardPage() {
         endDate={endDate}
         setEndDate={setEndDate}
         onDrillDown={handleDrillDown}
-      />
+        aside={<LatestUpdatesCard logs={logs} loading={logsLoading} />}
+      >
+        <VolumeTrendCard logs={logs} loading={logsLoading} />
+      </AgentStatusHeader>
 
-      {/* Quality Metrics & Top Unanswered Questions */}
-      <AgentQualityMetrics
-        onDrillDownFallback={() => handleDrillDown('not_found')}
-      />
+      <AgentQualityMetrics onDrillDownFallback={() => handleDrillDown('not_found')} />
 
-      {/* 24h x 7d Conversation Heatmap Timeline */}
-      <ConversationHeatmap onSelectSlot={handleHeatmapSlotSelect} />
+      <ConversationHeatmap logs={logs} onSelectSlot={(day, hour) => handleDrillDown(`slot_${day}_${hour}h`)} />
 
-      <Grid container spacing={3} mb={4}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <BarCard />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <LineCard />
-        </Grid>
-      </Grid>
+      <BarCard />
 
-      {/* Interactive Conversation Log Table */}
-      <Box mb={4} id="conversation-logs-table">
-        <ConversationCard
-          activeFilter={activeDrillDown}
-          timeRange={timeRange}
-          startDate={startDate}
-          endDate={endDate}
-        />
-      </Box>
-    </Box>
+      <div id="conversation-logs-table">
+        <ConversationCard activeFilter={activeDrillDown} timeRange={timeRange} startDate={startDate} endDate={endDate} />
+      </div>
+    </div>
   );
 }

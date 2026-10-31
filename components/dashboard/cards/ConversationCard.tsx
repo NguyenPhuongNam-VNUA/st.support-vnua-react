@@ -29,13 +29,13 @@ import conversationApi from "@/api/chatbot/conversationApi";
 
 const StyledTableHead = styled(TableHead)(() => ({
   '& .MuiTableCell-head': {
-    backgroundColor: '#fafdfb',
-    fontWeight: 800,
+    backgroundColor: '#f8f8f8',
+    fontWeight: 600,
     fontSize: '0.75rem',
-    color: '#0d8a4f',
+    color: '#1f2937',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
-    borderBottom: '1px solid rgba(13, 138, 79, 0.08)',
+    borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
     position: 'sticky',
     top: 0,
     zIndex: 10,
@@ -45,10 +45,10 @@ const StyledTableHead = styled(TableHead)(() => ({
 const StyledTableRow = styled(TableRow)(() => ({
   transition: 'background-color 0.18s cubic-bezier(0.2, 0.8, 0.2, 1)',
   '&:hover': {
-    backgroundColor: '#f0f8f4 !important',
+    backgroundColor: '#f3f4f6 !important',
   },
   '& .MuiTableCell-root': {
-    borderBottom: '1px solid rgba(13, 138, 79, 0.04)',
+    borderBottom: '1px solid rgba(0, 0, 0, 0.04)',
     padding: '13px 16px',
     fontSize: '0.875rem',
   },
@@ -58,20 +58,20 @@ const GreenTextField = styled(TextField)(() => ({
   '& .MuiOutlinedInput-root': {
     height: '42px',
     borderRadius: '12px',
-    backgroundColor: '#fbfdfc',
+    backgroundColor: '#f8f8f8',
     fontSize: '0.875rem',
     transition: 'all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
     '& fieldset': {
-      borderColor: 'rgba(13, 138, 79, 0.08)',
+      borderColor: 'rgba(0, 0, 0, 0.08)',
     },
     '&:hover fieldset': {
-      borderColor: 'rgba(16, 185, 129, 0.28)',
+      borderColor: 'rgba(0, 0, 0, 0.12)',
     },
     '&.Mui-focused': {
-      boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.15)',
+      boxShadow: '0 0 0 3px rgba(0, 0, 0, 0.12)',
     },
     '&.Mui-focused fieldset': {
-      borderColor: '#0d8a4f',
+      borderColor: '#1f2937',
       borderWidth: '1.5px',
     },
   },
@@ -80,36 +80,36 @@ const GreenTextField = styled(TextField)(() => ({
 const GreenSelect = styled(Select)(() => ({
   height: '42px',
   borderRadius: '12px',
-  backgroundColor: '#fbfdfc',
+  backgroundColor: '#f8f8f8',
   fontSize: '0.875rem',
   transition: 'all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
   '& fieldset': {
-    borderColor: 'rgba(13, 138, 79, 0.08)',
+    borderColor: 'rgba(0, 0, 0, 0.08)',
   },
   '&:hover fieldset': {
-    borderColor: 'rgba(16, 185, 129, 0.28)',
+    borderColor: 'rgba(0, 0, 0, 0.12)',
   },
   '&.Mui-focused': {
-    boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.15)',
+    boxShadow: '0 0 0 3px rgba(0, 0, 0, 0.12)',
   },
   '&.Mui-focused fieldset': {
-    borderColor: '#0d8a4f',
+    borderColor: '#1f2937',
     borderWidth: '1.5px',
   },
 }));
 
 const StatusChip = ({ status }: { status: string }) => {
   const config: Record<string, { label: string; text: string; bg: string; border: string }> = {
-    answered: { label: "Đã trả lời", text: "#047857", bg: "#ecfdf5", border: "rgba(16, 185, 129, 0.25)" },
-    not_found: { label: "Không tìm thấy", text: "#be123c", bg: "#fff1f2", border: "rgba(244, 63, 94, 0.25)" },
-    auto_generated: { label: "Tự sinh", text: "#b45309", bg: "#fffbeb", border: "rgba(245, 158, 11, 0.25)" },
-    out_of_topic: { label: "Lạc đề", text: "#475569", bg: "#f1f5f9", border: "rgba(100, 116, 139, 0.2)" },
+    answered: { label: "Đã trả lời", text: "#1f2937", bg: "#f3f4f6", border: "rgba(0, 0, 0, 0.12)" },
+    not_found: { label: "Không tìm thấy", text: "#ef4444", bg: "#f7f7f7", border: "rgba(0, 0, 0, 0.12)" },
+    auto_generated: { label: "Tự sinh", text: "#4b5563", bg: "#f7f7f7", border: "rgba(0, 0, 0, 0.12)" },
+    out_of_topic: { label: "Lạc đề", text: "#4b5563", bg: "#f3f4f6", border: "rgba(100, 116, 139, 0.2)" },
   };
 
-  const item = config[status] || { label: status, text: "#475569", bg: "#f1f5f9", border: "rgba(100, 116, 139, 0.2)" };
+  const item = config[status] || { label: status, text: "#4b5563", bg: "#f3f4f6", border: "rgba(100, 116, 139, 0.2)" };
   return (
     <span
-      className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full inline-block border shadow-2xs"
+      className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full inline-block border shadow-2xs"
       style={{
         color: item.text,
         backgroundColor: item.bg,
@@ -275,9 +275,9 @@ export default function ConversationCard({
           title={
             <Box display="flex" alignItems="center" justifyContent="space-between" py={0.5}>
               <Box display="flex" alignItems="center" gap={1.5}>
-                <MessageSquareText className="w-5 h-5 text-[#0d8a4f]" />
+                <MessageSquareText className="w-5 h-5 text-[#1f2937]" />
                 <Box>
-                  <Typography variant="h6" fontWeight={800} sx={{ color: '#0d8a4f', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                  <Typography variant="h6" fontWeight={600} sx={{ color: '#1f2937', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                     Nhật ký hội thoại Chatbot & Tương tác thực tế
                   </Typography>
                   <Typography variant="caption" color="text.secondary" fontWeight={500}>
@@ -287,9 +287,9 @@ export default function ConversationCard({
               </Box>
 
               {/* Total Pill Badge */}
-              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-[#f0f8f4] border border-[#a7f3d0]/80 rounded-full">
-                <span className="text-xs font-bold text-slate-600">Tổng cộng:</span>
-                <span className="text-sm font-black text-[#0d8a4f]">{logs.length}</span>
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-[#f3f4f6] border border-[#e5e7eb]/80 rounded-full">
+                <span className="text-xs font-medium text-gray-600">Tổng cộng:</span>
+                <span className="text-sm font-semibold text-[#1f2937]">{logs.length}</span>
               </div>
             </Box>
           }
@@ -301,56 +301,56 @@ export default function ConversationCard({
         {/* Apple Squircle Stat Cards Grid */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid size={{ xs: 6, sm: 3 }}>
-            <div className="p-3.5 rounded-2xl bg-[#f0f8f4] border border-[#a7f3d0]/60 transition-all hover:shadow-xs">
+            <div className="p-3.5 rounded-xl bg-[#f3f4f6] border border-[#e5e7eb]/60 transition-all hover:shadow-xs">
               <div className="flex items-center justify-between mb-1">
-                <Typography variant="caption" fontWeight={800} sx={{ color: '#0d8a4f', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <Typography variant="caption" fontWeight={600} sx={{ color: '#1f2937', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Đã trả lời
                 </Typography>
-                <CheckCircle2 className="w-4 h-4 text-[#10b981]" />
+                <CheckCircle2 className="w-4 h-4 text-[#059669]" />
               </div>
-              <Typography variant="h4" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em' }}>
+              <Typography variant="h4" fontWeight={600} sx={{ color: '#1f2937', letterSpacing: '-0.025em' }}>
                 {stats.answered}
               </Typography>
             </div>
           </Grid>
 
           <Grid size={{ xs: 6, sm: 3 }}>
-            <div className="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200/60 transition-all hover:shadow-xs">
+            <div className="p-3.5 rounded-xl bg-[#f7f7f7] border border-[#e5e7eb] transition-all hover:shadow-xs">
               <div className="flex items-center justify-between mb-1">
-                <Typography variant="caption" fontWeight={800} sx={{ color: '#be123c', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <Typography variant="caption" fontWeight={600} sx={{ color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Không tìm thấy
                 </Typography>
-                <AlertCircle className="w-4 h-4 text-rose-600" />
+                <AlertCircle className="w-4 h-4 text-[#ef4444]" />
               </div>
-              <Typography variant="h4" fontWeight={900} sx={{ color: '#e11d48', letterSpacing: '-0.025em' }}>
+              <Typography variant="h4" fontWeight={600} sx={{ color: '#ef4444', letterSpacing: '-0.025em' }}>
                 {stats.notFound}
               </Typography>
             </div>
           </Grid>
 
           <Grid size={{ xs: 6, sm: 3 }}>
-            <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/60 transition-all hover:shadow-xs">
+            <div className="p-3.5 rounded-xl bg-[#f7f7f7] border border-[#e5e7eb] transition-all hover:shadow-xs">
               <div className="flex items-center justify-between mb-1">
-                <Typography variant="caption" fontWeight={800} sx={{ color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <Typography variant="caption" fontWeight={600} sx={{ color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Tự sinh
                 </Typography>
-                <Cpu className="w-4 h-4 text-amber-600" />
+                <Cpu className="w-4 h-4 text-[#4b5563]" />
               </div>
-              <Typography variant="h4" fontWeight={900} sx={{ color: '#d97706', letterSpacing: '-0.025em' }}>
+              <Typography variant="h4" fontWeight={600} sx={{ color: '#4b5563', letterSpacing: '-0.025em' }}>
                 {stats.autoGenerated}
               </Typography>
             </div>
           </Grid>
 
           <Grid size={{ xs: 6, sm: 3 }}>
-            <div className="p-3.5 rounded-2xl bg-[#f0f8f4] border border-[#a7f3d0]/60 transition-all hover:shadow-xs">
+            <div className="p-3.5 rounded-xl bg-[#f3f4f6] border border-[#e5e7eb]/60 transition-all hover:shadow-xs">
               <div className="flex items-center justify-between mb-1">
-                <Typography variant="caption" fontWeight={800} sx={{ color: '#0d8a4f', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <Typography variant="caption" fontWeight={600} sx={{ color: '#1f2937', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Tỷ lệ trả lời
                 </Typography>
-                <PieChart className="w-4 h-4 text-[#0d8a4f]" />
+                <PieChart className="w-4 h-4 text-[#1f2937]" />
               </div>
-              <Typography variant="h4" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.025em' }}>
+              <Typography variant="h4" fontWeight={600} sx={{ color: '#1f2937', letterSpacing: '-0.025em' }}>
                 {((stats.answered / (stats.total || 1)) * 100).toFixed(1)}%
               </Typography>
             </div>
@@ -366,7 +366,7 @@ export default function ConversationCard({
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search className="w-4 h-4 text-slate-400" />
+                  <Search className="w-4 h-4 text-gray-400" />
                 </InputAdornment>
               ),
             }}
@@ -378,7 +378,7 @@ export default function ConversationCard({
               value={statusFilter}
               onChange={(e: any) => { setStatusFilter(e.target.value); setPage(0); }}
               displayEmpty
-              startAdornment={<Filter className="w-4 h-4 mr-2 text-slate-400" />}
+              startAdornment={<Filter className="w-4 h-4 mr-2 text-gray-400" />}
             >
               <MenuItem value="">Tất cả trạng thái</MenuItem>
               <MenuItem value="answered">Đã trả lời</MenuItem>
@@ -391,15 +391,15 @@ export default function ConversationCard({
 
         {/* Active Heatmap Slot Filter Badge */}
         {slotFilter && (
-          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2.5} p={1.2} px={2} bgcolor="#f0f8f4" border="1px solid rgba(16, 185, 129, 0.3)" borderRadius="12px">
-            <Typography variant="body2" fontWeight={800} sx={{ color: '#0d8a4f' }}>
+          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2.5} p={1.2} px={2} bgcolor="#f3f4f6" border="1px solid rgba(0, 0, 0, 0.12)" borderRadius="12px">
+            <Typography variant="body2" fontWeight={600} sx={{ color: '#1f2937' }}>
               🎯 Đang lọc theo khung giờ Heatmap: <strong>{slotFilter.day} ({slotFilter.hour}:00 - {slotFilter.hour + 1}:00)</strong> — {filteredLogs.length} hội thoại
             </Typography>
             <Button
               size="small"
               startIcon={<X className="w-3.5 h-3.5" />}
               onClick={() => setSlotFilter(null)}
-              sx={{ fontSize: '0.725rem', fontWeight: 700, color: '#e11d48', textTransform: 'none', py: 0.2 }}
+              sx={{ fontSize: '0.725rem', fontWeight: 500, color: '#ef4444', textTransform: 'none', py: 0.2 }}
             >
               Bỏ lọc khung giờ
             </Button>
@@ -409,7 +409,7 @@ export default function ConversationCard({
         {/* Loading / Table view */}
         {loading ? (
           <Box display="flex" flexDirection="column" alignItems="center" py={8}>
-            <CircularProgress size={36} sx={{ color: '#006837' }} />
+            <CircularProgress size={36} sx={{ color: '#1f2937' }} />
             <Typography variant="body2" sx={{ mt: 2, color: "text.secondary", fontWeight: 600 }}>
               Đang tải dữ liệu hội thoại...
             </Typography>
@@ -420,8 +420,8 @@ export default function ConversationCard({
               component={Paper} 
               elevation={0} 
               sx={{ 
-                borderRadius: '16px',
-                border: '1px solid rgba(0, 60, 30, 0.08)',
+                borderRadius: '12px',
+                border: '1px solid rgba(0, 0, 0, 0.08)',
                 maxHeight: 520,
                 overflow: 'auto',
                 boxShadow: '0 0 0 1px rgba(255,255,255,0.8) inset'
@@ -442,7 +442,7 @@ export default function ConversationCard({
                   {paginatedLogs.map((row) => (
                     <StyledTableRow key={row.id}>
                       <TableCell align="center">
-                        <span className="font-extrabold text-[#006837] text-sm">
+                        <span className="font-semibold text-[#1f2937] text-sm">
                           {row.id}
                         </span>
                       </TableCell>
@@ -452,10 +452,10 @@ export default function ConversationCard({
                           <Typography 
                             variant="body2" 
                             sx={{ 
-                              fontWeight: 700,
-                              color: '#1e293b',
+                              fontWeight: 500,
+                              color: '#1f2937',
                               cursor: 'pointer',
-                              '&:hover': { color: '#006837' }
+                              '&:hover': { color: '#1f2937' }
                             }}
                           >
                             {truncate(row.question, 50)}
@@ -469,7 +469,7 @@ export default function ConversationCard({
                             variant="body2" 
                             sx={{ 
                               fontStyle: 'italic', 
-                              color: '#64748b',
+                              color: '#6b7280',
                               fontSize: '0.8rem',
                               cursor: row.context ? 'pointer' : 'default'
                             }}
@@ -483,7 +483,7 @@ export default function ConversationCard({
                         <Tooltip title={row.answer} arrow placement="top">
                           <Typography 
                             variant="body2"
-                            sx={{ cursor: 'pointer', color: '#334155' }}
+                            sx={{ cursor: 'pointer', color: '#374151' }}
                           >
                             {truncate(row.answer, 60)}
                           </Typography>
@@ -496,7 +496,7 @@ export default function ConversationCard({
                       
                       <TableCell align="center">
                         <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
-                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          <Clock className="w-3.5 h-3.5 text-gray-400" />
                           <Typography variant="caption" fontWeight={600} color="text.secondary">
                             {row.created_at}
                           </Typography>
@@ -531,13 +531,13 @@ export default function ConversationCard({
                 `${from}-${to} trong số ${count !== -1 ? count : `hơn ${to}`}`
               }
               sx={{
-                borderTop: '1px solid #f1f5f9',
+                borderTop: '1px solid #f3f4f6',
                 '& .MuiTablePagination-toolbar': {
                   px: 2,
                 },
                 '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
                   fontSize: '0.8rem',
-                  color: '#64748b',
+                  color: '#6b7280',
                   fontWeight: 600,
                 },
               }}

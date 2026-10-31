@@ -135,9 +135,9 @@ export default function AgentTrainingPage() {
       <Box mb={3.5}>
         <Box display="flex" alignItems="center" gap={2}>
           {/* Custom SVG Icon Placed Directly without Div Wrapper */}
-          <TrainingBookingIcon size={42} className="text-[#0d8a4f] flex-shrink-0 transition-transform hover:scale-105" />
+          <TrainingBookingIcon size={42} className="text-[#1f2937] flex-shrink-0 transition-transform hover:scale-105" />
           <Box>
-            <Typography variant="h5" fontWeight={900} sx={{ color: '#0d8a4f', letterSpacing: '-0.02em', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+            <Typography variant="h5" component="h1" fontWeight={500} sx={{ color: '#1f2937', fontSize: '1.5rem', lineHeight: 1 }}>
               Huấn Luyện & Chuẩn Hóa Tri Thức Agent (Active Learning)
             </Typography>
             <Typography variant="body2" color="text.secondary" fontWeight={500}>
@@ -153,30 +153,30 @@ export default function AgentTrainingPage() {
         <Box className="emerald-card" p={{ xs: 2, sm: 3 }} bgcolor="#ffffff">
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Box display="flex" alignItems="center" gap={1.2}>
-              <Typography variant="h6" fontWeight={800} sx={{ color: '#be123c', fontSize: { xs: '0.95rem', sm: '1.05rem' } }}>
+              <Typography variant="h6" fontWeight={600} sx={{ color: '#ef4444', fontSize: { xs: '0.95rem', sm: '1.05rem' } }}>
                 Hàng chờ câu hỏi cần chuẩn hóa tri thức
               </Typography>
-              <span className="px-2.5 py-0.5 text-xs font-black text-white bg-rose-600 rounded-full shadow-xs">
+              <span className="px-2.5 py-0.5 text-xs font-semibold text-white bg-[#ef4444] rounded-full shadow-xs">
                 {unansweredLogs.length}
               </span>
             </Box>
           </Box>
 
           <Box sx={{ width: '100%', overflowX: 'auto' }}>
-            <Table size="small" sx={{ width: '100%', border: '1px solid rgba(0, 60, 30, 0.08)', borderRadius: '14px', overflow: 'hidden' }}>
-              <TableHead sx={{ backgroundColor: '#fafdfb' }}>
+            <Table size="small" sx={{ width: '100%', border: '1px solid rgba(0, 0, 0, 0.08)', borderRadius: '12px', overflow: 'hidden' }}>
+              <TableHead sx={{ backgroundColor: '#f8f8f8' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 800, fontSize: { xs: '0.7rem', sm: '0.75rem' }, color: '#0d8a4f', px: { xs: 1, sm: 2 }, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>CÂU HỎI BỊ HỎI NHIỀU</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 800, fontSize: { xs: '0.7rem', sm: '0.75rem' }, color: '#0d8a4f', width: { xs: 55, sm: 80 }, px: { xs: 0.5, sm: 1.5 }, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>LẦN HỎI</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, fontSize: { xs: '0.7rem', sm: '0.75rem' }, color: '#0d8a4f', width: { xs: 90, sm: 110 }, px: { xs: 0.5, sm: 1.5 }, borderBottom: '1px solid rgba(13, 138, 79, 0.08)' }}>THAO TÁC</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: { xs: '0.7rem', sm: '0.75rem' }, color: '#1f2937', px: { xs: 1, sm: 2 }, borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>CÂU HỎI BỊ HỎI NHIỀU</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600, fontSize: { xs: '0.7rem', sm: '0.75rem' }, color: '#1f2937', width: { xs: 55, sm: 80 }, px: { xs: 0.5, sm: 1.5 }, borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>LẦN HỎI</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: { xs: '0.7rem', sm: '0.75rem' }, color: '#1f2937', width: { xs: 90, sm: 110 }, px: { xs: 0.5, sm: 1.5 }, borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>THAO TÁC</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loadingLogs ? (
                   <TableRow>
                     <TableCell colSpan={3} align="center" sx={{ py: 6 }}>
-                      <CircularProgress size={32} sx={{ color: '#0d8a4f' }} />
-                      <Typography variant="body2" sx={{ mt: 1.5, color: '#64748b', fontWeight: 600 }}>
+                      <CircularProgress size={32} sx={{ color: '#1f2937' }} />
+                      <Typography variant="body2" sx={{ mt: 1.5, color: '#6b7280', fontWeight: 600 }}>
                         Đang rà soát các câu hỏi fallback từ lịch sử hội thoại...
                       </Typography>
                     </TableCell>
@@ -194,44 +194,44 @@ export default function AgentTrainingPage() {
                           sx={{
                             cursor: 'pointer',
                             transition: 'background-color 0.18s cubic-bezier(0.2, 0.8, 0.2, 1)',
-                            backgroundColor: isSelected ? '#f0f8f4 !important' : 'inherit',
+                            backgroundColor: isSelected ? '#f3f4f6 !important' : 'inherit',
                             '&:last-child td': { borderBottom: 0 },
                           }}
                         >
-                          <TableCell sx={{ py: 1.5, px: { xs: 1, sm: 2 }, borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
-                            <Typography variant="body2" fontWeight={700} color={isSelected ? '#0d8a4f' : '#0f291e'} sx={{ fontSize: { xs: '0.8rem', sm: '0.85rem' } }}>
+                          <TableCell sx={{ py: 1.5, px: { xs: 1, sm: 2 }, borderBottom: '1px solid rgba(0, 0, 0, 0.04)' }}>
+                            <Typography variant="body2" fontWeight={500} color={isSelected ? '#1f2937' : '#1f2937'} sx={{ fontSize: { xs: '0.8rem', sm: '0.85rem' } }}>
                               {row.question}
                             </Typography>
                             <Box display="flex" alignItems="center" gap={0.8} mt={0.5} flexWrap="wrap">
-                              <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium">Lần gần nhất: {row.last_asked}</span>
-                              <span className="text-[10px] sm:text-[11px] text-[#0d8a4f] font-semibold bg-[#f0f8f4] px-1.5 py-0.2 rounded border border-[#a7f3d0]/60">• Chủ đề: {row.suggested_topic}</span>
+                              <span className="text-[10px] sm:text-[11px] text-gray-400 font-medium">Lần gần nhất: {row.last_asked}</span>
+                              <span className="text-[10px] sm:text-[11px] text-[#1f2937] font-semibold bg-[#f3f4f6] px-1.5 py-0.2 rounded border border-[#e5e7eb]/60">• Chủ đề: {row.suggested_topic}</span>
                             </Box>
                           </TableCell>
 
-                          <TableCell align="center" sx={{ px: { xs: 0.5, sm: 1.5 }, borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
-                            <span className="inline-flex items-center justify-center px-2 py-0.5 text-[11px] sm:text-xs font-black text-rose-700 bg-rose-50 border border-rose-200/80 rounded-full">
+                          <TableCell align="center" sx={{ px: { xs: 0.5, sm: 1.5 }, borderBottom: '1px solid rgba(0, 0, 0, 0.04)' }}>
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 text-[11px] sm:text-xs font-semibold text-[#ef4444] bg-[#f7f7f7] border border-[#e5e7eb] rounded-full">
                               {row.asked_count}
                             </span>
                           </TableCell>
 
-                          <TableCell align="right" sx={{ px: { xs: 0.5, sm: 1.5 }, borderBottom: '1px solid rgba(13, 138, 79, 0.04)' }}>
+                          <TableCell align="right" sx={{ px: { xs: 0.5, sm: 1.5 }, borderBottom: '1px solid rgba(0, 0, 0, 0.04)' }}>
                             <Button
                               size="small"
                               variant={isSelected ? 'contained' : 'outlined'}
                               sx={{
                                 borderRadius: '8px',
                                 textTransform: 'none',
-                                fontWeight: 700,
+                                fontWeight: 500,
                                 fontSize: { xs: '0.675rem', sm: '0.725rem' },
                                 whiteSpace: 'nowrap',
                                 px: { xs: 1, sm: 1.8 },
                                 py: 0.4,
-                                backgroundColor: isSelected ? '#0d8a4f' : 'transparent',
-                                borderColor: isSelected ? '#0d8a4f' : 'rgba(13, 138, 79, 0.25)',
-                                color: isSelected ? '#ffffff' : '#0d8a4f',
+                                backgroundColor: isSelected ? '#1f2937' : 'transparent',
+                                borderColor: isSelected ? '#1f2937' : 'rgba(0, 0, 0, 0.12)',
+                                color: isSelected ? '#ffffff' : '#1f2937',
                                 '&:hover': {
-                                  backgroundColor: isSelected ? '#0a7543' : '#f0f8f4',
-                                  borderColor: '#0d8a4f',
+                                  backgroundColor: isSelected ? '#111827' : '#f3f4f6',
+                                  borderColor: '#1f2937',
                                 },
                               }}
                             >
@@ -245,7 +245,7 @@ export default function AgentTrainingPage() {
                     {unansweredLogs.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={3} align="center" sx={{ py: 6 }}>
-                          <Typography variant="body2" fontWeight={700} sx={{ color: '#0d8a4f' }}>
+                          <Typography variant="body2" fontWeight={500} sx={{ color: '#1f2937' }}>
                             🎉 Tất cả câu hỏi thực tế đều đã được Agent tự giải đáp chính xác!
                           </Typography>
                         </TableCell>
@@ -262,10 +262,10 @@ export default function AgentTrainingPage() {
         <Box className="emerald-card" p={{ xs: 2.5, sm: 3.5 }} bgcolor="#ffffff" display="flex" flexDirection="column" justifyContent="space-between">
           <Box>
             <Box display="flex" alignItems="center" gap={1.5} mb={2.5}>
-              <div className="w-8 h-8 rounded-xl bg-[#f0f8f4] text-[#0d8a4f] flex items-center justify-center border border-[#a7f3d0]/60">
+              <div className="w-8 h-8 rounded-xl bg-[#f3f4f6] text-[#1f2937] flex items-center justify-center border border-[#e5e7eb]/60">
                 <MessageSquarePlus className="w-4 h-4" />
               </div>
-              <Typography variant="h6" fontWeight={800} sx={{ color: '#0d8a4f', fontSize: '1.05rem' }}>
+              <Typography variant="h6" fontWeight={600} sx={{ color: '#1f2937', fontSize: '1.05rem' }}>
                 Trình soạn thảo đáp án chuẩn (Fine-tuning Editor)
               </Typography>
             </Box>
@@ -273,21 +273,21 @@ export default function AgentTrainingPage() {
             {selectedQuestion ? (
               <Box display="flex" flexDirection="column" gap={2.5}>
                 {/* Active Question Box */}
-                <Box p={2.2} bgcolor="#fafdfb" borderLeft="4px solid #0d8a4f" borderTop="1px solid rgba(13, 138, 79, 0.08)" borderRight="1px solid rgba(13, 138, 79, 0.08)" borderBottom="1px solid rgba(13, 138, 79, 0.08)" sx={{ borderRadius: '14px', boxShadow: '0 0 0 1px rgba(255,255,255,0.8) inset' }}>
-                  <Typography variant="caption" fontWeight={800} color="#0d8a4f" display="block" sx={{ letterSpacing: '0.05em' }}>
+                <Box p={2.2} bgcolor="#f8f8f8" borderLeft="4px solid #1f2937" borderTop="1px solid rgba(0, 0, 0, 0.08)" borderRight="1px solid rgba(0, 0, 0, 0.08)" borderBottom="1px solid rgba(0, 0, 0, 0.08)" sx={{ borderRadius: '12px', boxShadow: '0 0 0 1px rgba(255,255,255,0.8) inset' }}>
+                  <Typography variant="caption" fontWeight={600} color="#1f2937" display="block" sx={{ letterSpacing: '0.05em' }}>
                     CÂU HỎI ĐANG BIÊN TẬP:
                   </Typography>
-                  <Typography variant="body1" fontWeight={800} color="#0f291e" mt={0.5}>
+                  <Typography variant="body1" fontWeight={600} color="#1f2937" mt={0.5}>
                     &quot;{selectedQuestion.question}&quot;
                   </Typography>
-                  <span className="text-[11px] text-slate-500 font-semibold mt-1 block">
-                    Số sinh viên đã hỏi bị fallback: <strong className="text-rose-600">{selectedQuestion.asked_count} lượt</strong>
+                  <span className="text-[11px] text-gray-500 font-semibold mt-1 block">
+                    Số sinh viên đã hỏi bị fallback: <strong className="text-[#ef4444]">{selectedQuestion.asked_count} lượt</strong>
                   </span>
                 </Box>
 
                 {/* Topic Selector */}
                 <FormControl size="small" fullWidth>
-                  <Typography variant="caption" fontWeight={800} color="#0d8a4f" mb={0.5}>
+                  <Typography variant="caption" fontWeight={600} color="#1f2937" mb={0.5}>
                     Phân loại chủ đề cho RAG Router:
                   </Typography>
                   <Select
@@ -295,11 +295,11 @@ export default function AgentTrainingPage() {
                     onChange={(e) => setTopicInput(e.target.value)}
                     sx={{ 
                       borderRadius: '12px',
-                      bgcolor: '#fbfdfc',
-                      '& fieldset': { borderColor: 'rgba(13, 138, 79, 0.08)' },
-                      '&:hover fieldset': { borderColor: 'rgba(16, 185, 129, 0.28)' },
-                      '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.15)' },
-                      '&.Mui-focused fieldset': { borderColor: '#0d8a4f' }
+                      bgcolor: '#f8f8f8',
+                      '& fieldset': { borderColor: 'rgba(0, 0, 0, 0.08)' },
+                      '&:hover fieldset': { borderColor: 'rgba(0, 0, 0, 0.12)' },
+                      '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(0, 0, 0, 0.12)' },
+                      '&.Mui-focused fieldset': { borderColor: '#1f2937' }
                     }}
                   >
                     {['Học vụ', 'Học phí', 'Ký túc xá', 'Tuyển sinh', 'Bảo lưu', 'Khác'].map((t) => (
@@ -312,7 +312,7 @@ export default function AgentTrainingPage() {
 
                 {/* Answer Text Input */}
                 <Box>
-                  <Typography variant="caption" fontWeight={800} color="#0d8a4f" mb={0.5} display="block">
+                  <Typography variant="caption" fontWeight={600} color="#1f2937" mb={0.5} display="block">
                     Nội dung đáp án chuẩn hóa cho AI Agent:
                   </Typography>
                   <TextField
@@ -326,20 +326,20 @@ export default function AgentTrainingPage() {
                     sx={{ 
                       '& .MuiOutlinedInput-root': { 
                         borderRadius: '12px',
-                        bgcolor: '#fbfdfc',
-                        '& fieldset': { borderColor: 'rgba(13, 138, 79, 0.08)' },
-                        '&:hover fieldset': { borderColor: 'rgba(16, 185, 129, 0.28)' },
-                        '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.15)' },
-                        '&.Mui-focused fieldset': { borderColor: '#0d8a4f' }
+                        bgcolor: '#f8f8f8',
+                        '& fieldset': { borderColor: 'rgba(0, 0, 0, 0.08)' },
+                        '&:hover fieldset': { borderColor: 'rgba(0, 0, 0, 0.12)' },
+                        '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(0, 0, 0, 0.12)' },
+                        '&.Mui-focused fieldset': { borderColor: '#1f2937' }
                       } 
                     }}
                   />
                 </Box>
 
                 {successMsg && (
-                  <Box display="flex" alignItems="center" gap={1} py={1.2} px={1.8} bgcolor="#f0f8f4" border="1px solid rgba(16, 185, 129, 0.3)" borderRadius="12px" boxShadow="0 0 0 1px rgba(255,255,255,0.8) inset">
-                    <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                    <Typography variant="body2" fontWeight={800} sx={{ color: '#0d8a4f' }}>
+                  <Box display="flex" alignItems="center" gap={1} py={1.2} px={1.8} bgcolor="#f3f4f6" border="1px solid rgba(0, 0, 0, 0.12)" borderRadius="12px" boxShadow="0 0 0 1px rgba(255,255,255,0.8) inset">
+                    <CheckCircle className="w-5 h-5 text-[#059669] flex-shrink-0" />
+                    <Typography variant="body2" fontWeight={600} sx={{ color: '#1f2937' }}>
                       Đã cập nhật thành công vào Knowledge Base & Re-indexed Vector DB!
                     </Typography>
                   </Box>
@@ -351,7 +351,7 @@ export default function AgentTrainingPage() {
                     variant="outlined"
                     startIcon={<X className="w-4 h-4" />}
                     onClick={() => setSelectedQuestion(null)}
-                    sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700, borderColor: 'rgba(0, 0, 0, 0.12)', color: '#475569', '&:hover': { bgcolor: '#f1f5f9' } }}
+                    sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 500, borderColor: 'rgba(0, 0, 0, 0.12)', color: '#4b5563', '&:hover': { bgcolor: '#f3f4f6' } }}
                   >
                     Hủy
                   </Button>
@@ -362,14 +362,14 @@ export default function AgentTrainingPage() {
                     disabled={isPublishing || !answerInput.trim()}
                     sx={{
                       borderRadius: '10px',
-                      backgroundColor: '#0d8a4f',
-                      fontWeight: 700,
+                      backgroundColor: '#1f2937',
+                      fontWeight: 500,
                       textTransform: 'none',
                       whiteSpace: 'nowrap',
                       px: 3,
-                      boxShadow: '0 4px 12px rgba(13, 138, 79, 0.2)',
-                      '&:hover': { backgroundColor: '#0a7543' },
-                      '&.Mui-disabled': { bgcolor: '#e2e8f0', color: '#94a3b8' }
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
+                      '&:hover': { backgroundColor: '#111827' },
+                      '&.Mui-disabled': { bgcolor: '#e5e7eb', color: '#9ca3af' }
                     }}
                   >
                     {isPublishing ? 'Đang cập nhật...' : 'Cập nhật vào Tri thức Agent'}
@@ -377,9 +377,9 @@ export default function AgentTrainingPage() {
                 </Box>
               </Box>
             ) : (
-              <Box py={10} px={3} textAlign="center" bgcolor="#fafdfb" border="1px dashed rgba(13, 138, 79, 0.2)" sx={{ borderRadius: '16px' }}>
-                <BrainCircuit className="w-12 h-12 text-emerald-500/70 mx-auto mb-3" />
-                <Typography variant="subtitle2" fontWeight={800} color="#0d8a4f" mb={0.5}>
+              <Box py={10} px={3} textAlign="center" bgcolor="#f8f8f8" border="1px dashed rgba(0, 0, 0, 0.12)" sx={{ borderRadius: '12px' }}>
+                <BrainCircuit className="w-12 h-12 text-[#059669] mx-auto mb-3" />
+                <Typography variant="subtitle2" fontWeight={600} color="#1f2937" mb={0.5}>
                   Chưa chọn câu hỏi cần huấn luyện
                 </Typography>
                 <Typography variant="body2" color="text.secondary" fontWeight={500} maxWidth={340} mx="auto">

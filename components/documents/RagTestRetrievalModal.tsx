@@ -63,26 +63,26 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
       slotProps={{
         backdrop: {
           sx: {
-            backgroundColor: 'rgba(15, 23, 42, 0.35)',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
             backdropFilter: 'blur(8px)',
           },
         },
       }}
       PaperProps={{
         sx: {
-          borderRadius: '24px',
+          borderRadius: '12px',
           p: 1.5,
           backgroundColor: '#ffffff',
-          boxShadow: '0 30px 60px -15px rgba(13, 138, 79, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.95) inset',
-          border: '1px solid rgba(13, 138, 79, 0.15)',
+          boxShadow: '0 30px 60px -15px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.95) inset',
+          border: '1px solid rgba(0, 0, 0, 0.12)',
         },
       }}
     >
       <DialogTitle sx={{ p: 2.5, pb: 1.5 }}>
         <Box display="flex" alignItems="center" gap={1.5}>
-          <Sparkles className="w-6 h-6 text-[#0d8a4f]" />
+          <Sparkles className="w-6 h-6 text-[#1f2937]" />
           <Box>
-            <Typography variant="h6" fontWeight={900} sx={{ color: '#0d8a4f', fontSize: '1.25rem', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+            <Typography variant="h6" fontWeight={600} sx={{ color: '#1f2937', fontSize: '1.25rem', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
               Thử nghiệm Semantic Retrieval RAG (Test Query)
             </Typography>
             <Typography variant="caption" color="text.secondary" fontWeight={500}>
@@ -103,8 +103,8 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: '12px',
-                bgcolor: '#f8fbf9',
-                '&.Mui-focused fieldset': { borderColor: '#0d8a4f' },
+                bgcolor: '#f8f8f8',
+                '&.Mui-focused fieldset': { borderColor: '#1f2937' },
               },
             }}
           />
@@ -115,8 +115,8 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
               onChange={(e) => setTopK(Number(e.target.value))}
               sx={{
                 borderRadius: '12px',
-                bgcolor: '#f8fbf9',
-                '&.Mui-focused fieldset': { borderColor: '#0d8a4f' },
+                bgcolor: '#f8f8f8',
+                '&.Mui-focused fieldset': { borderColor: '#1f2937' },
               }}
             >
               <MenuItem value={1}>Top K = 1</MenuItem>
@@ -130,20 +130,20 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
             startIcon={<Search className="w-4 h-4" />}
             onClick={handleTestSearch}
             sx={{
-              borderRadius: '9999px',
-              backgroundColor: '#0d8a4f',
+              borderRadius: '8px',
+              backgroundColor: '#1f2937',
               color: '#ffffff',
-              fontWeight: 800,
+              fontWeight: 600,
               px: 3,
               py: 1,
               textTransform: 'none',
               whiteSpace: 'nowrap',
               flexShrink: 0,
               minWidth: 'auto',
-              boxShadow: '0 4px 14px -2px rgba(13, 138, 79, 0.35)',
+              boxShadow: '0 4px 14px -2px rgba(0, 0, 0, 0.12)',
               '&:hover': {
-                backgroundColor: '#0a7543',
-                boxShadow: '0 6px 18px -2px rgba(13, 138, 79, 0.45)',
+                backgroundColor: '#111827',
+                boxShadow: '0 6px 18px -2px rgba(0, 0, 0, 0.12)',
               },
             }}
           >
@@ -156,16 +156,16 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
             sx={{
               my: 2.5,
               height: 6,
-              borderRadius: '9999px',
-              bgcolor: 'rgba(13, 138, 79, 0.08)',
-              '& .MuiLinearProgress-bar': { bgcolor: '#0d8a4f', borderRadius: '9999px' },
+              borderRadius: '8px',
+              bgcolor: 'rgba(0, 0, 0, 0.08)',
+              '& .MuiLinearProgress-bar': { bgcolor: '#1f2937', borderRadius: '8px' },
             }}
           />
         )}
 
         {results && (
           <Box display="flex" flexDirection="column" gap={2} mt={1}>
-            <Typography variant="subtitle2" fontWeight={800} sx={{ color: '#0d8a4f', fontSize: '0.875rem' }}>
+            <Typography variant="subtitle2" fontWeight={600} sx={{ color: '#1f2937', fontSize: '0.875rem' }}>
               Kết quả Trích xuất Context Chunks ({results.length} đoạn tương đồng nhất):
             </Typography>
 
@@ -174,26 +174,26 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
                 key={res.id}
                 p={2.5}
                 borderRadius="18px"
-                border="1px solid rgba(13, 138, 79, 0.12)"
-                bgcolor="#fbfdfc"
-                boxShadow="0 2px 8px -2px rgba(13, 138, 79, 0.04)"
+                border="1px solid rgba(0, 0, 0, 0.12)"
+                bgcolor="#f8f8f8"
+                boxShadow="0 2px 8px -2px rgba(0, 0, 0, 0.04)"
               >
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} flexWrap="wrap" gap={1}>
                   <Box display="flex" alignItems="center" gap={1.2}>
-                    <span className="text-xs font-black text-white bg-[#0d8a4f] px-2 py-0.5 rounded-md">
+                    <span className="text-xs font-semibold text-white bg-[#1f2937] px-2 py-0.5 rounded-md">
                       #{i + 1}
                     </span>
-                    <span className="text-xs font-black text-slate-800">{res.document}</span>
+                    <span className="text-xs font-semibold text-gray-800">{res.document}</span>
                     <Chip
                       size="small"
                       label={res.version}
                       sx={{
-                        borderRadius: '9999px',
+                        borderRadius: '8px',
                         fontSize: '0.675rem',
-                        fontWeight: 800,
-                        bgcolor: '#f0f8f4',
-                        color: '#0d8a4f',
-                        border: '1px solid rgba(13, 138, 79, 0.2)',
+                        fontWeight: 600,
+                        bgcolor: '#f3f4f6',
+                        color: '#1f2937',
+                        border: '1px solid rgba(0, 0, 0, 0.12)',
                       }}
                     />
                   </Box>
@@ -201,12 +201,12 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
                     size="small"
                     label={`${res.score}% Cosine Match`}
                     sx={{
-                      borderRadius: '9999px',
-                      fontWeight: 800,
+                      borderRadius: '8px',
+                      fontWeight: 600,
                       fontSize: '0.725rem',
-                      backgroundColor: '#ecfdf5',
-                      color: '#047857',
-                      border: '1px solid #a7f3d0',
+                      backgroundColor: '#f3f4f6',
+                      color: '#1f2937',
+                      border: '1px solid #e5e7eb',
                     }}
                   />
                 </Box>
@@ -216,7 +216,7 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
                   p={2}
                   borderRadius="12px"
                   bgcolor="#ffffff"
-                  border="1px solid rgba(13, 138, 79, 0.08)"
+                  border="1px solid rgba(0, 0, 0, 0.08)"
                   sx={{ lineHeight: 1.6, fontWeight: 500, fontSize: '0.85rem' }}
                 >
                   &quot;{res.chunk}&quot;
@@ -231,16 +231,16 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
         <Button
           onClick={onClose}
           sx={{
-            borderRadius: '9999px',
+            borderRadius: '8px',
             px: 3.5,
             py: 1,
             textTransform: 'none',
-            fontWeight: 800,
-            color: '#475569',
+            fontWeight: 600,
+            color: '#4b5563',
             bgcolor: '#ffffff',
             border: '1px solid rgba(0,0,0,0.08)',
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            '&:hover': { bgcolor: '#f0f8f4', color: '#0d8a4f' },
+            '&:hover': { bgcolor: '#f3f4f6', color: '#1f2937' },
           }}
         >
           Đóng
