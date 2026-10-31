@@ -58,9 +58,9 @@ def get_provider_capabilities(provider: str, model: str) -> ProviderCapability:
             max_output_tokens=8192,
             local_repair_required=False,
         )
-    elif provider_lower == "openai":
+    elif provider_lower in ("openai", "openrouter"):
         return ProviderCapability(
-            provider_name="openai",
+            provider_name=provider_lower,
             supports_native_json=True,
             supports_json_schema=True,
             supports_tool_calling=True,
@@ -95,6 +95,11 @@ def format_model_for_litellm(provider: str, model: str) -> str:
         if model_clean.startswith("openai/"):
             return model_clean
         return model_clean
+    elif provider_lower == "openrouter":
+        # OpenRouter models are vendor-scoped, e.g. "openai/gpt-4o-mini"
+        if model_clean.startswith("openrouter/"):
+            return model_clean
+        return f"openrouter/{model_clean}"
     elif provider_lower == "openai_compatible":
         if model_clean.startswith("openai/"):
             return model_clean
