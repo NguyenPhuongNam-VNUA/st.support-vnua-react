@@ -357,6 +357,12 @@ async def output_guardrail_node(state: GraphState) -> GraphState:
 
     citation_pattern = re.compile(r"\[(src_\w+)\]")
     answer = citation_pattern.sub(replace_invalid_citation, answer)
+    # Return only sources the answer cites, in citing order; the API keeps the
+    # first 3, so retrieval order would show pages unrelated to the answer.
+    cited_ids = list(dict.fromkeys(citation_pattern.findall(answer)))
+    if cited_ids:
+        by_id = {citation.citation_id: citation for citation in verified_citations}
+        verified_citations = [by_id[cid] for cid in cited_ids if cid in by_id]
     state["citations"] = verified_citations
 
     # 3. HTML and XSS Sanitization

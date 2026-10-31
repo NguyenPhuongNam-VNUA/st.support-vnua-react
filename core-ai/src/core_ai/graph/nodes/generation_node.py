@@ -9,6 +9,7 @@ call on Gemini Embedding 2 and one on answer generation; cache hits spend zero.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Any, Dict, List, Literal, cast
 
@@ -17,6 +18,12 @@ from core_ai.contracts.events import AnswerDeltaPayload, PipelineStatusPayload, 
 from core_ai.contracts.llm import ChatMessage, GenerationRequest, GenerationResult
 from core_ai.dependencies import get_component
 from core_ai.graph.state import GraphState, add_execution_trace
+
+# Phrases the prompts tell the model to use when the evidence lacks the answer.
+_NO_INFO_ANSWER = re.compile(
+    r"(chưa|không)\s+(có\s+(sẵn|thông\s+tin|văn\s+bản|dữ\s+liệu)|tìm\s+thấy\s+thông\s+tin)",
+    re.IGNORECASE,
+)
 
 logger = logging.getLogger("core_ai.graph.nodes.generation_node")
 
@@ -410,7 +417,11 @@ QUY TẮC BẢO MẬT & ĐẦU RA:
         and document_citation_ids
         and not any(f"[{citation_id}]" in answer_text for citation_id in document_citation_ids)
     ):
-        answer_text = f"{answer_text.rstrip()}\n\n[{document_citation_ids[0]}]"
+        if _NO_INFO_ANSWER.search(answer_text):
+            # A "no information" reply cites nothing; showing a source would mislead.
+            state["citations"] = []
+        else:
+            answer_text = f"{answer_text.rstrip()}\n\n[{document_citation_ids[0]}]"
 
     state["answer"] = answer_text
     if state.get("retrieved_chunks"):

@@ -321,11 +321,8 @@ async def retrieval_node(state: GraphState) -> GraphState:
         item if isinstance(item, Citation) else Citation(**item)
         for item in state.get("citations", [])
     ] if attempts > 1 else []
-    query = (
-        reformulate_query_deterministic(state.get("message", ""))
-        if attempts > 1
-        else state.get("message", "")
-    )
+    base_query = state.get("normalized_query") or state.get("message", "")
+    query = reformulate_query_deterministic(base_query) if attempts > 1 else base_query
     tenant_id = state.get("tenant_id", "vnua")
     retriever = get_component("hybrid_retriever")
 

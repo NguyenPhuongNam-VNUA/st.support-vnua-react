@@ -37,6 +37,33 @@ _SOCIAL_PATTERNS = re.compile(
 )
 
 
+# Student chat shorthand; left unexpanded these count as "distinctive" query terms
+# that never occur in documents, so evidence_node rejects otherwise good matches.
+_CHAT_ABBREVIATIONS = {
+    "ntn": "như thế nào",
+    "ntnao": "như thế nào",
+    "ko": "không",
+    "k": "không",
+    "kh": "không",
+    "khg": "không",
+    "hok": "không",
+    "dc": "được",
+    "đc": "được",
+    "j": "gì",
+    "sv": "sinh viên",
+    "gv": "giảng viên",
+    "ktx": "ký túc xá",
+}
+_ABBREVIATION_RE = re.compile(
+    r"(?<!\w)(" + "|".join(map(re.escape, _CHAT_ABBREVIATIONS)) + r")(?!\w)",
+    re.IGNORECASE | re.UNICODE,
+)
+
+
+def expand_chat_abbreviations(query: str) -> str:
+    return _ABBREVIATION_RE.sub(lambda m: _CHAT_ABBREVIATIONS[m.group(1).lower()], query)
+
+
 def classify_user_intent(query: str) -> str:
     """Classifies student intention: social, sensitive, academic, or out_of_domain."""
     cleaned = query.strip().lower()
@@ -67,7 +94,7 @@ def classify_user_intent(query: str) -> str:
 async def query_prep_node(state: GraphState) -> GraphState:
     started = time.perf_counter()
     state["current_stage"] = "query_prep"
-    query = " ".join(state.get("message", "").split())
+    query = expand_chat_abbreviations(" ".join(state.get("message", "").split()))
     state["normalized_query"] = query
     state["query_terms"] = [
         term for term in re.findall(r"[\w]+", query.lower(), flags=re.UNICODE) if len(term) > 1

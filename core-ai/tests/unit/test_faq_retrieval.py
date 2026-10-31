@@ -298,3 +298,60 @@ async def test_faq_only_output_does_not_require_document_citation() -> None:
 
     assert guardrail.validate.call_args.kwargs["require_citations"] is False
     assert state["citations"] == []
+
+
+@pytest.mark.asyncio
+async def test_output_citations_follow_answer_citing_order() -> None:
+    from core_ai.contracts.chat import Citation
+
+    citations = [
+        Citation(citation_id=f"src_{i}", document_id=3, title="Sổ tay", page=i * 10, snippet="x")
+        for i in range(1, 5)
+    ]
+    answer = "Học phí đóng theo kỳ [src_4]. Miễn giảm xem quy định [src_2]."
+    guardrail = MagicMock()
+    guardrail.validate.return_value = SimpleNamespace(
+        sanitized_answer=answer, validated_citations=citations, is_safe=True
+    )
+    state = create_initial_state("req-5", "Học phí đóng thế nào?")
+    state["user_intent"] = "academic"
+    state["answer"] = answer
+    state["citations"] = citations
+
+    with patch(
+        "core_ai.graph.nodes.guardrail_node.get_component",
+        side_effect=lambda name: guardrail if name == "output_guardrail" else None,
+    ):
+        await output_guardrail_node(state)
+
+    assert [c.citation_id for c in state["citations"]] == ["src_4", "src_2"]
+    assert [c.page for c in state["citations"]] == [40, 20]
+
+
+@pytest.mark.asyncio
+async def test_no_information_answer_shows_no_sources() -> None:
+    from core_ai.contracts.chat import RouteStatus
+    from core_ai.graph.nodes.generation_node import _NO_INFO_ANSWER
+    from core_ai.guardrails.output_guardrail import OutputGuardrail
+
+    answer = "Thông tin về học bổng hiện chưa có sẵn trong cơ sở dữ liệu của mình."
+    assert _NO_INFO_ANSWER.search(answer)
+    assert not _NO_INFO_ANSWER.search("Sinh viên cần GPA từ 3.2 trở lên.")
+
+    state = create_initial_state("req-6", "Điều kiện học bổng?")
+    state["user_intent"] = "academic"
+    state["status"] = RouteStatus.ANSWERED
+    state["answer"] = answer
+    state["citations"] = []  # generation_node clears them for no-info replies
+    state["retrieved_chunks"] = [
+        {"citation_id": "src_1", "source_type": "document", "snippet": "Đăng ký tín chỉ online."}
+    ]
+    with patch(
+        "core_ai.graph.nodes.guardrail_node.get_component",
+        side_effect=lambda name: OutputGuardrail() if name == "output_guardrail" else None,
+    ):
+        await output_guardrail_node(state)
+
+    assert state["citations"] == []
+    assert state["status"] == RouteStatus.ANSWERED
+    assert "chưa có sẵn" in state["answer"]
