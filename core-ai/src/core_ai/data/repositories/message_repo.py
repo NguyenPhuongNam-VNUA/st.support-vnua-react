@@ -79,8 +79,10 @@ class MessageRepository:
                         raw_session_id,
                     )
 
-                # 3. Check if active conversation exists for this client_ip within 48h
-                if valid_conv_id is None and client_ip and client_ip != "127.0.0.1":
+                # 3. Check if active conversation exists for this client_ip within 48h.
+                # Only without a session id: browsers behind one NAT/Docker IP would otherwise
+                # be merged into another chat, and feedback lookups by session id would miss.
+                if valid_conv_id is None and not raw_session_id and client_ip and client_ip != "127.0.0.1":
                     valid_conv_id = await conn.fetchval(
                         """
                         SELECT id FROM public.conversations
