@@ -61,6 +61,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 ENV TOKENIZERS_PARALLELISM=false \
     OMP_NUM_THREADS=2
 
+# Disable OpenSSL ARM CPU-feature probing: Docker Desktop on Apple M4 advertises
+# SVE, and cryptography>=46 then crashes with SIGILL (exit 132). No-op on x86.
+ENV OPENSSL_armcap=0
+
 # Install runtime libraries (libpq for asyncpg/PostgreSQL, curl for health check probe)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \

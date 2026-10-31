@@ -175,7 +175,7 @@ class ProviderCapability(BaseModel):
 
 class ModelConfig(BaseModel):
     """Active LLM provider configuration."""
-    provider: Literal["gemini", "openai", "openai_compatible"] = Field(
+    provider: Literal["gemini", "openai", "openrouter", "openai_compatible"] = Field(
         default="gemini",
         description="Active provider configured via LLM_PROVIDER",
     )
