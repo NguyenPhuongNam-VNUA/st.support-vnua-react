@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
 import { Check, ChevronDown, Copy, ExternalLink, FileText, Loader2 } from "lucide-react";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
@@ -132,11 +130,11 @@ interface ChatMsgProps {
   onConfirmRedaction?: () => void;
 }
 
-function ClaudeThinkingIcon({ animate = false }: { animate?: boolean }) {
+function ThinkingDots({ animate = false }: { animate?: boolean }) {
   return (
     <svg
-      width="24"
-      height="24"
+      width="16"
+      height="16"
       viewBox="0 0 60 60"
       fill="none"
       style={{ flexShrink: 0 }}
@@ -150,8 +148,8 @@ function ClaudeThinkingIcon({ animate = false }: { animate?: boolean }) {
           y2="60"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0%" stopColor="#8b5cf6" />
-          <stop offset="100%" stopColor="#3b82f6" />
+          <stop offset="0%" stopColor="#34a06b" />
+          <stop offset="100%" stopColor="#0d7a46" />
         </linearGradient>
       </defs>
       <circle cx="14" cy="30" r="5" fill="url(#cl1)">
@@ -327,101 +325,84 @@ function preprocessMarkdown(content: string): string {
 
 const markdownComponents = {
   p: ({ children }: any) => (
-    <p className="mb-3.5 last:mb-0 leading-[1.74] text-slate-700 text-[0.935rem]">
+    <p className="mb-4 last:mb-0 leading-[1.75] text-[#1f2937] text-[15px]">
       {children}
     </p>
   ),
   ol: ({ children }: any) => (
-    <ol className="my-3 space-y-2.5 pl-5 list-decimal text-slate-700 marker:text-blue-600 marker:font-bold marker:text-[0.95rem]">
+    <ol className="my-3 space-y-2 pl-6 list-decimal text-[#1f2937] marker:text-ink-subtle">
       {children}
     </ol>
   ),
   ul: ({ children }: any) => (
-    <ul className="my-3 space-y-2 pl-5 list-disc text-slate-700 marker:text-blue-500">
+    <ul className="my-3 space-y-1.5 pl-6 list-disc text-[#1f2937] marker:text-ink-subtle">
       {children}
     </ul>
   ),
   li: ({ children }: any) => (
-    <li className="pl-1 leading-[1.68] text-slate-700 text-[0.935rem]">
-      {children}
-    </li>
+    <li className="pl-1 leading-[1.7] text-[15px]">{children}</li>
   ),
   strong: ({ children }: any) => (
-    <strong className="font-semibold text-slate-900 bg-blue-50/80 px-1.5 py-0.5 rounded text-[0.93rem] border border-blue-100/70">
-      {children}
-    </strong>
+    <strong className="font-semibold text-ink">{children}</strong>
   ),
-  em: ({ children }: any) => (
-    <em className="italic text-slate-600 font-medium">{children}</em>
-  ),
+  em: ({ children }: any) => <em className="italic">{children}</em>,
   h1: ({ children }: any) => (
-    <h1 className="text-[1.06rem] font-extrabold text-slate-900 mt-5 mb-2.5 pb-2 border-b border-blue-200/60 flex items-center gap-2.5 tracking-tight">
-      <span className="w-1.5 h-5 bg-blue-600 rounded-full inline-block flex-shrink-0 shadow-xs" />
-      <span>{children}</span>
+    <h1 className="text-[18px] font-semibold text-ink mt-6 mb-3 first:mt-0 tracking-[-0.01em]">
+      {children}
     </h1>
   ),
   h2: ({ children }: any) => (
-    <h2 className="ml-4 pl-3 border-l-2 border-blue-500/80 text-[0.97rem] font-bold text-slate-800 mt-4 mb-2 flex items-center gap-2 tracking-tight">
-      <span className="w-2 h-2 rounded-full bg-blue-500 inline-block flex-shrink-0" />
-      <span>{children}</span>
+    <h2 className="text-[16.5px] font-semibold text-ink mt-6 mb-2.5 first:mt-0 tracking-[-0.01em]">
+      {children}
     </h2>
   ),
   h3: ({ children }: any) => (
-    <h3 className="ml-7 pl-2.5 border-l border-blue-300/70 text-[0.91rem] font-semibold text-slate-700 mt-3 mb-1.5 flex items-center gap-1.5">
-      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block flex-shrink-0" />
-      <span>{children}</span>
+    <h3 className="text-[15px] font-semibold text-ink mt-5 mb-2 first:mt-0">
+      {children}
     </h3>
   ),
   blockquote: ({ children }: any) => (
-    <blockquote className="my-3.5 border-l-4 border-blue-500 bg-blue-50/40 py-2.5 px-4 rounded-r-xl text-slate-700 italic text-[0.91rem] leading-relaxed shadow-xs">
+    <blockquote className="my-4 border-l-[3px] border-gray-300 pl-4 text-ink-muted text-[15px] leading-relaxed">
       {children}
     </blockquote>
   ),
   code: ({ inline, className, children, ...props }: any) => {
     if (inline) {
       return (
-        <code className="px-1.5 py-0.5 mx-0.5 rounded-md bg-blue-50/80 text-blue-800 font-mono text-[0.85em] font-medium border border-blue-200/60">
+        <code className="px-1.5 py-0.5 mx-0.5 rounded-md bg-gray-100 text-ink font-mono text-[0.86em]">
           {children}
         </code>
       );
     }
     return (
-      <code className="block p-3.5 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto my-3 leading-relaxed shadow-md border border-slate-800">
+      <code className="block p-4 rounded-xl bg-[#0f1411] text-gray-100 font-mono text-[13px] overflow-x-auto my-4 leading-relaxed">
         {children}
       </code>
     );
   },
   table: ({ children }: any) => (
-    <div className="my-4 overflow-x-auto rounded-xl border border-slate-200 shadow-xs bg-white">
-      <table className="min-w-full divide-y divide-slate-200 text-[0.84rem] text-slate-700 border-collapse">
+    <div className="my-4 overflow-x-auto rounded-xl border border-line">
+      <table className="min-w-full text-[14px] text-[#1f2937] border-collapse">
         {children}
       </table>
     </div>
   ),
   thead: ({ children }: any) => (
-    <thead className="bg-blue-50/90 font-semibold text-blue-950 border-b border-blue-200/80">
-      {children}
-    </thead>
+    <thead className="bg-canvas border-b border-line">{children}</thead>
   ),
   tbody: ({ children }: any) => (
-    <tbody className="divide-y divide-slate-100 bg-white">{children}</tbody>
+    <tbody className="divide-y divide-line">{children}</tbody>
   ),
-  tr: ({ children }: any) => (
-    <tr className="transition-colors hover:bg-blue-50/40 even:bg-slate-50/50">
-      {children}
-    </tr>
-  ),
+  tr: ({ children }: any) => <tr>{children}</tr>,
   th: ({ children }: any) => (
-    <th className="px-3.5 py-2.5 text-left font-bold text-blue-900 tracking-normal text-[0.82rem] whitespace-nowrap">
+    <th className="px-4 py-2.5 text-left font-semibold text-ink text-[13px] whitespace-nowrap">
       {children}
     </th>
   ),
   td: ({ children }: any) => (
-    <td className="px-3.5 py-2.5 text-[0.84rem] leading-relaxed text-slate-700 align-top">
-      {children}
-    </td>
+    <td className="px-4 py-2.5 leading-relaxed align-top">{children}</td>
   ),
-  hr: () => <hr className="my-3.5 border-slate-200/80" />,
+  hr: () => <hr className="my-6 border-line" />,
 };
 
 export default function ChatMsg({
@@ -460,72 +441,34 @@ export default function ChatMsg({
   const hasThinking = isStreaming || trace.length > 0;
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 1.5,
-        my: 2,
-        maxWidth: { md: "88%", xs: "98%" },
-      }}
-    >
-      <Box sx={{ width: 36, height: 36, flexShrink: 0 }}>
-        <Image
-          src="/st.png"
-          alt="ST - Care"
-          width={36}
-          height={36}
-          className="object-contain drop-shadow-sm"
-        />
-      </Box>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        {/* Assistant Header */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            mb: 0.8,
-            px: 0.5,
-          }}
-        >
-          <Typography
-            variant="caption"
-            sx={{ fontWeight: 700, color: "#2563eb", fontSize: "0.75rem" }}
-          >
-            ST - Care
-          </Typography>
-          <Typography
-            variant="caption"
-            sx={{ color: "#64748b", fontSize: "0.75rem", fontWeight: 500 }}
-          >
-            {timestamp || (isStreaming ? "Đang xử lý" : "Vừa xong")}
-          </Typography>
-        </Box>
-
-        {/* Claude-style Thinking Section (ABOVE the answer) */}
+    <div className="flex items-start gap-3 sm:gap-4 stc-rise">
+      <div className="h-8 w-8 flex-shrink-0 rounded-full bg-white border border-line flex items-center justify-center">
+        <Image src="/st.png" alt="ST - Care" width={22} height={22} className="object-contain" />
+      </div>
+      <div className="flex-1 min-w-0 pt-1">
+        {/* Thinking summary (above the answer) */}
         {hasThinking && (
-          <Box sx={{ mb: 1.2 }}>
+          <div className="mb-3">
             <button
               type="button"
               onClick={() => setShowTrace((prev) => !prev)}
-              className="group inline-flex items-center gap-2 py-0.5 text-xs font-medium text-slate-600 transition-colors hover:text-slate-900 cursor-pointer"
+              aria-expanded={showTrace}
+              className="group inline-flex items-center gap-2 text-[13px] text-ink-subtle transition-colors hover:text-ink-muted cursor-pointer"
             >
-              <ClaudeThinkingIcon animate={isStreaming} />
-              <span>
+              <ThinkingDots animate={isStreaming} />
+              <span className={isStreaming ? "text-ink-muted" : ""}>
                 {isStreaming
                   ? currentStepTitle
-                  : `Đã suy nghĩ (${trace.length} bước${totalDuration ? ` · ${totalDuration}` : ""})`}
+                  : `Đã xử lý ${trace.length} bước${totalDuration ? ` trong ${totalDuration}` : ""}`}
               </span>
               <ChevronDown
-                size={13}
-                className={`text-slate-400 transition-transform duration-200 group-hover:text-slate-600 ${showTrace ? "rotate-180" : ""}`}
+                size={14}
+                className={`transition-transform duration-200 ${showTrace ? "rotate-180" : ""}`}
               />
             </button>
 
-            {/* Expanded Dropdown Panel */}
             {showTrace && trace.length > 0 && (
-              <div className="mt-1.5 space-y-1.5 border-l-2 border-emerald-500/50 pl-3 py-1 text-xs text-slate-600 max-w-xl bg-emerald-50/20 rounded-r-lg">
+              <div className="mt-2 ml-[7px] space-y-1.5 border-l border-line pl-4 py-1 text-[13px] max-w-xl">
                 {trace.map((item, index) => {
                   const title = formatTraceStep(item);
                   const isDone =
@@ -533,22 +476,18 @@ export default function ChatMsg({
                   return (
                     <div
                       key={`${item.step}-${index}`}
-                      className="flex items-center justify-between gap-3 text-slate-600 py-0.5"
+                      className="flex items-center justify-between gap-3"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full ${isDone ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"}`}>
-                          {isDone ? (
-                            <Check size={11} strokeWidth={2.5} />
-                          ) : (
-                            <Loader2 size={11} className="animate-spin text-blue-600" />
-                          )}
-                        </span>
-                        <span className="font-medium text-slate-700">
-                          {title}
-                        </span>
+                      <div className="flex items-center gap-2 min-w-0 text-ink-muted">
+                        {isDone ? (
+                          <Check size={13} className="text-brand flex-shrink-0" />
+                        ) : (
+                          <Loader2 size={13} className="animate-spin text-amber-600 flex-shrink-0" />
+                        )}
+                        <span>{title}</span>
                       </div>
                       {item.latency_ms != null && (
-                        <span className="flex-shrink-0 text-[11px] text-slate-400 font-mono">
+                        <span className="flex-shrink-0 text-xs text-ink-subtle tabular-nums">
                           {item.latency_ms} ms
                         </span>
                       )}
@@ -557,26 +496,12 @@ export default function ChatMsg({
                 })}
               </div>
             )}
-          </Box>
+          </div>
         )}
 
-        {/* Message Bubble */}
+        {/* Answer */}
         {(message || (!isStreaming && !message)) && (
-          <Box
-            sx={{
-              position: "relative",
-              px: { xs: 2, sm: 2.6 },
-              py: { xs: 1.8, sm: 2.2 },
-              borderRadius: "4px 22px 22px 22px",
-              background: "rgba(255, 255, 255, 0.98)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(13, 138, 79, 0.12)",
-              boxShadow:
-                "0 4px 24px -4px rgba(13, 138, 79, 0.06), 0 1px 3px 0 rgba(0, 0, 0, 0.02)",
-              color: "#1e293b",
-            }}
-          >
+          <div>
             {message ? (
               <div className="markdown-content">
                 <ReactMarkdown
@@ -587,104 +512,68 @@ export default function ChatMsg({
                 </ReactMarkdown>
               </div>
             ) : (
-              <Typography variant="body2" sx={{ color: "#64748b" }}>
+              <p className="text-[15px] text-ink-subtle">
                 Không có nội dung phản hồi.
-              </Typography>
-            )}
-
-            {message && !isStreaming && (
-              <div className="mt-3.5 flex items-center justify-between pt-2 border-t border-slate-100">
-                <span className="text-[11px] text-slate-400 font-medium tracking-tight">
-                  ST-Care Assistant
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-slate-500 transition-all hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer"
-                  title="Sao chép nội dung"
-                >
-                  {copied ? (
-                    <>
-                      <Check size={12} className="text-emerald-600" />
-                      <span className="text-emerald-700 font-semibold">
-                        Đã chép
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={12} />
-                      <span>Sao chép</span>
-                    </>
-                  )}
-                </button>
-              </div>
+              </p>
             )}
 
             {citations.length > 0 && (
-              <Box
-                sx={{
-                  mt: 2,
-                  pt: 1.6,
-                  borderTop: "1px dashed rgba(13, 138, 79, 0.18)",
-                }}
-              >
-                <details className="group/source">
-                  <summary className="flex cursor-pointer list-none items-center gap-2 text-[0.78rem] font-bold text-emerald-800 [&::-webkit-details-marker]:hidden">
-                    <ChevronDown
-                      size={14}
-                      className="transition-transform group-open/source:rotate-180"
-                    />
-                    Nguồn văn bản tham khảo
-                  </summary>
-                  <div className="mt-2 grid gap-1.5">
-                    {citations.slice(0, 3).map((source, index) => {
-                      const meta = getFileTypeMeta(source.title, source.page);
-                      return (
-                        <div
-                          key={source.citation_id}
-                          className={`flex items-center justify-between gap-3 rounded-xl border p-2.5 text-xs text-slate-700 shadow-2xs transition-all ${meta.bgLight}`}
-                        >
-                          <div className="flex items-start gap-1.5 min-w-0">
-                            <FileText
-                              size={14}
-                              className={`${meta.iconColor} flex-shrink-0 mt-0.5`}
-                            />
-                            <strong className="min-w-0 leading-relaxed font-semibold text-slate-800">
-                              ({index + 1}) {source.title}
-                              {source.page
-                                ? ` — Trang ${source.page}${source.page_end && source.page_end !== source.page ? `–${source.page_end}` : ""}`
-                                : ""}
-                            </strong>
-                          </div>
-                          <a
-                            href={`/api/documents/${encodeURIComponent(String(source.document_id))}/file${source.page ? `?page=${source.page}` : ""}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`inline-flex flex-shrink-0 items-center gap-1 rounded-lg px-2 py-1 font-semibold ${meta.linkColor}`}
-                            title={`Mở ${meta.label} trong tab mới`}
-                          >
-                            {meta.actionLabel}
-                            <ExternalLink size={12} />
-                          </a>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </details>
-              </Box>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {citations.slice(0, 3).map((source, index) => {
+                  const meta = getFileTypeMeta(source.title, source.page);
+                  return (
+                    <a
+                      key={source.citation_id}
+                      href={`/api/documents/${encodeURIComponent(String(source.document_id))}/file${source.page ? `?page=${source.page}` : ""}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group/cite inline-flex max-w-full items-center gap-2 rounded-full border border-line bg-white pl-1.5 pr-3 py-1 text-[12.5px] text-ink-muted hover:bg-canvas hover:text-ink transition-colors"
+                      title={`${meta.actionLabel}: ${source.title}`}
+                    >
+                      <span className="flex-shrink-0 h-5 w-5 rounded-full bg-canvas text-[11px] font-medium text-ink-muted flex items-center justify-center tabular-nums">
+                        {index + 1}
+                      </span>
+                      <FileText size={13} className={`${meta.iconColor} flex-shrink-0`} />
+                      <span className="min-w-0 truncate">
+                        {source.title}
+                        {source.page
+                          ? `, tr. ${source.page}${source.page_end && source.page_end !== source.page ? `–${source.page_end}` : ""}`
+                          : ""}
+                      </span>
+                      <ExternalLink size={12} className="flex-shrink-0 text-ink-subtle group-hover/cite:text-ink" />
+                    </a>
+                  );
+                })}
+              </div>
             )}
 
             {fallback?.redacted_query && onConfirmRedaction && (
               <button
                 onClick={onConfirmRedaction}
-                className="mt-3 rounded-lg bg-emerald-700 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-800 transition-colors shadow-xs"
+                className="mt-4 rounded-full bg-brand px-4 py-2 text-[13px] font-medium text-white hover:bg-brand-deep transition-colors cursor-pointer"
               >
-                Xác nhận dùng câu hỏi đã ẩn thông tin
+                Gửi câu hỏi đã ẩn thông tin cá nhân
               </button>
             )}
-          </Box>
+
+            {message && !isStreaming && (
+              <div className="mt-2 -ml-1.5 flex items-center gap-1 text-ink-subtle">
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="inline-flex items-center gap-1.5 rounded-lg p-1.5 text-xs transition-colors hover:bg-black/5 hover:text-ink cursor-pointer"
+                  title="Sao chép câu trả lời"
+                  aria-label="Sao chép câu trả lời"
+                >
+                  {copied ? <Check size={14} className="text-brand" /> : <Copy size={14} />}
+                  {copied && <span className="text-brand">Đã sao chép</span>}
+                </button>
+                {timestamp && <span className="text-[11px] ml-1">{timestamp}</span>}
+              </div>
+            )}
+          </div>
         )}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
