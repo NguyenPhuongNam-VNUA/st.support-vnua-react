@@ -2,27 +2,23 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { flushSync } from 'react-dom';
+import Image from 'next/image';
 
 // MUI
 import TextField from '@mui/material/TextField';
-import IconButton from '@mui/material/IconButton';
-import InputAdornment from '@mui/material/InputAdornment';
-import Tooltip from '@mui/material/Tooltip';
 
 // Lucide Icons
 import {
-  Send,
-  Plus,
+  ArrowUp,
   ChevronDown,
-  ShieldCheck,
   Menu,
   X,
-  SlidersHorizontal,
+  PanelRight,
+  SquarePen,
   ExternalLink,
-  CheckCircle2,
+  Check,
   Loader2,
   FileText,
-  Activity,
   Square,
 } from 'lucide-react';
 
@@ -124,6 +120,17 @@ function getFriendlyStepTitle(step: ChatTraceStep): string {
   }
   const key = (step.step || '').toLowerCase();
   return FRIENDLY_STEP_TITLES[key] || step.step || 'Đang xử lý thông tin';
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  answered: 'Đã trả lời',
+  stopped: 'Đã dừng',
+  interrupted: 'Bị gián đoạn',
+  fallback: 'Chuyển hỗ trợ',
+};
+
+function getStatusLabel(status: string): string {
+  return STATUS_LABELS[status.toLowerCase()] || status;
 }
 
 export default function ChatBotPage() {
@@ -406,302 +413,285 @@ export default function ChatBotPage() {
   const activeCitations = latestAssistantMessage?.citations || [];
   const activeStatus = isThinking ? (liveStatus || 'Đang xử lý...') : (latestAssistantMessage?.status || 'Sẵn sàng');
 
-  return (
-    <main
-      className="relative h-screen h-[100dvh] w-full flex overflow-hidden font-sans bg-cover bg-center bg-no-repeat bg-fixed"
-      style={{ backgroundImage: "url('/background.png')" }}
+  const canSend = !!message.trim() && !isThinking;
+
+  const renderComposer = (variant: 'hero' | 'dock') => (
+    <div
+      className={`w-full bg-white border border-line rounded-[22px] shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-12px_rgba(16,24,40,0.12)] transition-[border-color,box-shadow] focus-within:border-gray-300 focus-within:shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_32px_-12px_rgba(16,24,40,0.18)] ${
+        variant === 'hero' ? 'p-3 pl-4' : 'p-2 pl-4'
+      }`}
     >
+      <div className={variant === 'hero' ? 'flex flex-col gap-2' : 'flex items-end gap-2'}>
+        <TextField
+          fullWidth
+          multiline
+          minRows={variant === 'hero' ? 2 : 1}
+          maxRows={variant === 'hero' ? 10 : 6}
+          variant="standard"
+          placeholder="Hỏi về học phí, quy chế, lịch học, tuyển sinh..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+          slotProps={{
+            input: { disableUnderline: true },
+            htmlInput: { 'aria-label': 'Nhập câu hỏi cho ST - Care' },
+          }}
+          sx={{
+            '& textarea': {
+              color: '#111827',
+              fontSize: '0.95rem',
+              lineHeight: 1.6,
+              pt: variant === 'hero' ? '6px' : '7px',
+              pb: variant === 'dock' ? '7px' : 0,
+            },
+            '& textarea::placeholder': { color: '#9ca3af', opacity: 1 },
+          }}
+        />
+
+        <div className={`flex items-center gap-2 ${variant === 'hero' ? 'justify-between' : 'flex-shrink-0'}`}>
+          {variant === 'hero' && (
+            <span className="hidden sm:inline text-xs text-ink-subtle">
+              Shift + Enter để xuống dòng
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={isThinking ? handleStopGenerating : () => handleSend()}
+            disabled={!isThinking && !message.trim()}
+            aria-label={isThinking ? 'Dừng tạo câu trả lời' : 'Gửi câu hỏi'}
+            title={isThinking ? 'Dừng tạo câu trả lời' : 'Gửi (Enter)'}
+            className={`ml-auto h-9 w-9 flex items-center justify-center rounded-full transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 ${
+              isThinking
+                ? 'bg-ink hover:bg-black text-white'
+                : canSend
+                  ? 'bg-brand hover:bg-brand-deep text-white'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {isThinking ? <Square size={12} fill="currentColor" /> : <ArrowUp size={18} strokeWidth={2.4} />}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <main className="stc-app relative h-screen h-[100dvh] w-full flex overflow-hidden bg-white text-ink antialiased">
       {/* Dynamic SEO Hidden Header */}
       <header className="sr-only">
         <h1>ST - Care | Hệ Thống Trợ Lý AI Chatbot Học Viện Nông Nghiệp Việt Nam (VNUA)</h1>
         <p>ST - Care tư vấn trực tuyến 24/7 về quy chế, học phí, lịch học và tuyển sinh VNUA.</p>
       </header>
 
-      {/* MOBILE BACKDROP OVERLAY FOR SIDEBAR */}
+      {/* Drawer backdrops (mobile / tablet) */}
       {sidebarOpen && (
-        <div
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs lg:hidden transition-opacity"
-        />
+        <div onClick={() => setSidebarOpen(false)} className="fixed inset-0 z-40 bg-black/30 lg:hidden" />
+      )}
+      {rightPanelOpen && (
+        <div onClick={() => setRightPanelOpen(false)} className="fixed inset-0 z-40 bg-black/30 xl:hidden" />
       )}
 
-      {/* ========================================================================= */}
-      {/* 1. LEFT SIDEBAR (Truly transparent glass, background clearly visible)      */}
-      {/* ========================================================================= */}
+      {/* ===================================================================== */}
+      {/* LEFT: navigation                                                       */}
+      {/* ===================================================================== */}
       <aside
         className={`
           fixed lg:static inset-y-0 left-0 z-50
-          w-64 sm:w-72 h-full flex flex-col
-          bg-white/5 backdrop-blur-xs text-slate-800 p-4 sm:p-5
-          transform transition-transform duration-300 ease-in-out
-          ${sidebarOpen ? 'translate-x-0 shadow-2xl bg-white/90' : '-translate-x-full lg:translate-x-0'}
-          border-r border-white/20 shadow-none flex-shrink-0
+          w-[272px] h-full flex flex-col flex-shrink-0
+          bg-canvas border-r border-line
+          transform transition-transform duration-300 ease-out
+          ${sidebarOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-        {/* Top Section */}
-        <div className="flex flex-col gap-3 flex-shrink-0 mb-3">
-          {/* Mobile close button header */}
-          <div className="flex items-center justify-between lg:hidden mb-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-              ST - Care Menu
-            </span>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="p-1 rounded-md text-slate-700 hover:text-black hover:bg-white/40 cursor-pointer"
-            >
-              <X size={20} />
-            </button>
+        <div className="h-14 flex items-center justify-between px-4 flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <Image src="/st.png" alt="ST" width={30} height={30} className="object-contain" />
+            <div className="leading-tight">
+              <p className="text-[14px] font-semibold text-ink">ST - Care</p>
+              <p className="text-[11px] text-ink-subtle">Học viện Nông nghiệp Việt Nam</p>
+            </div>
           </div>
-
-          {/* "+ New" Button */}
           <button
-            onClick={handleResetChat}
-            className="w-full h-11 flex items-center justify-center gap-2 px-4 bg-white/30 hover:bg-orange-50/50 active:scale-98 text-slate-800 hover:text-orange-950 font-bold text-sm rounded-2xl border border-orange-200/60 hover:border-orange-400/80 shadow-xs hover:shadow-[0_0_18px_rgba(251,146,60,0.25)] transition-all cursor-pointer backdrop-blur-sm group"
-            title="Tạo đoạn chat mới (+ New)"
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden p-1.5 rounded-lg text-ink-muted hover:bg-black/5 cursor-pointer"
+            aria-label="Đóng"
           >
-            <Plus size={17} strokeWidth={2.5} className="text-orange-600 group-hover:rotate-90 transition-transform duration-200" />
-            <span>Đoạn chat mới</span>
+            <X size={18} />
           </button>
         </div>
 
-        {/* "Recents" Section - Styled after IMG 1 */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="mb-2 px-1 flex-shrink-0 flex items-center justify-between">
-            <button
-              onClick={() => setRecentsOpen((prev) => !prev)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer select-none group"
-              title="Thu gọn / Mở rộng"
-            >
-              <span>Frequently Asked Questions</span>
-              <ChevronDown
-                size={13}
-                className={`text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ${
-                  recentsOpen ? '' : '-rotate-90'
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* List of items matching IMG 1 */}
-          {recentsOpen && (
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-0.5 flex flex-col gap-0.5 min-h-0">
-              {SUGGESTED_QUESTIONS.map((q, idx) => {
-                const isActive = activeQuestionIdx === idx;
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      setActiveQuestionIdx(idx);
-                      handleSend(q.query);
-                      if (sidebarOpen) setSidebarOpen(false);
-                    }}
-                    className={`w-full group relative flex items-center px-3 py-2 rounded-xl transition-all cursor-pointer select-none text-left ${
-                      isActive
-                        ? 'bg-orange-100/60 shadow-xs border border-orange-300/70 text-slate-950 font-medium'
-                        : 'hover:bg-orange-100/40 hover:border-orange-200/60 hover:shadow-2xs text-slate-700 hover:text-slate-950'
-                    }`}
-                    title={q.query}
-                  >
-                    {/* Question text only */}
-                    <span className="text-[13px] leading-snug truncate flex-1 font-medium">
-                      {q.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+        <div className="px-3 pt-1 pb-3 flex-shrink-0">
+          <button
+            onClick={handleResetChat}
+            className="w-full h-10 flex items-center gap-2 px-3 rounded-xl bg-white border border-line text-[13.5px] font-medium text-ink hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
+          >
+            <SquarePen size={16} className="text-ink-muted" />
+            Đoạn chat mới
+          </button>
         </div>
 
-        {/* Bottom Section: Pill / Oval button matching wireframe */}
-        <div className="pt-3 mt-3 border-t border-white/20 flex flex-col items-center flex-shrink-0">
+        <button
+          onClick={() => setRecentsOpen((prev) => !prev)}
+          className="mx-3 px-2 py-1.5 flex items-center justify-between rounded-lg text-xs font-medium text-ink-subtle hover:text-ink-muted cursor-pointer select-none"
+          aria-expanded={recentsOpen}
+        >
+          Câu hỏi thường gặp
+          <ChevronDown size={14} className={`transition-transform duration-200 ${recentsOpen ? '' : '-rotate-90'}`} />
+        </button>
+
+        {recentsOpen && (
+          <nav aria-label="Câu hỏi thường gặp" className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-3 pb-3 flex flex-col gap-px">
+            {SUGGESTED_QUESTIONS.map((q, idx) => {
+              const isActive = activeQuestionIdx === idx;
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setActiveQuestionIdx(idx);
+                    handleSend(q.query);
+                    if (sidebarOpen) setSidebarOpen(false);
+                  }}
+                  disabled={isThinking}
+                  className={`w-full text-left px-2.5 py-2 rounded-lg text-[13.5px] truncate transition-colors cursor-pointer disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 ${
+                    isActive ? 'bg-black/[0.06] text-ink font-medium' : 'text-ink-muted hover:bg-black/[0.04] hover:text-ink'
+                  }`}
+                  title={q.query}
+                >
+                  {q.label}
+                </button>
+              );
+            })}
+          </nav>
+        )}
+        {!recentsOpen && <div className="flex-1" />}
+
+        <div className="p-3 border-t border-line flex-shrink-0">
           <a
             href="https://st-dse.vnua.edu.vn/"
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full py-2 px-4 bg-white/10 hover:bg-white/25 backdrop-blur-md text-slate-800 hover:text-blue-950 text-xs font-bold rounded-full transition-all text-center flex items-center justify-center gap-1.5 border border-white/60 hover:border-white shadow-[0_0_10px_rgba(255,255,255,0.35)] active:scale-98 group cursor-pointer"
-            title="Cổng thông tin Học viện Nông nghiệp Việt Nam"
+            className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-black/[0.04] transition-colors"
           >
-            <span>FITA - ST</span>
-            <ExternalLink size={12} className="text-slate-600 group-hover:text-blue-600 transition-colors" />
+            <Image src="/fita.png" alt="" width={24} height={24} className="object-contain rounded" />
+            <div className="flex-1 min-w-0 leading-tight">
+              <p className="text-[12.5px] font-medium text-ink truncate">Khoa Công nghệ thông tin</p>
+              <p className="text-[11px] text-ink-subtle truncate">Software Development & Research Team</p>
+            </div>
+            <ExternalLink size={13} className="text-ink-subtle flex-shrink-0" />
           </a>
-          <span className="text-[10px] text-slate-500 mt-2 font-medium">
-            ST - Care v2.5 • AI Support
-          </span>
         </div>
       </aside>
 
-      {/* ========================================================================= */}
-      {/* 2. CENTER CANVAS (Main chat area matching wireframe)                       */}
-      {/* ========================================================================= */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-transparent relative">
-        {/* Header - Transparent without full-width strip */}
-        <div className="px-4 py-3 flex items-center justify-between bg-transparent z-20">
-          <div className="flex items-center gap-2">
+      {/* ===================================================================== */}
+      {/* CENTER: conversation                                                   */}
+      {/* ===================================================================== */}
+      <section aria-label="Khung trò chuyện ST - Care" className="relative flex-1 min-w-0 flex flex-col h-full">
+        <div className="h-14 flex items-center justify-between gap-2 px-3 sm:px-5 flex-shrink-0 border-b border-transparent">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-1.5 rounded-lg text-slate-700 hover:bg-white/40 lg:hidden cursor-pointer"
-              title="Mở thanh điều hướng"
+              className="lg:hidden p-2 -ml-1 rounded-lg text-ink-muted hover:bg-black/5 cursor-pointer"
+              aria-label="Mở menu"
             >
-              <Menu size={22} />
+              <Menu size={20} />
             </button>
-            {/* Floating glowing pill */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-xs border border-white/60 shadow-[0_0_15px_rgba(255,255,255,0.4)]">
-              <span className="text-xs font-bold text-slate-800 tracking-tight">
-                ST - Care
-              </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50/80 text-blue-700 border border-blue-200/60 shadow-2xs">
-                <ShieldCheck size={11} className="text-blue-600" /> VNUA AI
-              </span>
-            </div>
+            <span className="text-[15px] font-semibold text-ink">Trợ lý sinh viên</span>
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-ink-subtle">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Trực tuyến
+            </span>
           </div>
 
           <div className="flex items-center gap-1">
-            {/* Mobile toggle for outputs / sources */}
             <button
-              onClick={() => setRightPanelOpen(!rightPanelOpen)}
-              className="lg:hidden flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/20 hover:bg-white/40 text-slate-700 transition-colors cursor-pointer border border-white/50 shadow-[0_0_10px_rgba(255,255,255,0.3)]"
-              title="Xem outputs & sources"
+              onClick={handleResetChat}
+              className="lg:hidden p-2 rounded-lg text-ink-muted hover:bg-black/5 cursor-pointer"
+              aria-label="Đoạn chat mới"
             >
-              <SlidersHorizontal size={14} />
-              <span>Info</span>
+              <SquarePen size={18} />
+            </button>
+            <button
+              onClick={() => setRightPanelOpen(true)}
+              className="xl:hidden relative p-2 rounded-lg text-ink-muted hover:bg-black/5 cursor-pointer"
+              aria-label="Xem quá trình xử lý và nguồn tham khảo"
+            >
+              <PanelRight size={18} />
               {activeCitations.length > 0 && (
-                <span className="h-2 w-2 rounded-full bg-blue-500" />
+                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-brand ring-2 ring-white" />
               )}
             </button>
           </div>
         </div>
 
-        {/* Center Content Body */}
-        <section
-          aria-label="Khung trò chuyện ST - Care"
-          className="flex-1 overflow-hidden relative flex flex-col"
-        >
-          {messages.length === 0 ? (
-            /* =================================================================== */
-            /* EMPTY HERO STATE - Perfectly matching center of wireframe:          */
-            /* [LOGO]                                                              */
-            /* [TEXT]                                                              */
-            /* [Rounded Input Box with Glowing Border Effect]                      */
-            /* =================================================================== */
-            <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 overflow-y-auto custom-scrollbar animate-fadeIn">
-              <div className="w-full max-w-[701px] flex flex-col items-center text-center gap-5 my-auto">
-                {/* 1. Video Animation intro_logo.mp4 tràn viền đặt trực tiếp lên background */}
-                <div
-                  className="relative flex items-center justify-center -my-3 min-h-[140px] sm:min-h-[160px]"
-                  suppressHydrationWarning
-                >
-                  {isMounted ? (
-                    <video
-                      src="/intro_logo.mp4"
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      suppressHydrationWarning
-                      className="w-56 sm:w-64 md:w-72 max-w-full h-auto object-contain mix-blend-multiply pointer-events-none select-none"
-                    />
-                  ) : (
-                    <div className="w-56 sm:w-64 md:w-72 h-[150px]" />
-                  )}
-                </div>
+        {messages.length === 0 ? (
+          <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center px-4 sm:px-6 pb-10">
+            <div className="w-full max-w-[720px] flex flex-col items-center my-auto">
+              {/* ST animation (outside the entrance animation so mix-blend-multiply hits white) */}
+              <div className="relative flex items-center justify-center min-h-[130px] sm:min-h-[160px] -mb-1" suppressHydrationWarning>
+                {isMounted ? (
+                  <video
+                    src="/intro_logo.mp4"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    suppressHydrationWarning
+                    className="w-52 sm:w-60 md:w-64 max-w-full h-auto object-contain mix-blend-multiply pointer-events-none select-none"
+                  />
+                ) : (
+                  <div className="w-52 sm:w-60 md:w-64 h-[140px]" />
+                )}
+              </div>
 
-                {/* 2. TEXT Box with Glowing Border */}
-                <div className="bg-white/15 backdrop-blur-xs text-slate-900 font-extrabold text-sm sm:text-base px-8 py-2.5 rounded-xl tracking-wider uppercase shadow-[0_0_15px_rgba(255,255,255,0.6)] border border-white/70">
-                  ST - CARE | TRỢ LÝ AI VNUA
-                </div>
-
-                <p className="text-xs text-slate-600 font-medium max-w-md -mt-1 leading-relaxed">
-                  Hệ thống hỗ trợ sinh viên Học viện Nông nghiệp Việt Nam về quy chế, học phí, lịch học và tuyển sinh.
+              <div className="w-full flex flex-col items-center stc-rise">
+                <h2 className="text-[26px] sm:text-[30px] font-semibold text-ink tracking-[-0.02em] text-center">
+                  Bạn cần hỗ trợ điều gì?
+                </h2>
+                <p className="mt-2 mb-7 text-[15px] text-ink-muted text-center max-w-md leading-relaxed">
+                  Giải đáp quy chế, học phí, lịch học và tuyển sinh dựa trên văn bản chính thức của Học viện.
                 </p>
 
-                {/* 3. Liquid-Glass Input Box Wrapper - Height reduced by 15px to 173px, dynamically expands on multiline */}
-                <div className="relative w-[701px] max-md:w-[calc(100vw-48px)] min-h-[173px] bg-white/[0.06] border-[3px] border-white rounded-[44px] shadow-[0_0_4px_0_rgba(0,0,0,0.15)] overflow-hidden backdrop-blur-[20px] flex flex-col justify-between p-4 sm:p-5 sm:px-6 text-left transition-all">
-                  <div className="flex-1 flex flex-col">
-                    <TextField
-                      fullWidth
-                      multiline
-                      minRows={1}
-                      maxRows={12}
-                      variant="standard"
-                      placeholder="Nhập câu hỏi cho ST - Care..."
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSend();
-                        }
-                      }}
-                      InputProps={{
-                        disableUnderline: true,
-                      }}
-                      sx={{
-                        '& textarea': {
-                          color: '#0f172a',
-                          fontSize: '0.98rem',
-                          lineHeight: '1.6',
-                        },
-                        '& textarea::placeholder': {
-                          color: '#64748b',
-                          opacity: 0.85,
-                        },
-                      }}
-                    />
-                  </div>
+                {renderComposer('hero')}
 
-                  <div className="flex items-center justify-between pt-2 mt-1 border-t border-white/20">
-                    <span className="text-[11px] sm:text-xs text-slate-500 font-medium">
-                      Nhấn Enter để gửi • Shift + Enter xuống dòng
-                    </span>
-                    <Tooltip title="Gửi câu hỏi" placement="top">
-                      <span>
-                        <IconButton
-                          onClick={() => handleSend()}
-                          disabled={!message.trim() || isThinking}
-                          sx={{
-                            backgroundColor: message.trim() && !isThinking ? '#2563eb' : 'rgba(255, 255, 255, 0.4)',
-                            color: message.trim() && !isThinking ? '#ffffff' : '#64748b',
-                            transition: 'all 0.2s ease',
-                            p: '8px',
-                            '&:hover': {
-                              backgroundColor: message.trim() && !isThinking ? '#1d4ed8' : 'rgba(255, 255, 255, 0.4)',
-                              transform: message.trim() && !isThinking ? 'scale(1.05)' : 'none',
-                              boxShadow: '0 0 15px rgba(37, 99, 235, 0.45)',
-                            },
-                          }}
-                        >
-                          <Send size={16} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </div>
+                <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-4">
+                  {SUGGESTED_QUESTIONS.slice(0, 4).map((q, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setActiveQuestionIdx(idx);
+                        handleSend(q.query);
+                      }}
+                      className="text-left px-4 py-3 rounded-2xl border border-line bg-white hover:bg-canvas transition-colors cursor-pointer"
+                    >
+                      <span className="block text-[13.5px] font-medium text-ink">{q.label}</span>
+                      <span className="block text-[12.5px] text-ink-subtle mt-0.5 truncate">{q.query}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
-          ) : (
-            /* =================================================================== */
-            /* ACTIVE CHAT STATE - Messages List                                   */
-            /* =================================================================== */
+          </div>
+        ) : (
+          <>
             <div
               ref={scrollRef}
-              className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 custom-scrollbar bg-transparent"
+              className="flex-1 overflow-y-auto px-4 sm:px-6 pt-4 pb-8 custom-scrollbar"
               onScroll={(e) => {
                 const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
                 setIsAtBottom(scrollTop + clientHeight >= scrollHeight - 30);
               }}
             >
-              <div className="max-w-3xl mx-auto flex flex-col space-y-4">
+              <div className="max-w-[760px] mx-auto flex flex-col gap-6">
                 {messages.map((msg, index) => {
                   if (msg.role === 'user')
-                    return (
-                      <UserMsg
-                        key={index}
-                        message={msg.text}
-                        timestamp={msg.timestamp}
-                      />
-                    );
+                    return <UserMsg key={index} message={msg.text} timestamp={msg.timestamp} />;
                   if (msg.role === 'assistant')
                     return (
                       <ChatMsg
@@ -728,250 +718,151 @@ export default function ChatBotPage() {
                 })}
 
                 {/* Live stream progress & answer */}
-                {isThinking && (
-                  <ChatMsg message={liveAnswer} trace={liveTrace} isStreaming />
-                )}
+                {isThinking && <ChatMsg message={liveAnswer} trace={liveTrace} isStreaming />}
                 <div ref={bottomRef} />
               </div>
             </div>
-          )}
 
-          {/* Floating Scroll to Bottom Button */}
-          {messages.length > 0 && !isAtBottom && (
-            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30">
-              <button
-                onClick={() =>
-                  bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-                }
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900/60 hover:bg-slate-900/80 text-white backdrop-blur-xs text-xs font-medium shadow-md transition-all border border-white/20 cursor-pointer"
-              >
-                <ChevronDown size={14} /> Cuộn xuống mới nhất
-              </button>
-            </div>
-          )}
+            {!isAtBottom && (
+              <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30">
+                <button
+                  onClick={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                  className="h-9 w-9 flex items-center justify-center rounded-full bg-white text-ink-muted shadow-md border border-line hover:text-ink transition-colors cursor-pointer"
+                  aria-label="Cuộn xuống tin nhắn mới nhất"
+                >
+                  <ChevronDown size={18} />
+                </button>
+              </div>
+            )}
 
-          {/* Active Chat Bottom Input Dock - Transparent with glowing border input */}
-          {messages.length > 0 && (
-            <footer className="p-3 sm:p-4 bg-transparent border-t border-white/20">
-              <div className="max-w-3xl mx-auto">
-                {/* Input box with light orange border effect for high visibility */}
-                <div className="w-full bg-white/20 hover:bg-white/30 focus-within:bg-white/40 backdrop-blur-md rounded-2xl p-2.5 sm:p-3 border-2 border-orange-300/80 shadow-[0_2px_15px_rgba(251,146,60,0.15),0_0_15px_rgba(255,255,255,0.6)] transition-all hover:border-orange-400 hover:shadow-[0_0_22px_rgba(251,146,60,0.25)] focus-within:border-orange-500 focus-within:shadow-[0_0_28px_rgba(249,115,22,0.32)]">
-                  <TextField
-                    fullWidth
-                    multiline
-                    minRows={1}
-                    maxRows={4}
-                    variant="standard"
-                    placeholder="Nhập câu hỏi cho ST - Care..."
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSend();
-                      }
-                    }}
-                    InputProps={{
-                      disableUnderline: true,
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <Tooltip title={isThinking ? 'Dừng tạo' : 'Gửi câu hỏi (Enter)'} placement="top">
-                            <span>
-                              <IconButton
-                                onClick={isThinking ? handleStopGenerating : () => handleSend()}
-                                disabled={!isThinking && !message.trim()}
-                                aria-label={isThinking ? 'Dừng tạo câu trả lời' : 'Gửi câu hỏi'}
-                                sx={{
-                                  backgroundColor: isThinking ? '#dc2626' : message.trim() ? '#ea580c' : 'rgba(255, 255, 255, 0.4)',
-                                  color: isThinking || message.trim() ? '#ffffff' : '#64748b',
-                                  transition: 'all 0.2s ease',
-                                  p: '6px',
-                                  '&:hover': {
-                                    backgroundColor: isThinking ? '#b91c1c' : message.trim() ? '#c2410c' : 'rgba(255, 255, 255, 0.4)',
-                                    transform: isThinking || message.trim() ? 'scale(1.05)' : 'none',
-                                    boxShadow: isThinking ? 'none' : '0 0 15px rgba(234, 88, 12, 0.45)',
-                                  },
-                                }}
-                              >
-                                {isThinking ? <Square size={14} fill="currentColor" /> : <Send size={16} />}
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                        </InputAdornment>
-                      ),
-                    }}
-                    sx={{
-                      '& textarea': {
-                        color: '#0f172a',
-                        fontSize: '0.925rem',
-                      },
-                    }}
-                  />
-                </div>
+            <footer className="px-3 sm:px-6 pb-3 pt-1 bg-gradient-to-t from-white via-white to-white/0">
+              <div className="max-w-[760px] mx-auto">
+                {renderComposer('dock')}
+                <p className="text-[11px] text-ink-subtle text-center mt-2">
+                  ST - Care có thể nhầm lẫn. Hãy kiểm tra lại với văn bản gốc trong phần nguồn tham khảo.
+                </p>
               </div>
             </footer>
-          )}
-        </section>
-      </div>
+          </>
+        )}
+      </section>
 
-      {/* ========================================================================= */}
-      {/* 3. RIGHT PANEL (outputs & sources, transparent with glowing border card)  */}
-      {/* ========================================================================= */}
-      {rightPanelOpen && (
-        <div
-          onClick={() => setRightPanelOpen(false)}
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs lg:hidden transition-opacity"
-        />
-      )}
-
+      {/* ===================================================================== */}
+      {/* RIGHT: processing steps & sources                                      */}
+      {/* ===================================================================== */}
       <aside
         className={`
-          fixed lg:static inset-y-0 right-0 z-50
-          w-72 xl:w-80 h-full p-4 sm:p-5 flex flex-col justify-start
-          bg-transparent border-l border-white/20 shadow-none overflow-y-auto custom-scrollbar
-          transform transition-transform duration-300 ease-in-out
-          ${rightPanelOpen ? 'translate-x-0 shadow-2xl bg-white/90' : 'translate-x-full lg:translate-x-0'}
-          flex-shrink-0
+          fixed xl:static inset-y-0 right-0 z-50
+          w-[320px] h-full flex flex-col flex-shrink-0
+          bg-white border-l border-line
+          overflow-y-auto custom-scrollbar
+          transform transition-transform duration-300 ease-out
+          ${rightPanelOpen ? 'translate-x-0 shadow-xl' : 'translate-x-full xl:translate-x-0'}
         `}
       >
-        {/* Mobile close button */}
-        <div className="flex items-center justify-between lg:hidden mb-3">
-          <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-            Thông tin chi tiết
-          </span>
+        <div className="h-14 flex items-center justify-between px-5 flex-shrink-0">
+          <span className="text-[14px] font-semibold text-ink">Chi tiết câu trả lời</span>
           <button
             onClick={() => setRightPanelOpen(false)}
-            className="p-1 rounded-md text-slate-500 hover:text-slate-800 hover:bg-white/60 cursor-pointer"
+            className="xl:hidden p-1.5 rounded-lg text-ink-muted hover:bg-black/5 cursor-pointer"
+            aria-label="Đóng"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Card Frame with glowing border effect */}
-        <div className="w-full bg-white/10 hover:bg-orange-500/[0.04] backdrop-blur-xs rounded-2xl p-4 sm:p-5 border border-white/60 shadow-[0_0_20px_rgba(255,255,255,0.4)] hover:shadow-[0_0_25px_rgba(251,146,60,0.25)] hover:border-orange-300/60 flex flex-col gap-3 transition-all">
-          {/* SECTION: outputs */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-800 tracking-wider">
-                outputs
-              </h3>
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-orange-900 bg-orange-100/80 px-2 py-0.5 rounded-full shadow-2xs border border-orange-200/70">
-                {isThinking ? (
-                  <Loader2 size={10} className="text-orange-600 animate-spin flex-shrink-0" />
-                ) : (
-                  <CheckCircle2 size={10} className="text-emerald-500 flex-shrink-0" />
-                )}
-                {activeStatus}
+        <div className="px-5 pb-6 flex flex-col gap-7">
+          {/* Processing steps */}
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h3 className="text-xs font-medium text-ink-subtle">Quá trình xử lý</h3>
+              <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${isThinking ? 'text-amber-600' : 'text-ink-muted'}`}>
+                {isThinking ? <Loader2 size={12} className="animate-spin" /> : <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+                {getStatusLabel(activeStatus)}
               </span>
             </div>
 
-            {/* Outputs Trace Steps without latency */}
-            <div className="min-h-[60px] max-h-48 overflow-y-auto custom-scrollbar flex flex-col gap-1.5 text-xs bg-white/10 hover:bg-orange-50/20 border border-white/30 hover:border-orange-200/50 rounded-xl p-2 transition-all">
-              {activeTrace && activeTrace.length > 0 ? (
-                <>
-                  {activeTrace.map((step, sIdx) => {
-                    const isLast = sIdx === activeTrace.length - 1;
-                    const isStepRunning =
-                      isThinking &&
-                      isLast &&
-                      step.status !== 'completed' &&
-                      step.status !== 'passed';
-                    return (
-                      <div
-                        key={sIdx}
-                        className="flex items-center justify-between gap-1.5 bg-white/30 rounded-md p-1.5 text-[11px] text-slate-800 shadow-2xs border border-white/40"
+            {activeTrace && activeTrace.length > 0 ? (
+              <ol className="flex flex-col">
+                {activeTrace.map((step, sIdx) => {
+                  const isLast = sIdx === activeTrace.length - 1;
+                  const isStepRunning =
+                    isThinking && isLast && step.status !== 'completed' && step.status !== 'passed';
+                  const hasNext = !isLast || isThinking;
+                  return (
+                    <li key={sIdx} className="relative flex gap-3 pb-3.5 last:pb-0">
+                      {hasNext && <span className="absolute left-[7.5px] top-[18px] bottom-0 w-px bg-line" />}
+                      <span
+                        className={`relative mt-[2px] h-4 w-4 flex-shrink-0 flex items-center justify-center rounded-full ${
+                          isStepRunning ? 'text-amber-600' : 'bg-brand text-white'
+                        }`}
                       >
-                        <span className="truncate flex items-center gap-1.5 font-medium">
-                          {isStepRunning ? (
-                            <Loader2 size={12} className="text-blue-600 animate-spin flex-shrink-0" />
-                          ) : (
-                            <CheckCircle2 size={12} className="text-emerald-500 flex-shrink-0" />
-                          )}
-                          {getFriendlyStepTitle(step)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  {isThinking && (
-                    <div className="flex items-center gap-1.5 bg-white/20 rounded-md p-1.5 text-[11px] text-slate-600 italic shadow-2xs border border-white/30">
-                      <Loader2 size={12} className="text-blue-600 animate-spin flex-shrink-0" />
-                      <span className="truncate font-medium">Đang xử lý bước tiếp theo...</span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="text-[11px] text-slate-600 italic py-1 leading-relaxed flex items-center gap-1.5">
-                  {isThinking ? (
-                    <>
-                      <Loader2 size={12} className="text-blue-600 animate-spin flex-shrink-0" />
-                      <span>Đang tiến hành truy vấn RAG...</span>
-                    </>
-                  ) : (
-                    'Hệ thống AI sẵn sàng tiếp nhận câu hỏi.'
-                  )}
-                </div>
-              )}
-            </div>
+                        {isStepRunning ? <Loader2 size={14} className="animate-spin" /> : <Check size={10} strokeWidth={3.2} />}
+                      </span>
+                      <span className={`text-[13px] leading-snug ${isStepRunning ? 'text-ink font-medium' : 'text-ink-muted'}`}>
+                        {getFriendlyStepTitle(step)}
+                      </span>
+                    </li>
+                  );
+                })}
+                {isThinking && (
+                  <li className="flex gap-3 pt-0.5">
+                    <span className="mt-[2px] h-4 w-4 flex-shrink-0 rounded-full border border-dashed border-gray-300" />
+                    <span className="text-[13px] text-ink-subtle">Bước tiếp theo</span>
+                  </li>
+                )}
+              </ol>
+            ) : (
+              <p className="text-[13px] text-ink-subtle leading-relaxed">
+                {isThinking
+                  ? 'Đang tìm kiếm trong kho tài liệu của Học viện...'
+                  : 'Các bước ST - Care thực hiện để trả lời sẽ hiển thị tại đây.'}
+              </p>
+            )}
           </div>
 
-          {/* DIVIDER LINE matching wireframe */}
-          <div className="border-t border-white/30 my-0.5" />
-
-          {/* SECTION: sources */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-800 tracking-wider">
-                sources
-              </h3>
+          {/* Sources */}
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h3 className="text-xs font-medium text-ink-subtle">Nguồn tham khảo</h3>
               {activeCitations.length > 0 && (
-                <span className="text-[10px] font-bold text-blue-800 bg-blue-100/70 px-1.5 py-0.5 rounded border border-blue-200/60 shadow-2xs">
-                  {activeCitations.length} trích dẫn
-                </span>
+                <span className="text-xs text-ink-subtle tabular-nums">{activeCitations.length}</span>
               )}
             </div>
 
-            {/* Sources List */}
-            <div className="min-h-[80px] max-h-56 overflow-y-auto custom-scrollbar flex flex-col gap-2 text-xs bg-white/10 hover:bg-orange-50/20 border border-white/30 hover:border-orange-200/50 rounded-xl p-2 transition-all">
-              {activeCitations && activeCitations.length > 0 ? (
-                activeCitations.map((source, cIdx) => {
+            {activeCitations.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {activeCitations.map((source, cIdx) => {
                   const meta = getFileTypeMeta(source.title, source.page);
                   return (
-                    <div
+                    <a
                       key={cIdx}
-                      className={`bg-white/30 hover:bg-orange-50/40 rounded-lg p-2.5 text-[11px] text-slate-800 flex flex-col gap-1 border border-white/40 hover:border-orange-200/60 ${meta.cardHoverBorder} shadow-2xs transition-all`}
+                      href={`/api/documents/${encodeURIComponent(String(source.document_id))}/file${source.page ? `?page=${source.page}` : ''}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-start gap-3 rounded-xl border border-line p-3 hover:bg-canvas transition-colors"
+                      title={meta.actionLabel}
                     >
-                      <div className="font-semibold text-slate-900 line-clamp-2 leading-tight flex items-start gap-1.5">
-                        <FileText size={14} className={`${meta.iconColor} flex-shrink-0 mt-0.5`} />
-                        <span className="flex-1">{source.title}</span>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${meta.badgeBg}`}>
+                      <span className="h-8 w-8 flex-shrink-0 rounded-lg bg-canvas border border-line flex items-center justify-center">
+                        <FileText size={15} className={meta.iconColor} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[13px] font-medium text-ink leading-snug line-clamp-2">{source.title}</span>
+                        <span className="block text-xs text-ink-subtle mt-1">
                           {meta.label}
+                          {source.page ? `, trang ${source.page}` : ''}
                         </span>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-1 text-[10px] text-slate-600">
-                        <span>
-                          {source.page ? `Trang ${source.page}` : 'Tài liệu chuẩn'}
-                        </span>
-                        <a
-                          href={`/api/documents/${encodeURIComponent(String(source.document_id))}/file${source.page ? `?page=${source.page}` : ''}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`inline-flex items-center gap-1 font-bold ${meta.linkColor} cursor-pointer`}
-                          title={`Mở tài liệu ${meta.label}`}
-                        >
-                          {meta.actionLabel}
-                          <ExternalLink size={10} />
-                        </a>
-                      </div>
-                    </div>
+                      </span>
+                      <ExternalLink size={13} className="mt-0.5 text-ink-subtle group-hover:text-ink flex-shrink-0" />
+                    </a>
                   );
-                })
-              ) : (
-                <div className="text-[11px] text-slate-600 italic py-1 leading-relaxed">
-                  Chưa có nguồn tài liệu tham khảo nào được trích dẫn.
-                </div>
-              )}
-            </div>
+                })}
+              </div>
+            ) : (
+              <p className="text-[13px] text-ink-subtle leading-relaxed">
+                Văn bản, quy chế được dùng để trả lời sẽ được liệt kê tại đây.
+              </p>
+            )}
           </div>
         </div>
       </aside>
