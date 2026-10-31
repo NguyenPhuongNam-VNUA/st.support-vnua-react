@@ -9,13 +9,23 @@ export async function GET(request: NextRequest) {
     await requireRole(request, ['admin']);
     const supabase = getSupabaseAdmin();
 
-    // 1. Get real DB counts concurrently
+    // 1. Get real DB counts concurrently. from/to (ISO) scope the conversation count to the dashboard filter.
+    const params = request.nextUrl.searchParams;
+    const from = params.get('from');
+    const to = params.get('to');
+    if ((from && Number.isNaN(Date.parse(from))) || (to && Number.isNaN(Date.parse(to)))) {
+      return NextResponse.json({ success: false, message: 'Tham số thời gian không hợp lệ' }, { status: 422 });
+    }
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const [chunksRes, activeDocsRes, activeSessionsRes, totalConvsRes] = await Promise.all([
+    let periodQuery = supabase.from('conversations').select('*', { count: 'exact', head: true });
+    if (from) periodQuery = periodQuery.gte('started_at', new Date(from).toISOString());
+    if (to) periodQuery = periodQuery.lte('started_at', new Date(to).toISOString());
+    const [chunksRes, activeDocsRes, activeSessionsRes, totalConvsRes, periodConvsRes] = await Promise.all([
       supabase.from('document_chunks').select('*', { count: 'exact', head: true }),
       supabase.from('documents').select('*', { count: 'exact', head: true }).eq('is_active', true),
       supabase.from('conversations').select('*', { count: 'exact', head: true }).gte('started_at', oneDayAgo),
       supabase.from('conversations').select('*', { count: 'exact', head: true }),
+      periodQuery,
     ]);
 
     // 2. Probe Core AI engine health and measure roundtrip latency
@@ -49,6 +59,7 @@ export async function GET(request: NextRequest) {
         active_documents: activeDocsRes.count || 0,
         active_sessions: activeSessionsRes.count || 0,
         total_conversations: totalConvsRes.count || 0,
+        period_conversations: periodConvsRes.count || 0,
         updated_at: new Date().toISOString(),
       },
     });

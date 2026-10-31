@@ -57,8 +57,23 @@ async function streamAi(data: unknown, onEvent: StreamHandler, signal?: AbortSig
   }
 }
 
+async function sendFeedback(conversationId: string, answer: string, feedback: 'like' | 'dislike' | null) {
+  const response = await fetch('/api/chat/feedback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ conversation_id: conversationId, answer, feedback }),
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const error = new Error(payload.message || `Feedback returned ${response.status}`) as Error & { status?: number };
+    error.status = response.status;
+    throw error;
+  }
+}
+
 const aiApi = {
   streamAi,
+  sendFeedback,
 };
 
 export default aiApi;

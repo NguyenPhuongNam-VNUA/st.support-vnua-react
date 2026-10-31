@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 
 import UserMsg from '@/components/chatbot/UserMsg/UserMsg';
-import ChatMsg, { ChatCitation, ChatFallback, ChatTraceStep, getFileTypeMeta } from '@/components/chatbot/ChatMsg/ChatMsg';
+import ChatMsg, { ChatCitation, ChatFallback, ChatFeedback, ChatTraceStep, getFileTypeMeta } from '@/components/chatbot/ChatMsg/ChatMsg';
 import aiApi from '@/api/chatbot/aiApi';
 
 interface Message {
@@ -40,7 +40,12 @@ interface Message {
   originalQuestion?: string;
   status?: string;
   confidence?: number;
+  conversationId?: string;
+  feedback?: ChatFeedback;
 }
+
+// Answers core-ai never persisted (user stopped, stream broke) cannot be rated.
+const UNRATEABLE_STATUSES = new Set(['stopped', 'interrupted']);
 
 const SUGGESTED_QUESTIONS: { label: string; query: string; tag?: string }[] = [
   {
@@ -262,6 +267,8 @@ export default function ChatBotPage() {
           originalQuestion,
           status: finalStatus,
           confidence: finalConfidence,
+          conversationId: conversationIdRef.current,
+          feedback: null,
         },
       ]);
     } catch (err) {
@@ -309,6 +316,29 @@ export default function ChatBotPage() {
 
   const STORAGE_KEY = 'vnua_chat_messages_v1';
   const CONV_STORAGE_KEY = 'vnua_chat_conversation_id';
+
+  const handleFeedback = async (index: number, value: ChatFeedback) => {
+    const target = messages[index];
+    if (!target?.conversationId) return;
+    const previous = target.feedback ?? null;
+    const setFeedback = (feedback: ChatFeedback) =>
+      setMessages((prev) => prev.map((item, i) => (i === index ? { ...item, feedback } : item)));
+
+    setFeedback(value);
+    try {
+      try {
+        await aiApi.sendFeedback(target.conversationId, target.text, value);
+      } catch (err: any) {
+        // core-ai saves the turn right after streaming; a very fast click can beat it once.
+        if (err?.status !== 404) throw err;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        await aiApi.sendFeedback(target.conversationId, target.text, value);
+      }
+    } catch (err) {
+      console.warn('Không thể lưu đánh giá câu trả lời:', err);
+      setFeedback(previous);
+    }
+  };
 
   const handleStopGenerating = () => {
     if (!isThinking || !abortRef.current) return;
@@ -684,6 +714,12 @@ export default function ChatBotPage() {
                         onConfirmRedaction={
                           msg.fallback?.redacted_query
                             ? () => handleSend(msg.fallback?.redacted_query || '', true)
+                            : undefined
+                        }
+                        feedback={msg.feedback ?? null}
+                        onFeedback={
+                          msg.conversationId && !UNRATEABLE_STATUSES.has(msg.status || '')
+                            ? (value) => void handleFeedback(index, value)
                             : undefined
                         }
                       />

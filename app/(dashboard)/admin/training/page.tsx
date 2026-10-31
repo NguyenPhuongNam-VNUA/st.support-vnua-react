@@ -24,7 +24,8 @@ import {
   X,
 } from 'lucide-react';
 import { TrainingBookingIcon } from '@/components/icons/SidebarIcons';
-import conversationApi from '@/api/chatbot/conversationApi';
+import { TOPIC_TAGS } from '@/components/questions/QuestionsWorkflowView';
+import trainingApi from '@/api/admin/trainingApi';
 import questionApi from '@/api/admin/questionApi';
 
 function formatRelativeTime(dateStr: string) {
@@ -47,50 +48,27 @@ export default function AgentTrainingPage() {
   const [topicInput, setTopicInput] = useState('Học vụ');
   const [isPublishing, setIsPublishing] = useState(false);
   const [successMsg, setSuccessMsg] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     const fetchFallbackQuestions = async () => {
       try {
-        const res: any = await conversationApi.getAll();
-        const logs = res && Array.isArray(res.data) ? res.data : [];
-        const map = new Map<string, { id: number; question: string; asked_count: number; lastDate: string; suggested_topic: string }>();
-        for (const log of logs) {
-          const status = log.response_type || log.status;
-          if (status === 'not_found' && log.question?.trim()) {
-            const q = log.question.trim();
-            const existing = map.get(q);
-            if (existing) {
-              existing.asked_count += 1;
-              if (new Date(log.created_at).getTime() > new Date(existing.lastDate).getTime()) {
-                existing.lastDate = log.created_at;
-              }
-            } else {
-              map.set(q, {
-                id: log.id,
-                question: q,
-                asked_count: 1,
-                lastDate: log.created_at,
-                suggested_topic: 'Học vụ',
-              });
-            }
-          }
-        }
+        // Server groups not_found answers, drops questions already in the bank and suggests a topic.
+        const res: any = await trainingApi.getFallbacks();
+        const rows = res && Array.isArray(res.data) ? res.data : [];
         if (isMounted) {
           setUnansweredLogs(
-            Array.from(map.values())
-              .sort((a, b) => b.asked_count - a.asked_count)
-              .map((item) => ({
-                id: item.id,
-                question: item.question,
-                asked_count: item.asked_count,
-                last_asked: formatRelativeTime(item.lastDate),
-                suggested_topic: item.suggested_topic,
-              }))
+            rows.map((item: any) => ({
+              ...item,
+              last_asked: formatRelativeTime(item.last_asked_at),
+            }))
           );
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Lỗi tải câu hỏi fallback:', err);
+        if (isMounted) setLoadError(err?.message || 'Không tải được hàng chờ câu hỏi');
       } finally {
         if (isMounted) setLoadingLogs(false);
       }
@@ -101,15 +79,22 @@ export default function AgentTrainingPage() {
 
   const handleSelectQuestion = (q: any) => {
     setSelectedQuestion(q);
-    setTopicInput(q.suggested_topic || 'Học vụ');
+    setTopicInput(q.suggested_topic || 'Khác');
     setAnswerInput('');
     setSuccessMsg(false);
+    setErrorMsg(null);
   };
 
   const handlePublishToKnowledgeBase = async () => {
     if (!answerInput.trim() || !selectedQuestion) return;
 
     setIsPublishing(true);
+    setErrorMsg(null);
+    const removeFromQueue = () => {
+      setUnansweredLogs((prev) => prev.filter((q) => q.id !== selectedQuestion.id));
+      setSelectedQuestion(null);
+      setAnswerInput('');
+    };
     try {
       await questionApi.add({
         question: selectedQuestion.question,
@@ -118,12 +103,13 @@ export default function AgentTrainingPage() {
         status: 'approved',
       });
       setSuccessMsg(true);
-      setUnansweredLogs((prev) => prev.filter((q) => q.id !== selectedQuestion.id));
-      setSelectedQuestion(null);
-      setAnswerInput('');
+      removeFromQueue();
       setTimeout(() => setSuccessMsg(false), 4000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Lỗi khi lưu tri thức vào ngân hàng câu hỏi:', err);
+      // 502/503: the question was saved as pending but embedding failed; it now lives in the question bank.
+      if (err?.response?.status === 502 || err?.response?.status === 503) removeFromQueue();
+      setErrorMsg(err?.message || 'Không lưu được câu trả lời vào tri thức Agent');
     } finally {
       setIsPublishing(false);
     }
@@ -245,8 +231,8 @@ export default function AgentTrainingPage() {
                     {unansweredLogs.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={3} align="center" sx={{ py: 6 }}>
-                          <Typography variant="body2" fontWeight={500} sx={{ color: '#1f2937' }}>
-                            🎉 Tất cả câu hỏi thực tế đều đã được Agent tự giải đáp chính xác!
+                          <Typography variant="body2" fontWeight={500} sx={{ color: loadError ? '#b91c1c' : '#1f2937' }}>
+                            {loadError || '🎉 Không còn câu hỏi fallback nào cần chuẩn hóa tri thức!'}
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -302,7 +288,7 @@ export default function AgentTrainingPage() {
                       '&.Mui-focused fieldset': { borderColor: '#1f2937' }
                     }}
                   >
-                    {['Học vụ', 'Học phí', 'Ký túc xá', 'Tuyển sinh', 'Bảo lưu', 'Khác'].map((t) => (
+                    {TOPIC_TAGS.map((t) => (
                       <MenuItem key={t} value={t}>
                         {t}
                       </MenuItem>
@@ -335,6 +321,12 @@ export default function AgentTrainingPage() {
                     }}
                   />
                 </Box>
+
+                {errorMsg && (
+                  <Typography role="alert" variant="body2" fontWeight={600} sx={{ color: '#b91c1c' }}>
+                    {errorMsg}
+                  </Typography>
+                )}
 
                 {successMsg && (
                   <Box display="flex" alignItems="center" gap={1} py={1.2} px={1.8} bgcolor="#f3f4f6" border="1px solid rgba(0, 0, 0, 0.12)" borderRadius="12px" boxShadow="0 0 0 1px rgba(255,255,255,0.8) inset">

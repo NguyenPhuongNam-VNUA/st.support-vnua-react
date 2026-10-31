@@ -157,15 +157,6 @@ export default function LoginPage() {
       "/admin/dashboard"
     );
 
-    if (result.isStudent) {
-      setInfoAlert(
-        lang === "VN"
-          ? "Đăng nhập thành công! Chức năng dành cho Sinh viên đang phát triển. Vui lòng quay lại sau!"
-          : "Sign in successful! Student features are currently under development."
-      );
-      return;
-    }
-
     if (!result.success) {
       setErrorAlert(
         result.message ||

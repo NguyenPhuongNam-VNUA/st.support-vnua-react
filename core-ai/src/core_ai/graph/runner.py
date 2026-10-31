@@ -113,9 +113,6 @@ class GraphRunner:
             history=history_items,
             locale=request.locale,
             channel=request.channel,
-            tool_name_requested=request.requested_tool,
-            tool_args_requested=request.tool_arguments,
-            tool_approved=request.tool_approved,
             pii_confirmed=request.pii_confirmed,
         )
 
@@ -205,9 +202,6 @@ class GraphRunner:
             history=history_items,
             locale=request.locale,
             channel=request.channel,
-            tool_name_requested=request.requested_tool,
-            tool_args_requested=request.tool_arguments,
-            tool_approved=request.tool_approved,
             pii_confirmed=request.pii_confirmed,
         )
         initial_state["event_queue"] = event_queue
@@ -265,11 +259,8 @@ class GraphRunner:
                                             safe_details[key] = raw_details[key]
                             if node_name in ("tool_node", "tool_execution") and safe_details.get("tool_name"):
                                 tool_labels = {
-                                    "check_tuition": "học phí & công nợ",
-                                    "lookup_schedule": "thời khóa biểu & lịch học",
                                     "get_regulations": "quy chế đào tạo",
                                     "search_knowledge": "kho dữ liệu sinh viên",
-                                    "create_support_case": "phiếu hỗ trợ",
                                 }
                                 friendly_tool = tool_labels.get(safe_details["tool_name"], "dữ liệu hệ thống")
                                 label = f"Đã tra cứu {friendly_tool}"

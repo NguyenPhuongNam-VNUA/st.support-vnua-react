@@ -58,6 +58,14 @@ export const authService = {
       throw new AuthServiceError('Tài khoản hoặc mật khẩu không chính xác', 401);
     }
 
+    // Chỉ quản trị viên được đăng nhập; sinh viên dùng chatbot ẩn danh, không cần tài khoản.
+    if (account.role !== 'admin') {
+      throw new AuthServiceError(
+        'Trang đăng nhập chỉ dành cho quản trị viên. Sinh viên có thể dùng chatbot mà không cần đăng nhập.',
+        403
+      );
+    }
+
     // 5. Ký JWT thật bằng jose. Token chỉ chứa định danh và vai trò tối thiểu.
     const token = await signAccessToken({ userId: account.id, role: account.role });
 

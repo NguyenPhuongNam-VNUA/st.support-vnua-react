@@ -23,6 +23,15 @@ async def test_local_rate_limit_is_bounded(mock_settings: Settings) -> None:
     assert await controller.allow_request("vnua", "student-1") is False
 
 
+@pytest.mark.asyncio
+async def test_rate_limit_is_separate_per_ip(mock_settings: Settings) -> None:
+    settings = mock_settings.model_copy(update={"rate_limit_per_minute": 1})
+    controller = RequestController(settings=settings)
+    assert await controller.allow_request("vnua", "ip:1.1.1.1") is True
+    assert await controller.allow_request("vnua", "ip:1.1.1.1") is False
+    assert await controller.allow_request("vnua", "ip:2.2.2.2") is True
+
+
 def test_chunked_body_limit_returns_413(client) -> None:
     response = client.post(
         "/v1/chat",

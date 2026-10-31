@@ -2,41 +2,81 @@
 
 import { useMemo, useState } from 'react';
 import SectionCard from '@/components/admin/SectionCard';
+import { DateRange, inRange, previousRange } from '@/lib/dashboard/time-range';
 
 interface VolumeTrendCardProps {
+  /** Logs covering `range` and, when available, the previous period of the same length. */
   logs: { created_at?: string }[];
+  range: DateRange;
   loading?: boolean;
 }
 
 const DAY_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+const MAX_BARS = 15;
 
-// Kravio "volume trend": total + delta vs previous period, gradient bars per day.
-export default function VolumeTrendCard({ logs, loading }: VolumeTrendCardProps) {
+interface Bar {
+  start: Date;
+  label: string;
+  tooltip: string;
+  count: number;
+}
+
+// Hourly buckets for a single day, daily buckets up to MAX_BARS days, multi-day buckets beyond.
+function buildBars(range: DateRange, times: number[]): Bar[] {
+  const to = range.to.getTime();
+  let from = range.from?.getTime() ?? (times.length ? Math.min(...times) : to - 7 * DAY_MS);
+  const span = to - from;
+  let size: number;
+  let fixedCount: number | null = null;
+  if (span <= DAY_MS) {
+    // One day: always show the whole day in 2-hour slots, later slots stay empty.
+    size = 2 * HOUR_MS;
+    const d = new Date(from);
+    d.setHours(0, 0, 0, 0);
+    from = d.getTime();
+    fixedCount = 12;
+  } else {
+    const d = new Date(from);
+    d.setHours(0, 0, 0, 0);
+    from = d.getTime();
+    size = Math.ceil((to - from) / DAY_MS / MAX_BARS) * DAY_MS;
+  }
+  const count = fixedCount ?? Math.max(1, Math.ceil((to - from) / size));
+  const bars: Bar[] = Array.from({ length: count }, (_, i) => {
+    const start = new Date(from + i * size);
+    const ddmm = start.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    if (size < DAY_MS) return { start, label: `${start.getHours()}h`, tooltip: `${start.getHours()}h–${start.getHours() + 2}h`, count: 0 };
+    if (size === DAY_MS) {
+      const label = count <= 7 ? DAY_LABELS[start.getDay()] : ddmm;
+      return { start, label, tooltip: `${DAY_LABELS[start.getDay()]} ${ddmm}`, count: 0 };
+    }
+    return { start, label: ddmm, tooltip: `Từ ${ddmm} (${size / DAY_MS} ngày)`, count: 0 };
+  });
+  times.forEach((t) => {
+    if (t < from || t > to) return;
+    const i = Math.min(count - 1, Math.floor((t - from) / size));
+    bars[i].count += 1;
+  });
+  return bars;
+}
+
+// Kravio "volume trend": total + delta vs previous period, gradient bars per time bucket.
+export default function VolumeTrendCard({ logs, range, loading }: VolumeTrendCardProps) {
   const [active, setActive] = useState<number | null>(null);
 
   const { bars, total, delta } = useMemo(() => {
-    const counts = new Map<string, number>();
-    logs.forEach((l) => {
-      if (!l.created_at) return;
-      const k = dayKey(new Date(l.created_at));
-      counts.set(k, (counts.get(k) || 0) + 1);
-    });
-    const at = (offset: number) => {
-      const d = new Date();
-      d.setDate(d.getDate() - offset);
-      return { date: d, count: counts.get(dayKey(d)) || 0 };
-    };
-    const current = [6, 5, 4, 3, 2, 1, 0].map(at);
-    const previous = [13, 12, 11, 10, 9, 8, 7].map(at);
-    const sum = current.reduce((s, b) => s + b.count, 0);
-    const prev = previous.reduce((s, b) => s + b.count, 0);
+    const times = logs.filter((l) => l.created_at).map((l) => new Date(l.created_at as string).getTime());
+    const current = times.filter((t) => inRange(new Date(t).toISOString(), range));
+    const prevRange = previousRange(range);
+    const prev = prevRange ? times.filter((t) => t >= prevRange.from!.getTime() && t < prevRange.to.getTime()).length : 0;
     return {
-      bars: current,
-      total: sum,
-      delta: prev === 0 ? null : ((sum - prev) / prev) * 100,
+      bars: buildBars(range, current),
+      total: current.length,
+      delta: !prevRange || prev === 0 ? null : ((current.length - prev) / prev) * 100,
     };
-  }, [logs]);
+  }, [logs, range]);
 
   const max = Math.max(4, ...bars.map((b) => b.count));
   const niceMax = Math.ceil(max / 4) * 4;
@@ -44,7 +84,7 @@ export default function VolumeTrendCard({ logs, loading }: VolumeTrendCardProps)
   const shown = active ?? bars.length - 1;
 
   return (
-    <SectionCard title="Lượt hội thoại theo ngày" bodyClassName="px-3.5 pb-3.5 pt-4 gap-5" className="min-h-[404px]">
+    <SectionCard title="Lượt hội thoại" bodyClassName="px-3.5 pb-3.5 pt-4 gap-5" className="min-h-[404px]">
       <div className="flex items-end gap-3 whitespace-nowrap leading-none">
         <p className="text-[32px] font-medium text-[#1f2937]">{loading ? '—' : total.toLocaleString('vi-VN')}</p>
         <p className="flex items-center gap-1.5 pb-1">
@@ -54,7 +94,7 @@ export default function VolumeTrendCard({ logs, loading }: VolumeTrendCardProps)
               {delta.toFixed(1)}%
             </span>
           )}
-          <span className="text-[13px] tracking-[-0.13px] text-[#6b7280]">so với 7 ngày trước</span>
+          <span className="text-[13px] tracking-[-0.13px] text-[#6b7280]">so với kỳ trước</span>
         </p>
       </div>
 
@@ -63,7 +103,7 @@ export default function VolumeTrendCard({ logs, loading }: VolumeTrendCardProps)
           <div
             role="group"
             tabIndex={0}
-            aria-label="Lượt hội thoại theo ngày. Dùng phím mũi tên trái phải để xem từng cột."
+            aria-label="Lượt hội thoại theo thời gian. Dùng phím mũi tên trái phải để xem từng cột."
             onKeyDown={(e) => {
               if (e.key === 'ArrowLeft') setActive(Math.max(0, shown - 1));
               if (e.key === 'ArrowRight') setActive(Math.min(bars.length - 1, shown + 1));
@@ -83,13 +123,13 @@ export default function VolumeTrendCard({ logs, loading }: VolumeTrendCardProps)
                     key={i}
                     type="button"
                     tabIndex={-1}
-                    aria-label={`${b.date.toLocaleDateString('vi-VN')}: ${b.count} hội thoại`}
+                    aria-label={`${b.tooltip}: ${b.count} hội thoại`}
                     onMouseEnter={() => setActive(i)}
                     className="relative h-full w-full max-w-[56px] outline-none"
                   >
                     {on && (
                       <span className="k-rise absolute left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#1f2937] px-2 py-1 text-[11px] font-medium leading-none text-white" style={{ bottom: `calc(${(b.count / niceMax) * 100}% + 8px)` }}>
-                        {DAY_LABELS[b.date.getDay()]} : {b.count}
+                        {b.tooltip} : {b.count}
                       </span>
                     )}
                     <span
@@ -109,12 +149,12 @@ export default function VolumeTrendCard({ logs, loading }: VolumeTrendCardProps)
             </div>
           </div>
           <p aria-live="polite" className="sr-only">
-            {bars[shown] && `${bars[shown].date.toLocaleDateString('vi-VN')}: ${bars[shown].count} hội thoại`}
+            {bars[shown] && `${bars[shown].tooltip}: ${bars[shown].count} hội thoại`}
           </p>
           <div className="flex justify-around px-[1%]" aria-hidden="true">
             {bars.map((b, i) => (
               <p key={i} className={`w-full max-w-[56px] text-center text-xs leading-none ${i === shown ? 'text-[#1f2937]' : 'text-[#9ca3af]'}`}>
-                {DAY_LABELS[b.date.getDay()]}
+                {b.label}
               </p>
             ))}
           </div>

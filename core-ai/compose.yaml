@@ -112,7 +112,7 @@ services:
       # Internal Redis Cache (points to internal compose service)
       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
       REDIS_MAX_CONNECTIONS: 30
-      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-10}
       IDEMPOTENCY_TTL_SECONDS: ${IDEMPOTENCY_TTL_SECONDS:-600}
       SEMANTIC_CACHE_SIMILARITY_THRESHOLD: ${SEMANTIC_CACHE_SIMILARITY_THRESHOLD:-0.93}
       SEMANTIC_CACHE_MAX_CANDIDATES: ${SEMANTIC_CACHE_MAX_CANDIDATES:-200}
@@ -122,10 +122,7 @@ services:
       MCP_TRANSPORT: ${MCP_TRANSPORT:-streamable-http}
       MCP_TOOL_TIMEOUT_SECONDS: ${MCP_TOOL_TIMEOUT_SECONDS:-3.0}
       MCP_MAX_RESULT_BYTES: ${MCP_MAX_RESULT_BYTES:-65536}
-      MCP_ALLOWED_TOOLS: "search_knowledge,lookup_schedule,check_tuition,get_regulations,create_support_case"
-      BUSINESS_API_BASE_URL: ${BUSINESS_API_BASE_URL:-http://host.docker.internal:3000/api}
-      BUSINESS_API_TOKEN: ${BUSINESS_API_TOKEN:-}
-      BUSINESS_API_TIMEOUT_SECONDS: ${BUSINESS_API_TIMEOUT_SECONDS:-2.5}
+      MCP_ALLOWED_TOOLS: "search_knowledge,get_regulations"
 
       # Observability
       OTEL_SERVICE_NAME: "st-care-core-ai"

@@ -41,7 +41,7 @@ class TestCircuitBreaker:
         self, circuit_breaker: ToolCircuitBreaker
     ) -> None:
         """Circuit transitions from CLOSED to OPEN after 3 consecutive failures."""
-        tool = "lookup_schedule"
+        tool = "search_knowledge"
 
         await circuit_breaker.record_failure(tool, Exception("Timeout 1"))
         assert await circuit_breaker.can_execute(tool) is True
@@ -62,7 +62,7 @@ class TestCircuitBreaker:
         self, circuit_breaker: ToolCircuitBreaker
     ) -> None:
         """After recovery timeout elapses, can_execute transitions circuit to HALF_OPEN for canary probe."""
-        tool = "check_tuition"
+        tool = "get_regulations"
         # Trip to OPEN
         for _ in range(3):
             await circuit_breaker.record_failure(tool, Exception("Err"))
@@ -103,7 +103,7 @@ class TestCircuitBreaker:
         self, circuit_breaker: ToolCircuitBreaker
     ) -> None:
         """A failure during canary probe in HALF_OPEN immediately trips back to OPEN."""
-        tool = "create_support_case"
+        tool = "search_knowledge"
         for _ in range(3):
             await circuit_breaker.record_failure(tool, Exception("Err"))
 

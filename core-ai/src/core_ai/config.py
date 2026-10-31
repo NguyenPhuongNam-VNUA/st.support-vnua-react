@@ -129,7 +129,7 @@ class Settings(BaseSettings):
     # Redis Semantic Cache
     redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
     redis_max_connections: int = Field(default=30, alias="REDIS_MAX_CONNECTIONS")
-    rate_limit_per_minute: int = Field(default=60, ge=1, le=10000, alias="RATE_LIMIT_PER_MINUTE")
+    rate_limit_per_minute: int = Field(default=10, ge=1, le=10000, alias="RATE_LIMIT_PER_MINUTE")
     idempotency_ttl_seconds: int = Field(default=600, ge=30, le=86400, alias="IDEMPOTENCY_TTL_SECONDS")
     semantic_cache_similarity_threshold: float = Field(
         default=0.93, ge=0.5, le=1.0, alias="SEMANTIC_CACHE_SIMILARITY_THRESHOLD"
@@ -148,19 +148,9 @@ class Settings(BaseSettings):
     mcp_allowed_tools: Union[List[str], str] = Field(
         default=[
             "search_knowledge",
-            "lookup_schedule",
-            "check_tuition",
             "get_regulations",
-            "create_support_case",
         ],
         alias="MCP_ALLOWED_TOOLS",
-    )
-
-    # Trusted Node/BFF business API used by authenticated MCP tools.
-    business_api_base_url: Optional[str] = Field(default=None, alias="BUSINESS_API_BASE_URL")
-    business_api_token: Optional[str] = Field(default=None, alias="BUSINESS_API_TOKEN")
-    business_api_timeout_seconds: float = Field(
-        default=2.5, ge=0.5, le=3.0, alias="BUSINESS_API_TIMEOUT_SECONDS"
     )
 
     # Signed document ingestion (SSRF and memory bounds)

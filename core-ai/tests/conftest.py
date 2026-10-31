@@ -56,10 +56,7 @@ def mock_settings() -> Settings:
         mcp_tool_timeout_seconds=2.0,
         mcp_allowed_tools=[
             "search_knowledge",
-            "lookup_schedule",
-            "check_tuition",
             "get_regulations",
-            "create_support_case",
         ],
         otel_service_name="st-care-core-ai-test",
         log_raw_prompts=False,

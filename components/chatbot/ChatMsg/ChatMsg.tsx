@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { Check, ChevronDown, Copy, ExternalLink, FileText, Loader2 } from "lucide-react";
+import { Check, ChevronDown, Copy, ExternalLink, FileText, Loader2, ThumbsDown, ThumbsUp } from "lucide-react";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -130,7 +130,12 @@ interface ChatMsgProps {
   isStreaming?: boolean;
   fallback?: ChatFallback | null;
   onConfirmRedaction?: () => void;
+  feedback?: ChatFeedback;
+  /** Omit to hide like/dislike (e.g. answers that were never saved). */
+  onFeedback?: (value: ChatFeedback) => void;
 }
+
+export type ChatFeedback = "like" | "dislike" | null;
 
 function ClaudeThinkingIcon({ animate = false }: { animate?: boolean }) {
   return (
@@ -249,9 +254,6 @@ function formatTraceStep(item: ChatTraceStep): string {
   const rawTool =
     typeof item.details?.tool_name === "string" ? item.details.tool_name : "";
   if (rawTool) {
-    if (rawTool.includes("schedule"))
-      return "Tra cứu thời khóa biểu và lịch học";
-    if (rawTool.includes("tuition")) return "Tra cứu biểu phí và học phí";
     if (rawTool.includes("regulation"))
       return "Tra cứu văn bản quy chế đào tạo";
     if (rawTool.includes("knowledge") || rawTool.includes("search"))
@@ -432,12 +434,28 @@ export default function ChatMsg({
   isStreaming,
   fallback,
   onConfirmRedaction,
+  feedback = null,
+  onFeedback,
 }: ChatMsgProps) {
   const [copied, setCopied] = useState(false);
   const [showTrace, setShowTrace] = useState(false);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(message);
+    try {
+      await navigator.clipboard.writeText(message);
+    } catch {
+      // navigator.clipboard only exists on https/localhost; plain-http LAN access needs the legacy path.
+      const area = document.createElement("textarea");
+      area.value = message;
+      area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      document.body.appendChild(area);
+      area.select();
+      const ok = document.execCommand("copy");
+      area.remove();
+      if (!ok) return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -597,6 +615,39 @@ export default function ChatMsg({
                 <span className="text-[11px] text-slate-400 font-medium tracking-tight">
                   ST-Care Assistant
                 </span>
+                <div className="flex items-center gap-0.5">
+                {onFeedback && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onFeedback(feedback === "like" ? null : "like")}
+                      aria-pressed={feedback === "like"}
+                      aria-label="Câu trả lời hữu ích"
+                      title="Câu trả lời hữu ích"
+                      className={`inline-flex items-center rounded-lg p-1.5 transition-all cursor-pointer ${
+                        feedback === "like"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"
+                      }`}
+                    >
+                      <ThumbsUp size={13} className={feedback === "like" ? "fill-emerald-600/20" : ""} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onFeedback(feedback === "dislike" ? null : "dislike")}
+                      aria-pressed={feedback === "dislike"}
+                      aria-label="Câu trả lời chưa tốt"
+                      title="Câu trả lời chưa tốt"
+                      className={`inline-flex items-center rounded-lg p-1.5 transition-all cursor-pointer ${
+                        feedback === "dislike"
+                          ? "bg-rose-50 text-rose-600"
+                          : "text-slate-500 hover:bg-rose-50 hover:text-rose-600"
+                      }`}
+                    >
+                      <ThumbsDown size={13} className={feedback === "dislike" ? "fill-rose-500/20" : ""} />
+                    </button>
+                  </>
+                )}
                 <button
                   type="button"
                   onClick={handleCopy}
@@ -617,6 +668,7 @@ export default function ChatMsg({
                     </>
                   )}
                 </button>
+                </div>
               </div>
             )}
 

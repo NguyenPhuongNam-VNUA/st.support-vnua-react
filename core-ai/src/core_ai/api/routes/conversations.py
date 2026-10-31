@@ -54,10 +54,6 @@ async def prepare_trusted_request(request: Request, chat_request: ChatRequest) -
     """Validate request limits and bind proxy-authenticated identity context."""
     context = request.state.context
     controller = get_request_controller(request.app.state.settings)
-    if not await controller.allow_request(context.tenant_id, context.user_id):
-        raise RateLimitExceededError()
-    if not await controller.claim_request(context.tenant_id, context.request_id):
-        raise DuplicateRequestError()
 
     raw_ip = (
         chat_request.client_ip
@@ -66,6 +62,12 @@ async def prepare_trusted_request(request: Request, chat_request: ChatRequest) -
         or (request.client.host if request.client else "127.0.0.1")
     )
     client_ip = raw_ip.split(",")[0].strip() if raw_ip else "127.0.0.1"
+
+    # Rate limit per client IP so each visitor (logged in or not) gets its own quota.
+    if not await controller.allow_request(context.tenant_id, f"ip:{client_ip}"):
+        raise RateLimitExceededError()
+    if not await controller.claim_request(context.tenant_id, context.request_id):
+        raise DuplicateRequestError()
 
     return chat_request.model_copy(
         update={

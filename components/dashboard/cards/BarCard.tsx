@@ -1,35 +1,33 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BarChart } from "@mui/x-charts";
 import { Card, CardHeader, CardContent, Typography, Box, CircularProgress } from "@mui/material";
 import { BarChart3 } from "lucide-react";
-import questionApi from "@/api/admin/questionApi";
+import { normalizeQuestion } from "@/lib/training/topic-suggester";
 
-export default function BarCard() {
-  const [topQuestions, setTopQuestions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+interface BarCardProps {
+  /** Logs already limited to the dashboard time filter. */
+  logs: { question?: string }[];
+  loading?: boolean;
+}
+
+export default function BarCard({ logs, loading = false }: BarCardProps) {
   const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  useEffect(() => {
-    setMounted(true);
-    const fetchTopQuestions = async () => {
-      try {
-        const res: any = await questionApi.getTop5();
-        if (res && Array.isArray(res.data) && res.data.length > 0) {
-          setTopQuestions(res.data);
-        } else {
-          setTopQuestions([]);
-        }
-      } catch (err) {
-        console.warn("Lỗi khi lấy top 5 câu hỏi:", err);
-        setTopQuestions([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTopQuestions();
-  }, []);
+  const topQuestions = useMemo(() => {
+    const groups = new Map<string, { question: string; ask_count: number }>();
+    for (const log of logs) {
+      const question = (log.question || '').trim();
+      const key = normalizeQuestion(question);
+      if (!key) continue;
+      const group = groups.get(key);
+      if (group) group.ask_count += 1;
+      else groups.set(key, { question, ask_count: 1 });
+    }
+    return Array.from(groups.values()).sort((a, b) => b.ask_count - a.ask_count).slice(0, 5);
+  }, [logs]);
 
   return (
     <Card
@@ -57,6 +55,10 @@ export default function BarCard() {
           <Box display="flex" justifyContent="center" alignItems="center" py={6}>
             <CircularProgress size={32} sx={{ color: '#1f2937' }} />
           </Box>
+        ) : topQuestions.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" textAlign="center" py={6}>
+            Chưa có câu hỏi nào trong khoảng thời gian này.
+          </Typography>
         ) : (
           <Box sx={{ width: '100%', overflowX: 'auto' }}>
             <Box sx={{ minWidth: 320, height: 250, display: 'flex', justifyContent: 'flex-start' }}>

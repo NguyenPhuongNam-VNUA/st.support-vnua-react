@@ -38,23 +38,6 @@ class TestMCPGateway:
         assert exc_info.value.code.value == "TOOL_NOT_ALLOWED"
 
     @pytest.mark.asyncio
-    async def test_authenticated_scope_requires_user_id(
-        self, mcp_gateway: MCPGatewayImpl
-    ) -> None:
-        """Tool with AUTHENTICATED scope (lookup_schedule) requires user_id; raises ToolNotAllowedError if missing."""
-        req = ToolRequest(
-            request_id="req-mcp-no-user",
-            tenant_id="vnua",
-            user_id=None,  # Missing student identity
-            tool_name="lookup_schedule",
-            arguments={"semester": 1},
-        )
-
-        with pytest.raises(ToolNotAllowedError) as exc_info:
-            await mcp_gateway.call_tool(req)
-        assert exc_info.value.code.value == "TOOL_NOT_ALLOWED"
-
-    @pytest.mark.asyncio
     async def test_public_tool_execution_success(
         self, mcp_gateway: MCPGatewayImpl
     ) -> None:
@@ -92,28 +75,6 @@ class TestMCPGateway:
         with pytest.raises(ToolExecutionError) as exc_info:
             await mcp_gateway.call_tool(req)
         assert "tham số không hợp lệ" in exc_info.value.message.lower()
-
-    @pytest.mark.asyncio
-    async def test_escalation_requires_authenticated_user_and_approval(
-        self, mcp_gateway: MCPGatewayImpl
-    ) -> None:
-        arguments = {
-            "student_id": "42",
-            "category": "dao_tao",
-            "subject": "Cần hỗ trợ đăng ký",
-            "details": "Không thể đăng ký học phần bắt buộc",
-        }
-        with pytest.raises(ToolNotAllowedError):
-            await mcp_gateway.call_tool(
-                ToolRequest(
-                    request_id="req-no-approval",
-                    tenant_id="vnua",
-                    user_id="42",
-                    tool_name="create_support_case",
-                    arguments=arguments,
-                    approved=False,
-                )
-            )
 
     @pytest.mark.asyncio
     async def test_cross_tenant_tool_call_is_denied(

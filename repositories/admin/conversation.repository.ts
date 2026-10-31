@@ -12,13 +12,18 @@ interface MessageRow {
 }
 
 export const conversationRepository = {
-  async listLogs(limit = 500) {
+  // shortcut: newest `limit` answers only; a busy 30-day window gets truncated. Move aggregation to SQL if that happens.
+  async listLogs(limit = 500, range: { from?: Date | null; to?: Date | null } = {}) {
     const safeLimit = Math.max(1, Math.min(1000, limit));
-    const { data, error } = await getSupabaseAdmin()
+    let query = getSupabaseAdmin()
       .from('messages')
       .select('id, conversation_id, sender, content, status, feedback, rating, created_at')
       .order('created_at', { ascending: false })
       .limit(safeLimit * 2);
+    // Start an hour early so the user question paired with the first answer is included.
+    if (range.from) query = query.gte('created_at', new Date(range.from.getTime() - 60 * 60 * 1000).toISOString());
+    if (range.to) query = query.lte('created_at', range.to.toISOString());
+    const { data, error } = await query;
 
     if (error) throw new Error(`Không thể tải nhật ký hội thoại: ${error.message}`);
 
@@ -48,7 +53,9 @@ export const conversationRepository = {
       });
     }
 
+    const fromMs = range.from ? range.from.getTime() : -Infinity;
     return logs
+      .filter((log) => new Date(String(log.created_at)).getTime() >= fromMs)
       .sort((a, b) => new Date(String(b.created_at)).getTime() - new Date(String(a.created_at)).getTime())
       .slice(0, safeLimit);
   },

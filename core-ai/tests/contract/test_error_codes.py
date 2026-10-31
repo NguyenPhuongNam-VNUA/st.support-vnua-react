@@ -80,10 +80,10 @@ class TestErrorCodesContract:
 
     def test_to_dict_serialization(self) -> None:
         """Verifies structure of exception serialized dictionary."""
-        exc = CircuitBreakerOpenError(tool_name="lookup_schedule")
+        exc = CircuitBreakerOpenError(tool_name="search_knowledge")
         d = exc.to_dict()
 
         assert d["error_code"] == "CIRCUIT_BREAKER_OPEN"
         assert d["retryable"] is True
-        assert "lookup_schedule" in d["message"]
-        assert d["details"] == {"tool_name": "lookup_schedule"}
+        assert "search_knowledge" in d["message"]
+        assert d["details"] == {"tool_name": "search_knowledge"}

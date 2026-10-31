@@ -16,42 +16,67 @@ import {
   Chip,
   LinearProgress,
 } from '@mui/material';
-import { Search, Sparkles, FileText, CheckCircle2, Sliders, X } from 'lucide-react';
+import { Search, Sparkles } from 'lucide-react';
+import documentApi from '@/api/admin/documentApi';
 
 interface RagTestRetrievalModalProps {
   open: boolean;
   onClose: () => void;
 }
 
+interface RetrievalResult {
+  source_type: 'document' | 'faq' | string;
+  document_id: number | null;
+  title: string | null;
+  page: number | null;
+  page_end: number | null;
+  chunk_index: number | null;
+  version: string | null;
+  validity_status: string | null;
+  snippet: string;
+  final_score: number | null;
+}
+
+interface RetrievalMeta {
+  embedding_ready: boolean;
+  rerank_strategy: string | null;
+  degraded: boolean;
+  latency_ms: number;
+}
+
+const formatScore = (score: number | null) =>
+  score == null ? 'N/A' : `${(Math.max(0, Math.min(1, score)) * 100).toFixed(1)}%`;
+
 export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrievalModalProps) {
-  const [query, setQuery] = useState('Mức học phí tín chỉ ngành Công nghệ thông tin năm 2025?');
+  const [query, setQuery] = useState('');
   const [topK, setTopK] = useState(3);
   const [isSearching, setIsSearching] = useState(false);
-  const [results, setResults] = useState<any[] | null>(null);
+  const [results, setResults] = useState<RetrievalResult[] | null>(null);
+  const [meta, setMeta] = useState<RetrievalMeta | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleTestSearch = () => {
+  const handleTestSearch = async () => {
+    const trimmed = query.trim();
+    if (trimmed.length < 2 || isSearching) return;
     setIsSearching(true);
-    setTimeout(() => {
-      setResults([
-        {
-          id: 1,
-          score: 94.8,
-          document: 'Quy chế Đào tạo và Học phí Khoa CNTT.pdf',
-          version: 'v2.1 (Active)',
-          chunk:
-            'Học phí ngành Công nghệ thông tin áp dụng cho khóa tuyển sinh 2025 là 450.000đ/tín chỉ đối với các học phần đại cương và 520.000đ/tín chỉ đối với học phần chuyên ngành.',
-        },
-        {
-          id: 2,
-          score: 82.3,
-          document: 'Thông báo Tuyển sinh ĐH Chính quy 2025.pdf',
-          version: 'v1.0 (Active)',
-          chunk:
-            'Mức thu học phí tạm thu đầu khóa cho sinh viên K70 ngành CNTT là 5.000.000đ cho kỳ học đầu tiên.',
-        },
-      ]);
+    setError(null);
+    try {
+      const res: any = await documentApi.testRetrieval(trimmed, topK);
+      const data = res?.data || {};
+      setResults(Array.isArray(data.results) ? data.results : []);
+      setMeta({
+        embedding_ready: Boolean(data.embedding_ready),
+        rerank_strategy: data.rerank_strategy ?? null,
+        degraded: Boolean(data.degraded),
+        latency_ms: Number(data.latency_ms) || 0,
+      });
+    } catch (err: any) {
+      setResults(null);
+      setMeta(null);
+      setError(err?.message || 'Không thể chạy thử truy xuất');
+    } finally {
       setIsSearching(false);
-    }, 600);
+    }
   };
 
   return (
@@ -98,8 +123,12 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
             fullWidth
             size="small"
             label="Câu hỏi mẫu cần test RAG retrieval"
+            placeholder="VD: Mức học phí tín chỉ ngành Công nghệ thông tin?"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void handleTestSearch();
+            }}
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: '12px',
@@ -129,6 +158,7 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
             variant="contained"
             startIcon={<Search className="w-4 h-4" />}
             onClick={handleTestSearch}
+            disabled={isSearching || query.trim().length < 2}
             sx={{
               borderRadius: '8px',
               backgroundColor: '#1f2937',
@@ -163,15 +193,33 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
           />
         )}
 
+        {error && (
+          <Typography role="alert" variant="body2" fontWeight={500} sx={{ color: '#b91c1c', mb: 2 }}>
+            {error}
+          </Typography>
+        )}
+
         {results && (
           <Box display="flex" flexDirection="column" gap={2} mt={1}>
             <Typography variant="subtitle2" fontWeight={600} sx={{ color: '#1f2937', fontSize: '0.875rem' }}>
               Kết quả Trích xuất Context Chunks ({results.length} đoạn tương đồng nhất):
             </Typography>
+            {meta && (
+              <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                {meta.latency_ms} ms · Embedding: {meta.embedding_ready ? 'có' : 'không (chỉ BM25)'} · Rerank:{' '}
+                {meta.rerank_strategy || 'N/A'}
+                {meta.degraded ? ' · Chế độ dự phòng' : ''}
+              </Typography>
+            )}
+            {results.length === 0 && (
+              <Typography variant="body2" color="text.secondary">
+                Không tìm thấy đoạn tài liệu hoặc câu hỏi nào phù hợp trong kho tri thức.
+              </Typography>
+            )}
 
             {results.map((res, i) => (
               <Box
-                key={res.id}
+                key={`${res.source_type}-${res.document_id ?? 'faq'}-${res.chunk_index ?? i}`}
                 p={2.5}
                 borderRadius="18px"
                 border="1px solid rgba(0, 0, 0, 0.12)"
@@ -183,10 +231,17 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
                     <span className="text-xs font-semibold text-white bg-[#1f2937] px-2 py-0.5 rounded-md">
                       #{i + 1}
                     </span>
-                    <span className="text-xs font-semibold text-gray-800">{res.document}</span>
+                    <span className="text-xs font-semibold text-gray-800">
+                      {res.title || (res.source_type === 'faq' ? 'Ngân hàng câu hỏi' : 'Tài liệu')}
+                      {res.page != null && ` · tr. ${res.page}${res.page_end && res.page_end !== res.page ? `-${res.page_end}` : ''}`}
+                    </span>
                     <Chip
                       size="small"
-                      label={res.version}
+                      label={
+                        res.source_type === 'faq'
+                          ? 'FAQ'
+                          : [res.version, res.validity_status].filter(Boolean).join(' · ') || 'Tài liệu'
+                      }
                       sx={{
                         borderRadius: '8px',
                         fontSize: '0.675rem',
@@ -199,7 +254,7 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
                   </Box>
                   <Chip
                     size="small"
-                    label={`${res.score}% Cosine Match`}
+                    label={`Điểm ${formatScore(res.final_score)}`}
                     sx={{
                       borderRadius: '8px',
                       fontWeight: 600,
@@ -219,7 +274,7 @@ export default function RagTestRetrievalModal({ open, onClose }: RagTestRetrieva
                   border="1px solid rgba(0, 0, 0, 0.08)"
                   sx={{ lineHeight: 1.6, fontWeight: 500, fontSize: '0.85rem' }}
                 >
-                  &quot;{res.chunk}&quot;
+                  &quot;{res.snippet}&quot;
                 </Typography>
               </Box>
             ))}

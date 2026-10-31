@@ -29,11 +29,6 @@ def route_after_input_guardrail(
         return "fallback"
     if state.get("redaction_required", False):
         return "fallback"
-    if state.get("tool_name_requested") == "create_support_case" and state.get(
-        "tool_approved", False
-    ):
-        logger.info("Routing explicitly approved support request to MCP tool")
-        return "tool_node"
     return "query_prep"
 
 

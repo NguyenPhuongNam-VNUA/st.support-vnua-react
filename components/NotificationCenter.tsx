@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Popover,
   Box,
@@ -11,52 +11,100 @@ import {
 } from '@mui/material';
 import { Bell } from 'lucide-react';
 import Link from 'next/link';
+import notificationApi from '@/api/admin/notificationApi';
+
+interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  desc: string;
+  link: string;
+  created_at: string;
+}
+
+// Read state is a per-browser convenience; the notifications themselves come from the DB.
+const READ_STORAGE_KEY = 'st_admin_notifications_read_ids';
+const POLL_MS = 60_000;
+
+function loadReadIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(READ_STORAGE_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveReadIds(ids: Set<string>) {
+  try {
+    localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(Array.from(ids).slice(-200)));
+  } catch {
+    /* storage blocked: unread state just resets on reload */
+  }
+}
+
+function formatRelativeTime(dateStr: string) {
+  const diffMins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+  if (!Number.isFinite(diffMins) || diffMins < 1) return 'Vừa xong';
+  if (diffMins < 60) return `${diffMins} phút trước`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} giờ trước`;
+  return `${Math.floor(diffHours / 24)} ngày trước`;
+}
 
 export default function NotificationCenter() {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: 'Có 4 câu hỏi mới chờ duyệt',
-      desc: 'Sinh viên vừa đặt câu hỏi liên quan đến hoãn thi lại.',
-      time: '5 phút trước',
-      type: 'question',
-      link: '/admin/questions',
-      unread: true,
-    },
-    {
-      id: 2,
-      title: 'Cảnh báo: Tỷ lệ Fallback cần chú ý',
-      desc: 'Tỷ lệ câu hỏi chưa có câu trả lời đạt 11.5% trong 1 giờ qua.',
-      time: '30 phút trước',
-      type: 'alert',
-      link: '/admin/training',
-      unread: true,
-    },
-    {
-      id: 3,
-      title: 'Tài liệu PDF vừa hoàn thành Embedding',
-      desc: 'Quy chế Đào tạo v2.1 đã sẵn sàng phục vụ RAG Agent.',
-      time: '2 giờ trước',
-      type: 'document',
-      link: '/admin/documents',
-      unread: false,
-    },
-  ]);
+  const [items, setItems] = useState<NotificationItem[]>([]);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res: any = await notificationApi.getAll();
+      setItems(Array.isArray(res?.data) ? res.data : []);
+      setLoadError(false);
+    } catch (err) {
+      console.warn('Lỗi tải thông báo:', err);
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setReadIds(loadReadIds());
+    void fetchNotifications();
+    const timer = window.setInterval(() => void fetchNotifications(), POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [fetchNotifications]);
+
+  const notifications = items.map((item) => ({
+    ...item,
+    time: formatRelativeTime(item.created_at),
+    unread: !readIds.has(item.id),
+  }));
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
+    void fetchNotifications();
   };
 
   const handleClose = () => {
     setAnchorEl(null);
   };
 
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+  const markRead = (ids: string[]) => {
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
+      saveReadIds(next);
+      return next;
+    });
   };
+
+  const markAllRead = () => markRead(items.map((n) => n.id));
 
   const open = Boolean(anchorEl);
 
@@ -178,11 +226,29 @@ export default function NotificationCenter() {
             gap: 1.2,
           }}
         >
+          {loading && notifications.length === 0 && (
+            <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>
+              Đang tải thông báo…
+            </Typography>
+          )}
+          {!loading && loadError && notifications.length === 0 && (
+            <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>
+              Không tải được thông báo. Vui lòng thử lại sau.
+            </Typography>
+          )}
+          {!loading && !loadError && notifications.length === 0 && (
+            <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>
+              Không có thông báo mới.
+            </Typography>
+          )}
           {notifications.map((item) => (
             <Link
               key={item.id}
               href={item.link}
-              onClick={handleClose}
+              onClick={() => {
+                markRead([item.id]);
+                handleClose();
+              }}
               className={`
                 group relative block p-3.5 rounded-xl border transition-all duration-200 ${
                   item.unread

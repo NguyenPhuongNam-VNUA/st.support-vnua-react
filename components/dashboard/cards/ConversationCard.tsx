@@ -23,9 +23,10 @@ import {
   Button,
 } from "@mui/material";
 import Grid from '@mui/material/Grid2';
-import { MessageSquareText, Clock, Search, Filter, CheckCircle2, AlertCircle, Cpu, PieChart, X } from 'lucide-react';
+import { MessageSquareText, Clock, Search, Filter, CheckCircle2, AlertCircle, Cpu, PieChart, X, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { styled } from "@mui/material/styles";
 import conversationApi from "@/api/chatbot/conversationApi";
+import { inRange, resolveDateRange } from "@/lib/dashboard/time-range";
 
 const StyledTableHead = styled(TableHead)(() => ({
   '& .MuiTableCell-head': {
@@ -142,6 +143,7 @@ export default function ConversationCard({
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [feedbackFilter, setFeedbackFilter] = useState('');
   const [slotFilter, setSlotFilter] = useState<{ day: string; hour: number } | null>(null);
 
   useEffect(() => {
@@ -165,7 +167,11 @@ export default function ConversationCard({
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const res: any = await conversationApi.getAll();
+        setLoading(true);
+        const range = timeRange ? resolveDateRange(timeRange, startDate, endDate) : null;
+        const res: any = await conversationApi.getAll(
+          range ? { from: range.from?.toISOString(), to: range.to.toISOString(), limit: 1000 } : undefined
+        );
         const rawData = res && Array.isArray(res.data) ? res.data : [];
 
         setLogs(
@@ -175,6 +181,7 @@ export default function ConversationCard({
             context: item.context,
             answer: item.answer,
             status: item.response_type || item.status || 'answered',
+            feedback: item.feedback === 'like' || item.feedback === 'dislike' ? item.feedback : null,
             rawDate: new Date(item.created_at || Date.now()),
             created_at: new Date(item.created_at || Date.now()).toLocaleString("vi-VN", {
               day: '2-digit',
@@ -194,13 +201,11 @@ export default function ConversationCard({
     };
 
     fetchLogs();
-  }, []);
+  }, [timeRange, startDate, endDate]);
 
   const filteredLogs = useMemo(() => {
     const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const range = timeRange ? resolveDateRange(timeRange, startDate, endDate, now) : null;
     const DAYS_VN = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
 
     return logs.filter((log) => {
@@ -210,22 +215,10 @@ export default function ConversationCard({
         log.answer?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesStatus = statusFilter === '' || log.status === statusFilter;
+      const matchesFeedback =
+        feedbackFilter === '' || (feedbackFilter === 'none' ? !log.feedback : log.feedback === feedbackFilter);
 
-      let matchesTime = true;
-      if (timeRange === 'today') {
-        matchesTime = log.rawDate >= startOfToday;
-      } else if (timeRange === '7d') {
-        matchesTime = log.rawDate >= sevenDaysAgo;
-      } else if (timeRange === '30d') {
-        matchesTime = log.rawDate >= thirtyDaysAgo;
-      } else if (timeRange === 'custom') {
-        if (startDate) {
-          matchesTime = matchesTime && log.rawDate >= new Date(startDate);
-        }
-        if (endDate) {
-          matchesTime = matchesTime && log.rawDate <= new Date(`${endDate}T23:59:59`);
-        }
-      }
+      const matchesTime = !range || inRange(log.rawDate.toISOString(), range);
 
       let matchesSlot = true;
       if (slotFilter) {
@@ -234,9 +227,9 @@ export default function ConversationCard({
         matchesSlot = logDay === slotFilter.day && logHour === slotFilter.hour;
       }
       
-      return matchesSearch && matchesStatus && matchesTime && matchesSlot;
+      return matchesSearch && matchesStatus && matchesFeedback && matchesTime && matchesSlot;
     });
-  }, [logs, searchTerm, statusFilter, timeRange, startDate, endDate, slotFilter]);
+  }, [logs, searchTerm, statusFilter, feedbackFilter, timeRange, startDate, endDate, slotFilter]);
 
   const paginatedLogs = useMemo(() => {
     const startIndex = page * rowsPerPage;
@@ -387,6 +380,20 @@ export default function ConversationCard({
               <MenuItem value="out_of_topic">Lạc đề</MenuItem>
             </GreenSelect>
           </FormControl>
+
+          <FormControl sx={{ minWidth: 170 }}>
+            <GreenSelect
+              value={feedbackFilter}
+              onChange={(e: any) => { setFeedbackFilter(e.target.value); setPage(0); }}
+              displayEmpty
+              inputProps={{ 'aria-label': 'Lọc theo đánh giá' }}
+            >
+              <MenuItem value="">Tất cả đánh giá</MenuItem>
+              <MenuItem value="like">Hài lòng</MenuItem>
+              <MenuItem value="dislike">Không hài lòng</MenuItem>
+              <MenuItem value="none">Chưa đánh giá</MenuItem>
+            </GreenSelect>
+          </FormControl>
         </Box>
 
         {/* Active Heatmap Slot Filter Badge */}
@@ -435,6 +442,7 @@ export default function ConversationCard({
                     <TableCell sx={{ minWidth: 150 }}>Ngữ cảnh</TableCell>
                     <TableCell sx={{ minWidth: 250 }}>Câu trả lời Chatbot</TableCell>
                     <TableCell align="center" sx={{ width: 140 }}>Trạng thái</TableCell>
+                    <TableCell align="center" sx={{ width: 90 }}>Đánh giá</TableCell>
                     <TableCell align="center" sx={{ width: 140 }}>Thời gian</TableCell>
                   </TableRow>
                 </StyledTableHead>
@@ -493,6 +501,20 @@ export default function ConversationCard({
                       <TableCell align="center">
                         <StatusChip status={row.status} />
                       </TableCell>
+
+                      <TableCell align="center">
+                        {row.feedback === 'like' ? (
+                          <span title="Hài lòng" className="inline-flex text-[#059669]">
+                            <ThumbsUp className="h-4 w-4" aria-label="Hài lòng" />
+                          </span>
+                        ) : row.feedback === 'dislike' ? (
+                          <span title="Không hài lòng" className="inline-flex text-[#ef4444]">
+                            <ThumbsDown className="h-4 w-4" aria-label="Không hài lòng" />
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400" aria-label="Chưa đánh giá">—</span>
+                        )}
+                      </TableCell>
                       
                       <TableCell align="center">
                         <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
@@ -507,7 +529,7 @@ export default function ConversationCard({
                   
                   {paginatedLogs.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                      <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                         <Typography variant="body2" color="text.secondary" fontWeight={600}>
                           Không tìm thấy cuộc hội thoại phù hợp
                         </Typography>

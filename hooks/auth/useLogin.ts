@@ -44,24 +44,12 @@ export function useLogin() {
         setUser(user);
         setIsSuccess(true);
 
-        // KIỂM TRA PHÂN QUYỀN (ROLE AUTHORIZATION)
-        if (user.role === 'student') {
-          // Sinh viên không có quyền vào trang quản trị Admin
-          setInfoAlert('Tài khoản Sinh viên: Chức năng đang phát triển. Vui lòng quay lại sau!');
-          return {
-            success: true,
-            isStudent: true,
-            message: 'Tài khoản Sinh viên: Chức năng đang phát triển. Vui lòng quay lại sau!',
-            data: resData.data,
-          };
-        }
-
-        // Quản trị viên (Admin) được phép vào Admin Dashboard
+        // Server chỉ cấp phiên cho quản trị viên nên có thể vào thẳng Admin Dashboard.
         if (redirectPath) {
           router.push(redirectPath);
         }
 
-        return { success: true, isStudent: false, data: resData.data };
+        return { success: true, data: resData.data };
       } else {
         const errorMsg = resData.message || 'Đăng nhập không thành công';
         setErrorAlert(errorMsg);

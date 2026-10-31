@@ -4,11 +4,23 @@ import { conversationRepository } from '@/repositories/admin/conversation.reposi
 
 export const dynamic = 'force-dynamic';
 
+function parseDate(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
 export async function GET(request: NextRequest) {
   try {
     await requireRole(request, ['admin']);
-    const limit = Number(request.nextUrl.searchParams.get('limit') || 500);
-    const logs = await conversationRepository.listLogs(limit);
+    const params = request.nextUrl.searchParams;
+    const limit = Number(params.get('limit') || 500);
+    const from = parseDate(params.get('from'));
+    const to = parseDate(params.get('to'));
+    if (from === undefined || to === undefined) {
+      return NextResponse.json({ success: false, message: 'Tham số thời gian không hợp lệ' }, { status: 422 });
+    }
+    const logs = await conversationRepository.listLogs(limit, { from, to });
     return NextResponse.json({ success: true, data: logs });
   } catch (error) {
     if (error instanceof AuthorizationError) {

@@ -58,8 +58,10 @@ async def evidence_node(state: GraphState) -> GraphState:
     chunks = state.get("retrieved_chunks", [])
     from core_ai.config import get_settings
 
+    from core_ai.agent_settings import get_agent_settings
+
     settings = get_settings()
-    low_threshold = settings.evidence_low_threshold
+    low_threshold = (await get_agent_settings(state.get("tenant_id", "vnua"))).evidence_low_threshold
     high_threshold = settings.evidence_high_threshold
 
     if not chunks:

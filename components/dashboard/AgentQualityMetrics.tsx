@@ -22,13 +22,17 @@ import {
   ThumbsUp,
   PlusCircle,
   CheckCircle2,
-  Star,
 } from 'lucide-react';
 import Link from 'next/link';
 
-import conversationApi from "@/api/chatbot/conversationApi";
+import trainingApi from '@/api/admin/trainingApi';
+import { DateRange } from '@/lib/dashboard/time-range';
 
 interface AgentQualityMetricsProps {
+  /** Logs already limited to the dashboard time filter. */
+  logs: any[];
+  range: DateRange;
+  loading?: boolean;
   onDrillDownFallback?: () => void;
 }
 
@@ -109,24 +113,34 @@ function AnimatedProgressBar({ selfPercent }: { selfPercent: number }) {
   );
 }
 
-export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualityMetricsProps) {
-  const [logs, setLogs] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
+export default function AgentQualityMetrics({ logs, range, loading = false, onDrillDownFallback }: AgentQualityMetricsProps) {
+  const [fallbackQuestions, setFallbackQuestions] = React.useState<FallbackItem[]>([]);
+  const fromIso = range.from?.toISOString();
+  const toIso = range.to.toISOString();
 
+  // Unhandled fallback questions in the window, with suggested topic (questions already in the bank are excluded).
   React.useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        const res: any = await conversationApi.getAll();
-        const raw = res && Array.isArray(res.data) ? res.data : [];
-        setLogs(raw);
-      } catch (err) {
-        console.warn('Lỗi tải logs cho quality metrics:', err);
-      } finally {
-        setLoading(false);
-      }
+    let alive = true;
+    trainingApi
+      .getFallbacks({ limit: 5, from: fromIso, to: toIso })
+      .then((res: any) => {
+        if (!alive) return;
+        const rows = Array.isArray(res?.data) ? res.data : [];
+        setFallbackQuestions(
+          rows.map((row: any) => ({
+            id: row.id,
+            question: row.question,
+            category: row.suggested_topic,
+            count: row.asked_count,
+            last_asked: formatRelativeTime(row.last_asked_at),
+          }))
+        );
+      })
+      .catch((err) => console.warn('Lỗi tải câu hỏi fallback cho dashboard:', err));
+    return () => {
+      alive = false;
     };
-    fetchLogs();
-  }, []);
+  }, [fromIso, toIso]);
 
   // Compute real metrics from logs
   const total = logs.length;
@@ -137,63 +151,22 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
     (l) => (l.response_type || l.status) === 'not_found'
   ).length;
 
-  const selfPercent = total > 0 ? (answeredCount / total) * 100 : 100;
+  const selfPercent = total > 0 ? (answeredCount / total) * 100 : 0;
   const fallbackPercent = total > 0 ? (fallbackCount / total) * 100 : 0;
 
   // Real feedback / satisfaction calculation
   const ratedLogs = logs.filter((l) => l.feedback || l.rating);
-  let posPercent = 95;
-  let negPercent = 5;
-  let avgRating = 4.9;
+  const ratedCount = ratedLogs.length;
+  let posPercent = 0;
+  let negPercent = 0;
 
-  if (ratedLogs.length > 0) {
+  if (ratedCount > 0) {
     const posCount = ratedLogs.filter(
       (l) => l.feedback === 'like' || (l.rating && Number(l.rating) >= 4)
     ).length;
-    posPercent = (posCount / ratedLogs.length) * 100;
+    posPercent = (posCount / ratedCount) * 100;
     negPercent = 100 - posPercent;
-    const totalRating = ratedLogs.reduce(
-      (acc, l) => acc + (l.rating ? Number(l.rating) : l.feedback === 'like' ? 5 : 2),
-      0
-    );
-    avgRating = Number((totalRating / ratedLogs.length).toFixed(1));
   }
-
-  // Extract real fallback questions
-  const fallbackQuestions: FallbackItem[] = React.useMemo(() => {
-    const map = new Map<string, { id: number; question: string; category: string; count: number; lastDate: string }>();
-    for (const log of logs) {
-      const status = log.response_type || log.status;
-      if (status === 'not_found' && log.question?.trim()) {
-        const qText = log.question.trim();
-        const existing = map.get(qText);
-        if (existing) {
-          existing.count += 1;
-          if (new Date(log.created_at).getTime() > new Date(existing.lastDate).getTime()) {
-            existing.lastDate = log.created_at;
-          }
-        } else {
-          map.set(qText, {
-            id: log.id,
-            question: qText,
-            category: 'Học vụ',
-            count: 1,
-            lastDate: log.created_at,
-          });
-        }
-      }
-    }
-    return Array.from(map.values())
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5)
-      .map((item) => ({
-        id: item.id,
-        question: item.question,
-        category: item.category,
-        count: item.count,
-        last_asked: formatRelativeTime(item.lastDate),
-      }));
-  }, [logs]);
 
   return (
     <Grid container spacing={2}>
@@ -297,10 +270,10 @@ export default function AgentQualityMetrics({ onDrillDownFallback }: AgentQualit
               <Box display="flex" alignItems="center" gap={3}>
                 <Box textAlign="center" py={1.5} px={1.5} minWidth={105} bgcolor="#f8f8f8" borderRadius="14px" border="1px solid rgba(0, 0, 0, 0.08)" boxShadow="0 0 0 1px rgba(255,255,255,0.8) inset">
                   <Typography variant="h3" fontWeight={600} sx={{ color: '#1f2937', lineHeight: 1, letterSpacing: '-0.03em' }}>
-                    <AnimatedNumber value={avgRating} decimals={1} suffix="" />
+                    <AnimatedNumber value={ratedCount} decimals={0} suffix="" />
                   </Typography>
-                  <Typography variant="caption" fontWeight={500} color="text.secondary" display="flex" alignItems="center" justifyContent="center" gap={0.5} mt={0.5}>
-                    trên 5.0 <Star className="w-3.5 h-3.5 text-[#9ca3af] fill-[#9ca3af] inline-block" />
+                  <Typography variant="caption" fontWeight={500} color="text.secondary" display="block" mt={0.5}>
+                    {loading ? 'Đang tải…' : ratedCount > 0 ? 'lượt đánh giá' : 'Chưa có đánh giá'}
                   </Typography>
                 </Box>
 

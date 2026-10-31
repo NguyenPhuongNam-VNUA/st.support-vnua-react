@@ -10,6 +10,7 @@ import {
   UpdateAccountDTO,
 } from '@/lib/validations/account.validation';
 import { useAccounts, SanitizedAccount } from '@/hooks/admin/useAccounts';
+import SectionCard from '@/components/admin/SectionCard';
 import {
   Users,
   UserPlus,
@@ -184,7 +185,7 @@ export default function AdminAccountsPage() {
       </Snackbar>
 
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-xl border border-[rgba(0, 0, 0, 0.08)] shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-xl border-[0.8px] border-[#e5e7eb]">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-[#1f2937] uppercase tracking-wider mb-1">
             <Shield className="w-4 h-4" />
@@ -209,7 +210,7 @@ export default function AdminAccountsPage() {
 
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white p-4 rounded-xl border border-[rgba(0, 0, 0, 0.08)] shadow-xs">
+        <div className="bg-white p-4 rounded-xl border-[0.8px] border-[#e5e7eb]">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-gray-500">Tổng tài khoản</span>
             <div className="w-8 h-8 rounded-lg bg-[#f7f7f7] text-[#1f2937] flex items-center justify-center">
@@ -220,7 +221,7 @@ export default function AdminAccountsPage() {
           <span className="text-[11px] text-gray-400">Trên hệ thống</span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-[rgba(0, 0, 0, 0.08)] shadow-xs">
+        <div className="bg-white p-4 rounded-xl border-[0.8px] border-[#e5e7eb]">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-gray-500">Quản trị viên (Admin)</span>
             <div className="w-8 h-8 rounded-lg bg-[#f7f7f7] text-[#4b5563] flex items-center justify-center">
@@ -231,7 +232,7 @@ export default function AdminAccountsPage() {
           <span className="text-[11px] text-[#4b5563] font-medium">Toàn quyền hệ thống</span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-[rgba(0, 0, 0, 0.08)] shadow-xs">
+        <div className="bg-white p-4 rounded-xl border-[0.8px] border-[#e5e7eb]">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-gray-500">Sinh viên (Student)</span>
             <div className="w-8 h-8 rounded-lg bg-[#f7f7f7] text-[#4b5563] flex items-center justify-center">
@@ -242,7 +243,7 @@ export default function AdminAccountsPage() {
           <span className="text-[11px] text-[#4b5563] font-medium">Người dùng Chatbot</span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-[rgba(0, 0, 0, 0.08)] shadow-xs">
+        <div className="bg-white p-4 rounded-xl border-[0.8px] border-[#e5e7eb]">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-gray-500">Đang hoạt động</span>
             <div className="w-8 h-8 rounded-lg bg-[#f7f7f7] text-[#059669] flex items-center justify-center">
@@ -255,7 +256,7 @@ export default function AdminAccountsPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-[rgba(0, 0, 0, 0.08)] shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-white p-4 rounded-xl border-[0.8px] border-[#e5e7eb] flex flex-col sm:flex-row items-center justify-between gap-3">
         <form onSubmit={onSearchSubmit} className="flex-1 w-full flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -302,7 +303,7 @@ export default function AdminAccountsPage() {
       </div>
 
       {/* Accounts Table */}
-      <div className="bg-white rounded-xl border border-[rgba(0, 0, 0, 0.08)] shadow-xs overflow-hidden">
+      <SectionCard title={`Danh sách tài khoản (${total})`}>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -446,7 +447,7 @@ export default function AdminAccountsPage() {
             </div>
           </div>
         )}
-      </div>
+      </SectionCard>
 
       {/* ======================================================== */}
       {/* MODAL: THÊM TÀI KHOẢN MỚI                                 */}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import statsApi, { SystemStats } from '@/api/admin/statsApi';
+import { resolveDateRange } from '@/lib/dashboard/time-range';
 
 interface AgentStatusHeaderProps {
   timeRange: string;
@@ -84,7 +85,9 @@ export default function AgentStatusHeader({
     let isMounted = true;
     const loadStats = async () => {
       try {
-        const res = await statsApi.getSystemStats();
+        // Recomputed per poll so "today"/"7d" windows keep sliding with the clock.
+        const range = resolveDateRange(timeRange, startDate, endDate);
+        const res = await statsApi.getSystemStats({ from: range.from?.toISOString(), to: range.to.toISOString() });
         if (isMounted && res?.data) {
           setStats(res.data);
         }
@@ -101,7 +104,7 @@ export default function AgentStatusHeader({
       isMounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [timeRange, startDate, endDate]);
 
   const status = stats?.agent_status;
   const dash = loadingStats ? '—' : null;
@@ -184,13 +187,13 @@ export default function AgentStatusHeader({
           hint="roundtrip tới Core AI"
         />
         <Kpi
-          title="Phiên đang hoạt động"
+          title="Hội thoại trong kỳ"
           delay={220}
           onClick={onDrillDown ? () => onDrillDown('active') : undefined}
-          value={dash ?? (stats?.active_sessions ?? 0).toLocaleString('vi-VN')}
+          value={dash ?? (stats?.period_conversations ?? 0).toLocaleString('vi-VN')}
           noteTone="muted"
           note={`${(stats?.total_conversations ?? 0).toLocaleString('vi-VN')}`}
-          hint="tổng hội thoại"
+          hint="tổng từ trước tới nay"
         />
         <Kpi
           title="Bộ nhớ Vector DB"

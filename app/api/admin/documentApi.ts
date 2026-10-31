@@ -28,6 +28,9 @@ const documentApi = {
   embed(id: number) {
     return apiClient.post(`/api/admin/documents/${id}/embed`);
   },
+  testRetrieval(query: string, topK: number) {
+    return apiClient.post('/api/admin/retrieval-test', { query, top_k: topK });
+  },
 };
 
 export default documentApi;

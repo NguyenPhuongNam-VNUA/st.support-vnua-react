@@ -60,7 +60,6 @@ services:
       - CORE_AI_HOST=0.0.0.0
       - CORE_AI_PORT=5001
       - REDIS_URL=redis://:${REDIS_PASSWORD:-st-care}@redis:6379/0
-      - BUSINESS_API_BASE_URL=http://web:3000/api
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       # LangSmith → OTEL: auto-instrument LangGraph, send traces to otel-collector (no cloud)
       - LANGSMITH_TRACING=true
