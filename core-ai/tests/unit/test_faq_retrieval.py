@@ -355,3 +355,17 @@ async def test_no_information_answer_shows_no_sources() -> None:
     assert state["citations"] == []
     assert state["status"] == RouteStatus.ANSWERED
     assert "chưa có sẵn" in state["answer"]
+
+
+def test_evidence_keeps_full_chunk_for_llm_but_caps_citation() -> None:
+    from core_ai.graph.nodes.retrieval_node import _to_evidence
+    from core_ai.retrieval.bm25 import RankedChunk
+
+    tail_row = "| Sinh học, CNSTH, Môi trường, Điện, Cơ khí, CNTT | 1.600.000 | 1.700.000 | 1.900.000 |"
+    content = "x" * 2500 + "\n" + tail_row
+    chunk = RankedChunk(chunk_id=1, document_id=1, chunk_index=0, content=content, page=123)
+
+    evidence, citation = _to_evidence(chunk, 1)
+
+    assert tail_row in evidence["snippet"]
+    assert citation is not None and len(citation.snippet) == 2000

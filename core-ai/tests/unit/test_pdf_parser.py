@@ -54,3 +54,18 @@ def test_tesseract_ocr_keeps_reading_order_and_confidence() -> None:
     assert all(block.source == "ocr" for block in blocks)
     assert run.call_args.args[0][:3] == ["tesseract", "stdin", "stdout"]
     assert "vie+eng" in run.call_args.args[0]
+
+
+def test_markdown_table_keeps_wrapped_cells_on_one_row() -> None:
+    table = [
+        ["Mức học bổng (đồng/tháng)\nNgành", "Khá", "Giỏi", "Xuất sắc"],
+        ["Thú y", "1.980.000", "2.100.000", "2.300.000"],
+        ["Sinh học, CNSTH, Môi trường, Điện, Cơ\nkhí, CNTT", "1.600.000", "1.700.000", "1.900.000"],
+    ]
+
+    lines = PDFParser._markdown_table(table).splitlines()
+
+    assert len(lines) == 4
+    assert all(line.startswith("|") and line.endswith("|") for line in lines)
+    assert lines[0] == "| Mức học bổng (đồng/tháng) Ngành | Khá | Giỏi | Xuất sắc |"
+    assert lines[3] == "| Sinh học, CNSTH, Môi trường, Điện, Cơ khí, CNTT | 1.600.000 | 1.700.000 | 1.900.000 |"

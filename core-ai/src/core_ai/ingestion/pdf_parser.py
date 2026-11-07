@@ -104,7 +104,8 @@ class PDFParser:
     @staticmethod
     def _markdown_table(table: List[List[Any]]) -> str:
         rows = [
-            [str(cell or "").replace("|", "\\|").strip() for cell in row]
+            # Collapse newlines inside a cell: a wrapped cell must stay on one markdown row.
+            [" ".join(str(cell or "").split()).replace("|", "\\|") for cell in row]
             for row in table
             if any(cell for cell in row)
         ]

@@ -252,7 +252,9 @@ def _to_evidence(
         "title": chunk.document_title,
         "page": chunk.page,
         "chunk_index": chunk.chunk_index,
-        "snippet": chunk.content[:2000],
+        # Full chunk goes to the LLM; a 2000-char cut dropped table rows at the end of long chunks.
+        # The Citation below keeps the 2000-char limit of its contract.
+        "snippet": chunk.content,
         "relevance_score": score,
         "source_type": chunk.source_type,
         "page_end": page_end,
