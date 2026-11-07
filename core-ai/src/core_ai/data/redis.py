@@ -6,6 +6,7 @@ and distributed locking to prevent cache stampedes during LLM generation.
 
 import logging
 from typing import Optional
+from urllib.parse import urlsplit
 
 import redis.asyncio as aioredis
 
@@ -40,7 +41,7 @@ async def init_redis_client(settings: Optional[Settings] = None) -> Optional[aio
     app_settings = settings or get_settings()
     logger.info(
         "Initializing Redis client at %s (max_connections=%d)...",
-        app_settings.redis_url,
+        urlsplit(app_settings.redis_url).hostname,  # never log the password in the URL
         app_settings.redis_max_connections,
     )
 
