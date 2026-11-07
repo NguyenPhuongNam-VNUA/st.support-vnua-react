@@ -40,7 +40,18 @@ RUN pip install --upgrade pip setuptools wheel && \
     pip install --extra-index-url https://download.pytorch.org/whl/cpu ".[local-models]"
 
 # ------------------------------------------------------------------------------
-# Stage 2: Minimal Production Runtime
+# Stage 2: Download local model weights (Prompt Guard + BGE reranker)
+# ------------------------------------------------------------------------------
+# HF_TOKEN must have access to the gated meta-llama/Llama-Prompt-Guard-2-86M repo.
+# The token only lives in this stage; the runtime image copies the weights only.
+FROM builder AS models
+ARG HF_TOKEN
+COPY scripts/download_local_models.py ./
+RUN test -n "$HF_TOKEN" || (echo "ERROR: build arg HF_TOKEN is required to download models" && exit 1)
+RUN HF_TOKEN="$HF_TOKEN" python download_local_models.py --output-dir /models
+
+# ------------------------------------------------------------------------------
+# Stage 3: Minimal Production Runtime
 # ------------------------------------------------------------------------------
 FROM python:3.11-slim-bookworm AS runtime
 
@@ -89,6 +100,9 @@ COPY pyproject.toml /app/pyproject.toml
 # Set directory ownership to non-root appuser
 RUN chown -R appuser:appgroup /app
 
+# Copy model weights after the chown so the ~3GB layer is not duplicated
+COPY --from=models --chown=appuser:appgroup /models /app/models
+
 # Switch to non-root user
 USER appuser
 
@@ -99,5 +113,5 @@ EXPOSE 5001
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5001/health/ready', timeout=3)" || exit 1
 
-# Launch production server via uvicorn
-CMD ["uvicorn", "core_ai.main:app", "--host", "0.0.0.0", "--port", "5001", "--workers", "1", "--no-access-log"]
+# Launch production server via uvicorn. Railway injects PORT; Compose falls back to CORE_AI_PORT.
+CMD ["sh", "-c", "exec uvicorn core_ai.main:app --host \"$CORE_AI_HOST\" --port \"${PORT:-$CORE_AI_PORT}\" --workers 1 --no-access-log"]

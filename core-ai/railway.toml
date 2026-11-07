@@ -1,0 +1,11 @@
+# Railway service: core-ai (FastAPI). Root Directory = /core-ai
+# Set "Config-as-code path" in service settings to /core-ai/railway.toml
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/health/ready"
+healthcheckTimeout = 300  # Local models load slowly on CPU
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
