@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/http/api-client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,14 +15,8 @@ export function useLogin() {
   const [infoAlert, setInfoAlert] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Preload trước trang /admin/dashboard để điều hướng tức thì sau khi đăng nhập thành công
-  useEffect(() => {
-    try {
-      router.prefetch('/admin/dashboard');
-    } catch {
-      // Bỏ qua nếu môi trường test/SSR
-    }
-  }, [router]);
+  // Không prefetch /admin/dashboard trước khi đăng nhập: ở production, Next.js cache
+  // kết quả redirect của middleware (chưa có cookie) và router.push sẽ quay lại /login.
 
   /**
    * Hook trực tiếp điều phối và gọi RESTful API /api/auth/login
